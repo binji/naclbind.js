@@ -262,6 +262,8 @@ var nacl={};
   var nextCallbackId = 1;
   var idCallbackMap = [];
   var moduleEl;
+  var moduleLoaded = false;
+  var queuedMessages = [];
 
   function postMessage(msg, callback) {
     var id = nextCallbackId++;
@@ -271,17 +273,17 @@ var nacl={};
     if (moduleLoaded) {
       moduleEl.postMessage(msg);
     } else {
-      queued.push(msg);
+      queuedMessages.push(msg);
     }
     return id;
   }
 
   function postQueuedMessages() {
-    queued.forEach(function(msg) {
+    queuedMessages.forEach(function(msg) {
       moduleEl.postMessage(msg);
     });
 
-    queued = [];
+    queuedMessages = [];
   }
 
   function onModuleLoad(event) {
