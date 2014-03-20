@@ -54,12 +54,32 @@ function copyToArrayBuffer(dst, dstOffset, src) {
   return dst;
 }
 
+//    z_const Bytef *next_in;     /* next input byte */
+//    uInt     avail_in;  /* number of bytes available at next_in */
+//    uLong    total_in;  /* total number of input bytes read so far */
+//
+//    Bytef    *next_out; /* next output byte should be put there */
+//    uInt     avail_out; /* remaining free space at next_out */
+//    uLong    total_out; /* total number of bytes output so far */
+//
+//    z_const char *msg;  /* last error message, NULL if no error */
+//    struct internal_state FAR *state; /* not visible by applications */
+//
+//    alloc_func zalloc;  /* used to allocate the internal state */
+//    free_func  zfree;   /* used to free the internal state */
+//    voidpf     opaque;  /* private data object passed to zalloc and zfree */
+//
+//    int     data_type;  /* best guess about the data type: binary or text */
+//    uLong   adler;      /* adler32 value of the uncompressed data */
+//    uLong   reserved;   /* reserved for future use */
 
-var z_stream = new nacl.StructType(16, 'z_stream');
+var z_stream = new nacl.StructType(56, 'z_stream');
 z_stream.addField('next_in', nacl.uint8_p, 0);
 z_stream.addField('avail_in', nacl.uint32, 4);
-z_stream.addField('next_out', nacl.uint8_p, 8);
-z_stream.addField('avail_out', nacl.uint32, 12);
+z_stream.addField('total_in', nacl.uint32, 8);
+z_stream.addField('next_out', nacl.uint8_p, 12);
+z_stream.addField('avail_out', nacl.uint32, 16);
+z_stream.addField('total_out', nacl.uint32, 20);
 
 var Z_NO_FLUSH = 0
 var Z_PARTIAL_FLUSH = 1
@@ -84,12 +104,14 @@ var deflateType = new nacl.FunctionType(nacl.int32, z_stream_p, nacl.int32);
 var deflateInit = new nacl.CFunction('deflateInit', deflateType);
 var deflate = new nacl.CFunction('deflate', deflateType);
 
+nacl.Type.logAll();
+
 function compress(inputAb, level, bufferSize, callback) {
   var inputOffset = 0;
   var outputAb = null;
   var outputOffset = 0;
 
-  var stream = z_stream.malloc();
+  var stream = z_stream.malloc().cast(z_stream_p);
   nacl.call(nacl.memset, stream, 0, z_stream.sizeof());
 
   var output = nacl.call(nacl.malloc, bufferSize);
@@ -97,15 +119,17 @@ function compress(inputAb, level, bufferSize, callback) {
   nacl.commit(result, step);
 
   function step(result) {
-    // TODO check result. Need result to be converted from handle to primitive.
+    if (result != Z_OK) {
+      return;
+    }
 
     var inputLeft = inputAb.byteLength - inputOffset;
     var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, bufferSize);
-    var inputSlice = nacl.mapArrayBuffer(ab);
+    var inputSlice = nacl.call(nacl.mapArrayBuffer, ab);
 
-    z_stream.fields.next_in.set(stream, inputSlice);
+    z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
     z_stream.fields.avail_in.set(stream, ab.byteLength);
-    z_stream.fields.next_out.set(stream, output);
+    z_stream.fields.next_out.set(stream, output.cast(nacl.uint8_p));
     z_stream.fields.avail_out.set(stream, bufferSize);
 
     var flush = inputLeft < bufferSize ? Z_PARTIAL_FLUSH : Z_FINISH;
