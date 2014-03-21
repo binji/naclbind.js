@@ -73,7 +73,8 @@ function copyToArrayBuffer(dst, dstOffset, src) {
 //    uLong   adler;      /* adler32 value of the uncompressed data */
 //    uLong   reserved;   /* reserved for future use */
 
-var z_stream = new nacl.StructType(56, 'z_stream');
+var z_stream = nacl.makeStructType(nacl.userTypeId + 0, 56, 'z_stream');
+// TODO(binji): fields should be specified in the constructor.
 z_stream.addField('next_in', nacl.uint8_p, 0);
 z_stream.addField('avail_in', nacl.uint32, 4);
 z_stream.addField('total_in', nacl.uint32, 8);
@@ -99,12 +100,12 @@ var Z_MEM_ERROR = -4
 var Z_BUF_ERROR = -5
 var Z_VERSION_ERROR = -6
 
-var z_stream_p = new nacl.PointerType(z_stream);
-var deflateType = new nacl.FunctionType(nacl.int32, z_stream_p, nacl.int32);
-var deflateInit = new nacl.CFunction('deflateInit', deflateType);
-var deflate = new nacl.CFunction('deflate', deflateType);
+var z_stream_p = nacl.makePointerType(nacl.userTypeId + 1, z_stream);
+var deflateType = nacl.makeFunctionType(nacl.userTypeId + 2, nacl.int32, z_stream_p, nacl.int32);
+var deflateInit = nacl.makeFunction('deflateInit', deflateType);
+var deflate = nacl.makeFunction('deflate', deflateType);
 
-nacl.Type.logAll();
+nacl.logTypes();
 
 function compress(inputAb, level, bufferSize, callback) {
   var inputOffset = 0;
@@ -112,10 +113,10 @@ function compress(inputAb, level, bufferSize, callback) {
   var outputOffset = 0;
 
   var stream = z_stream.malloc().cast(z_stream_p);
-  nacl.call(nacl.memset, stream, 0, z_stream.sizeof());
+  nacl.memset(stream, 0, z_stream.sizeof());
 
-  var output = nacl.call(nacl.malloc, bufferSize);
-  var result = nacl.call(deflateInit, stream, level);
+  var output = nacl.malloc(bufferSize);
+  var result = deflateInit(stream, level);
   nacl.commit(result, step);
 
   function step(result) {
@@ -125,7 +126,7 @@ function compress(inputAb, level, bufferSize, callback) {
 
     var inputLeft = inputAb.byteLength - inputOffset;
     var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, bufferSize);
-    var inputSlice = nacl.call(nacl.mapArrayBuffer, ab);
+    var inputSlice = nacl.mapArrayBuffer(ab);
 
     z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
     z_stream.fields.avail_in.set(stream, ab.byteLength);
@@ -133,7 +134,7 @@ function compress(inputAb, level, bufferSize, callback) {
     z_stream.fields.avail_out.set(stream, bufferSize);
 
     var flush = inputLeft < bufferSize ? Z_PARTIAL_FLUSH : Z_FINISH;
-    var result = nacl.call(deflate, stream, flush);
+    var result = deflate(stream, flush);
     var avail_in = z_stream.fields.avail_in.get(stream);
     var avail_out = z_stream.fields.avail_out.get(stream);
 

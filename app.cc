@@ -35,89 +35,97 @@
 #pragma warning(disable : 4355)
 #endif
 
-#define VAR_DICTIONARY(var, newvar) \
-  if (!var.is_dictionary()) { \
-    printf(#var " is not a dictionary.\n"); \
-    return; \
-  } \
+#define VAR_DICTIONARY(var, newvar)                                       \
+  if (!var.is_dictionary()) {                                             \
+    printf("%s:%d: " #var " is not a dictionary.\n", __FILE__, __LINE__); \
+    return;                                                               \
+  }                                                                       \
   pp::VarDictionary newvar(var)
 
-#define DICT_INT(var, key) \
-  int32_t key; \
-  do { \
-    pp::Var tempvar(var.Get(#key)); \
-    if (!tempvar.is_int()) { \
-      printf(#key " is not an int.\n"); \
-      return; \
-    } \
-    key = tempvar.AsInt(); \
-  } while(0)
+#define DICT_INT(var, key)                                            \
+  int32_t key;                                                        \
+  do {                                                                \
+    pp::Var tempvar(var.Get(#key));                                   \
+    if (!tempvar.is_int()) {                                          \
+      printf("%s:%d: " #key " is not an int.\n", __FILE__, __LINE__); \
+      return;                                                         \
+    }                                                                 \
+    key = tempvar.AsInt();                                            \
+  } while (0)
 
-#define DICT_STRING(var, key) \
-  std::string key; \
-  do { \
-    pp::Var tempvar(var.Get(#key)); \
-    if (!tempvar.is_string()) { \
-      printf(#key " is not an string.\n"); \
-      return; \
-    } \
-    key = tempvar.AsString(); \
-  } while(0)
+#define DICT_STRING(var, key)                                            \
+  std::string key;                                                       \
+  do {                                                                   \
+    pp::Var tempvar(var.Get(#key));                                      \
+    if (!tempvar.is_string()) {                                          \
+      printf("%s:%d: " #key " is not an string.\n", __FILE__, __LINE__); \
+      return;                                                            \
+    }                                                                    \
+    key = tempvar.AsString();                                            \
+  } while (0)
 
-#define DICT_ARRAY(var, key) \
-  pp::VarArray key; \
-  do { \
-    pp::Var tempvar(var.Get(#key)); \
-    if (!tempvar.is_array()) { \
-      printf(#key " is not an array.\n"); \
-      return; \
-    } \
-    key = pp::VarArray(tempvar); \
-  } while(0)
+#define DICT_ARRAY(var, key)                                            \
+  pp::VarArray key;                                                     \
+  do {                                                                  \
+    pp::Var tempvar(var.Get(#key));                                     \
+    if (!tempvar.is_array()) {                                          \
+      printf("%s:%d: " #key " is not an array.\n", __FILE__, __LINE__); \
+      return;                                                           \
+    }                                                                   \
+    key = pp::VarArray(tempvar);                                        \
+  } while (0)
 
-#define ARRAY_INT(var, ix, newvar) \
-  int32_t newvar; \
-  do { \
-    pp::Var tempvar(var.Get(ix)); \
-    if (!tempvar.is_int()) { \
-      printf("Argument %d is not an int.\n", ix); \
-      return; \
-    } \
-    newvar = tempvar.AsInt(); \
-  } while(0)
+#define ARRAY_INT(var, ix, newvar)                                           \
+  int32_t newvar;                                                            \
+  do {                                                                       \
+    pp::Var tempvar(var.Get(ix));                                            \
+    if (!tempvar.is_int()) {                                                 \
+      printf("%s:%d: Argument %d is not an int.\n", __FILE__, __LINE__, ix); \
+      return;                                                                \
+    }                                                                        \
+    newvar = tempvar.AsInt();                                                \
+  } while (0)
 
-#define ARRAY_HANDLE(var, ix, newvar) \
-  void* newvar; \
-  do { \
-    ARRAY_INT(var, ix, newvar##int); \
-    newvar = GetHandle(newvar##int); \
-    if (!newvar) { \
-      printf("Argument %d is not an valid handle.\n", ix); \
-      return; \
-    } \
-  } while(0)
+#define ARRAY_HANDLE(var, ix, newvar)                                  \
+  void* newvar;                                                        \
+  do {                                                                 \
+    ARRAY_INT(var, ix, newvar##int);                                   \
+    newvar = GetHandle(newvar##int);                                   \
+    if (!newvar) {                                                     \
+      printf("%s:%d: Argument %d is not an valid handle.\n", __FILE__, \
+             __LINE__, ix);                                            \
+      return;                                                          \
+    }                                                                  \
+  } while (0)
 
-#define ARRAY_ARRAY(var, ix, newvar) \
-  pp::VarArray newvar; \
-  do { \
-    pp::Var tempvar(var.Get(ix)); \
-    if (!tempvar.is_array()) { \
-      printf("Argument %d is not an array.\n", ix); \
-      return; \
-    } \
-    newvar = pp::VarArray(tempvar); \
-  } while(0)
+#define ARRAY_ARRAY(var, ix, newvar)                                           \
+  pp::VarArray newvar;                                                         \
+  do {                                                                         \
+    pp::Var tempvar(var.Get(ix));                                              \
+    if (!tempvar.is_array()) {                                                 \
+      printf("%s:%d: Argument %d is not an array.\n", __FILE__, __LINE__, ix); \
+      return;                                                                  \
+    }                                                                          \
+    newvar = pp::VarArray(tempvar);                                            \
+  } while (0)
 
-#define ARRAY_ARRAYBUFFER(var, ix, newvar) \
-  pp::VarArrayBuffer newvar; \
-  do { \
-    pp::Var tempvar(var.Get(ix)); \
-    if (!tempvar.is_array_buffer()) { \
-      printf("Argument %d is not an array buffer.\n", ix); \
-      return; \
-    } \
-    newvar = pp::VarArrayBuffer(tempvar); \
-  } while(0)
+#define ARRAY_ARRAYBUFFER(var, ix, newvar)                             \
+  pp::VarArrayBuffer newvar;                                           \
+  do {                                                                 \
+    pp::Var tempvar(var.Get(ix));                                      \
+    if (!tempvar.is_array_buffer()) {                                  \
+      printf("%s:%d: Argument %d is not an array buffer.\n", __FILE__, \
+             __LINE__, ix);                                            \
+      return;                                                          \
+    }                                                                  \
+    newvar = pp::VarArrayBuffer(tempvar);                              \
+  } while (0)
+
+#define CHECK_TYPE(cmd, type, expected)                                      \
+  if (type != expected.id()) {                                               \
+    printf("%s:%d: Type mismatch calling %s, %d != %d (%s).\n", __FILE__,    \
+           __LINE__, cmd, type, expected.id(), expected.ToString().c_str()); \
+  }
 
 typedef int32_t TypeId;
 class Type;
@@ -127,12 +135,30 @@ TypeMap g_type_map;
 
 class Type {
  public:
-  explicit Type(TypeId id) : id_(id) {}
+  explicit Type(TypeId id) : id_(id) {
+    TypeMap::iterator iter = g_type_map.find(id);
+    if (iter != g_type_map.end()) {
+      printf("Type id %d already used!\n", id);
+      return;
+    }
+
+    g_type_map.insert(TypeMap::value_type(id, this));
+  }
+  virtual ~Type() {}
   virtual size_t Size() = 0;
   virtual std::string ToString() = 0;
   virtual bool IsPrimitiveType() { return false; }
 
   TypeId id() { return id_; }
+
+  static Type* Get(TypeId id) {
+    TypeMap::iterator iter = g_type_map.find(id);
+    if (iter == g_type_map.end()) {
+      return NULL;
+    }
+
+    return iter->second;
+  }
 
  private:
   TypeId id_;
@@ -188,6 +214,36 @@ class StructType : public Type {
 
 class FunctionType : public Type {
  public:
+  FunctionType(TypeId id, Type* ret_type)
+      : Type(id), ret_type_(ret_type) {}
+
+  FunctionType(TypeId id, Type* ret_type, Type* arg0)
+      : Type(id), ret_type_(ret_type) {
+    arg_types_.push_back(arg0);
+  }
+
+  FunctionType(TypeId id, Type* ret_type, Type* arg0, Type* arg1)
+      : Type(id), ret_type_(ret_type) {
+    arg_types_.push_back(arg0);
+    arg_types_.push_back(arg1);
+  }
+
+  FunctionType(TypeId id, Type* ret_type, Type* arg0, Type* arg1, Type* arg2)
+      : Type(id), ret_type_(ret_type) {
+    arg_types_.push_back(arg0);
+    arg_types_.push_back(arg1);
+    arg_types_.push_back(arg2);
+  }
+
+  FunctionType(TypeId id, Type* ret_type, Type* arg0, Type* arg1, Type* arg2,
+               Type* arg3)
+      : Type(id), ret_type_(ret_type) {
+    arg_types_.push_back(arg0);
+    arg_types_.push_back(arg1);
+    arg_types_.push_back(arg2);
+    arg_types_.push_back(arg3);
+  }
+
   FunctionType(TypeId id, Type* ret_type, Type** arg_types)
       : Type(id), ret_type_(ret_type) {
     while (arg_types && *arg_types) {
@@ -215,13 +271,15 @@ class FunctionType : public Type {
   std::vector<Type*> arg_types_;
 };
 
-class PepperType {
+class PepperType : public Type {
  public:
-  PepperType(const char* name, PP_VarType var_type)
-      : name_(name), var_type_(var_type) {}
+  PepperType(TypeId id, const char* name, PP_VarType var_type)
+      : Type(id), name_(name), var_type_(var_type) {}
 
   virtual size_t Size() { return sizeof(pp::Var); }
   virtual std::string ToString() { return name_; }
+
+  PP_VarType var_type() const { return var_type_; }
 
  private:
   const char* name_;
@@ -229,39 +287,36 @@ class PepperType {
 };
 
 PrimitiveType TYPE_void(1, "void", 0);
-PointerType TYPE_void_p(2, &TYPE_void);
-PrimitiveType TYPE_int8(3, "int8", 1);
-PrimitiveType TYPE_uint8(4, "uint8", 1);
-PrimitiveType TYPE_int16(5, "int16", 2);
-PrimitiveType TYPE_uint16(6, "uint16", 2);
-PrimitiveType TYPE_int32(7, "int32", 4);
-PrimitiveType TYPE_uint32(8, "uint32", 4);
-PrimitiveType TYPE_int64(9, "int64", 8);
-PrimitiveType TYPE_uint64(10, "uint64", 8);
-PrimitiveType TYPE_float32(11, "float32", 4);
-PrimitiveType TYPE_float64(12, "float64", 8);
-PrimitiveType TYPE_size_t(13, "size_t", 4);
+PrimitiveType TYPE_int8(2, "int8", 1);
+PrimitiveType TYPE_uint8(3, "uint8", 1);
+PrimitiveType TYPE_int16(4, "int16", 2);
+PrimitiveType TYPE_uint16(5, "uint16", 2);
+PrimitiveType TYPE_int32(6, "int32", 4);
+PrimitiveType TYPE_uint32(7, "uint32", 4);
+PrimitiveType TYPE_int64(8, "int64", 8);
+PrimitiveType TYPE_uint64(9, "uint64", 8);
+PrimitiveType TYPE_float32(10, "float32", 4);
+PrimitiveType TYPE_float64(11, "float64", 8);
+PrimitiveType TYPE_size_t(12, "size_t", 4);
+
+PointerType TYPE_void_p(13, &TYPE_void);
 PointerType TYPE_uint8_p(14, &TYPE_uint8);
 PointerType TYPE_uint8_pp(15, &TYPE_uint8_p);
-PointerType TYPE_uint32_p(16, &TYPE_uint8_p);
-PepperType TYPE_arrayBuffer(17, PP_VARTYPE_ARRAY_BUFFER);
-PepperType TYPE_array(18, PP_VARTYPE_ARRAY);
-PepperType TYPE_dictionary(19, PP_VARTYPE_DICTIONARY);
-
-Type* TYPE_malloc_args[] = { &TYPE_size_t, NULL };
-FunctionType TYPE_malloc(20, &TYPE_void_p, TYPE_malloc_args);
-
-Type* TYPE_memset_args[] = { &TYPE_void_p, &TYPE_int32, &TYPE_size_t, NULL };
-FunctionType TYPE_memset(21, &TYPE_void, TYPE_memset_args);
-
-Type* TYPE_memcpy_args[] = { &TYPE_void_p, &TYPE_void_p, &TYPE_size_t, NULL };
-FunctionType TYPE_memcpy(22, &TYPE_void, TYPE_memcpy_args);
-
-Type* TYPE_mapArrayBuffer_args = { &TYPE_arrayBuffer, NULL };
-FunctionType TYPE_mapArrayBuffer(23, &TYPE_void_p, TYPE_mapArrayBuffer_args);
-
-Type* TYPE_add_void_p_int32 = { &TYPE_void_p, &TYPE_int32, NULL };
-FunctionType TYPE_add_void_p_int32(24, &TYPE_void_p, &TYPE_add_void_p_int32);
+PointerType TYPE_uint32_p(16, &TYPE_uint32);
+PepperType TYPE_arrayBuffer(17, "ArrayBuffer", PP_VARTYPE_ARRAY_BUFFER);
+PepperType TYPE_array(18, "Array", PP_VARTYPE_ARRAY);
+PepperType TYPE_dictionary(19, "Dictionary", PP_VARTYPE_DICTIONARY);
+FunctionType TYPE_malloc(20, &TYPE_void_p, &TYPE_size_t);
+FunctionType TYPE_memset(21, &TYPE_void, &TYPE_void_p, &TYPE_int32,
+                         &TYPE_size_t);
+FunctionType TYPE_memcpy(22, &TYPE_void, &TYPE_void_p, &TYPE_void_p,
+                         &TYPE_size_t);
+FunctionType TYPE_mapArrayBuffer(23, &TYPE_void_p, &TYPE_arrayBuffer);
+FunctionType TYPE_add_void_p_int32(24, &TYPE_void_p, &TYPE_void_p, &TYPE_int32);
+FunctionType TYPE_set_uint8_p(25, &TYPE_void, &TYPE_uint8_pp, &TYPE_uint8_p);
+FunctionType TYPE_set_uint32(26, &TYPE_void, &TYPE_uint32_p, &TYPE_uint32);
+FunctionType TYPE_get_uint8_p(27, &TYPE_uint8_p, &TYPE_uint8_pp);
+FunctionType TYPE_get_uint32(28, &TYPE_uint32, &TYPE_uint32_p);
 
 StructField TYPE_z_stream_fields[] = {
   {"next_in", &TYPE_uint8_p, offsetof(z_stream, next_in)},
@@ -275,12 +330,9 @@ StructType TYPE_z_stream(
     18, "z_stream", sizeof(z_stream),
     sizeof(TYPE_z_stream_fields)/sizeof(TYPE_z_stream_fields[0]),
     TYPE_z_stream_fields);
-PointerType TYPE_z_stream_p(25, &TYPE_z_stream);
+PointerType TYPE_z_stream_p(30, &TYPE_z_stream);
 
-Type* TYPE_deflate_args[] = { &TYPE_int32, &TYPE_z_stream_p, &TYPE_int32,
-                              NULL };
-FunctionType TYPE_deflate(26, &TYPE_void, TYPE_deflate_args);
-
+FunctionType TYPE_deflate(31, &TYPE_int32, &TYPE_z_stream_p, &TYPE_int32);
 
 class Instance : public pp::Instance {
  public:
@@ -393,24 +445,79 @@ class Instance : public pp::Instance {
     DICT_INT(dictionary, ret);
 
     if (cmd == "add") {
-    } else if (cmd == "addr") {
-    } else if (cmd == "malloc") {
-      CHECK(type == TYPE_malloc);
-      Handle_malloc(ret, args);
-    } else if (cmd == "memset") {
-      CHECK(type == TYPE_memset);
-      Handle_memset(ret, args);
-    } else if (cmd == "memcpy") {
-      CHECK(type == TYPE_memcpy);
-      Handle_memcpy(ret, args);
-    } else if (cmd == "mapArrayBuffer") {
-      CHECK(type == TYPE_mapArrayBuffer);
-      Handle_mapArrayBuffer(ret, args);
+      CHECK_TYPE(cmd.c_str(), type, TYPE_add_void_p_int32);
+      Handle_add(ret, args);
+    } else if (cmd == "deflate") {
+      CHECK_TYPE(cmd.c_str(), type, TYPE_deflate);
+      Handle_deflate(ret, args);
     } else if (cmd == "deflateInit") {
-      CHECK(type == TYPE_deflate);
+      CHECK_TYPE(cmd.c_str(), type, TYPE_deflate);
       Handle_deflateInit(ret, args);
+    } else if (cmd == "get") {
+      Handle_get(type, ret, args);
+    } else if (cmd == "malloc") {
+      CHECK_TYPE(cmd.c_str(), type, TYPE_malloc);
+      Handle_malloc(ret, args);
+    } else if (cmd == "mapArrayBuffer") {
+      CHECK_TYPE(cmd.c_str(), type, TYPE_mapArrayBuffer);
+      Handle_mapArrayBuffer(ret, args);
+    } else if (cmd == "memcpy") {
+      CHECK_TYPE(cmd.c_str(), type, TYPE_memcpy);
+      Handle_memcpy(ret, args);
+    } else if (cmd == "memset") {
+      CHECK_TYPE(cmd.c_str(), type, TYPE_memset);
+      Handle_memset(ret, args);
+    } else if (cmd == "set") {
+      Handle_set(type, ret, args);
     } else {
       printf("Unknown cmd: \"%s\".\n", cmd.c_str());
+    }
+  }
+
+  void Handle_add(Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_HANDLE(args, 0, ptr);
+    ARRAY_INT(args, 1, addend);
+    void* result = ((uint8_t*)ptr) + addend;
+    RegisterHandle(ret_handle, result);
+    printf("add(%p, %d) => %p (%d)\n", ptr, addend, result, ret_handle);
+  }
+
+  void Handle_deflateInit(Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_HANDLE(args, 0, stream);
+    ARRAY_INT(args, 1, level);
+    int result = deflateInit((z_stream*)stream, level);
+
+    // TODO(binji): putting the result in allocated memory kinda sucks.
+    // Something better here?
+    RegisterHandle(ret_handle, new int32_t(result));
+    printf("deflateInit(%p, %d) => %d\n", stream, level, result);
+  }
+
+  void Handle_deflate(Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_HANDLE(args, 0, stream);
+    ARRAY_INT(args, 1, flush);
+    int result = deflate((z_stream*)stream, flush);
+    RegisterHandle(ret_handle, new int32_t(result));
+    printf("deflate(%p, %d) => %d\n", stream, flush, result);
+  }
+
+  void Handle_get(TypeId id, Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_HANDLE(args, 0, ptr);
+    Type* type = Type::Get(id);
+
+    if (id == TYPE_get_uint8_p.id()) {
+      ARRAY_HANDLE(args, 1, value);
+      uint8_t* result = *(uint8_t**)ptr;
+      RegisterHandle(ret_handle, result);
+      printf("*(%s)%p => %p\n", type->ToString().c_str(), ptr, result);
+    } else if (id == TYPE_get_uint32.id()) {
+      ARRAY_INT(args, 1, value);
+      uint32_t result = *(uint32_t*)ptr;
+      RegisterHandle(ret_handle, new uint32_t(result));
+      printf("*(%s)%p => %u\n", type->ToString().c_str(), ptr, result);
+    } else {
+      printf("Unexpected function type: %d (%s)\n", id,
+             type->ToString().c_str());
     }
   }
 
@@ -418,8 +525,23 @@ class Instance : public pp::Instance {
     ARRAY_INT(args, 0, size);
     void* result = malloc(size);
     RegisterHandle(ret_handle, result);
-
     printf("malloc(%d) => %p (%d)\n", size, result, ret_handle);
+  }
+
+  void Handle_mapArrayBuffer(Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_ARRAYBUFFER(args, 0, buf);
+    void* ptr = buf.Map();
+    RegisterHandle(ret_handle, ptr);
+    printf("mapArrayBuffer(%lld) => %p (%d)\n", buf.pp_var().value.as_id, ptr,
+           ret_handle);
+  }
+
+  void Handle_memcpy(Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_HANDLE(args, 0, dst);
+    ARRAY_HANDLE(args, 1, src);
+    ARRAY_INT(args, 2, size);
+    memcpy(dst, src, size);
+    printf("memcpy(%p, %p, %d)\n", dst, src, size);
   }
 
   void Handle_memset(Handle ret_handle, const pp::VarArray& args) {
@@ -430,30 +552,22 @@ class Instance : public pp::Instance {
     printf("memset(%p, %d, %d)\n", buffer, value, size);
   }
 
-  void Handle_memcpy(Handle ret_handle, const pp::VarArray& args) {
-    ARRAY_HANDLE(args, 0, dst);
-    ARRAY_HANDLE(args, 1, src);
-    ARRAY_INT(args, 2, size);
-    printf("memcpy(%p, %p, %d)\n", dst, src, size);
-    memcpy(dst, src, size);
-  }
+  void Handle_set(TypeId id, Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_HANDLE(args, 0, ptr);
+    Type* type = Type::Get(id);
 
-  void Handle_mapArrayBuffer(Handle ret_handle, const pp::VarArray& args) {
-    ARRAY_ARRAYBUFFER(args, 0, buf);
-    void* ptr = buf.Map();
-    printf("mapArrayBuffer(%lld) => %p\n", buf.pp_var().value.as_id, ptr);
-    RegisterHandle(ret_handle, ptr);
-  }
-
-  void Handle_deflateInit(Handle ret_handle, const pp::VarArray& args) {
-    ARRAY_HANDLE(args, 0, stream);
-    ARRAY_INT(args, 1, level);
-    int result = deflateInit((z_stream*)stream, level);
-    printf("deflateInit(%p, %d) => %d\n", stream, level, result);
-
-    // TODO(binji): putting the result in allocated memory kinda sucks.
-    // Something better here?
-    RegisterHandle(ret_handle, new int32_t(result));
+    if (id == TYPE_set_uint8_p.id()) {
+      ARRAY_HANDLE(args, 1, value);
+      *(uint8_t**)ptr = (uint8_t*)value;
+      printf("*(%s)%p = %p\n", type->ToString().c_str(), ptr, value);
+    } else if (id == TYPE_set_uint32.id()) {
+      ARRAY_INT(args, 1, value);
+      *(uint32_t*)ptr = value;
+      printf("*(%s)%p = %d\n", type->ToString().c_str(), ptr, value);
+    } else {
+      printf("Unexpected function type: %d (%s)\n", id,
+             type->ToString().c_str());
+    }
   }
 
  private:

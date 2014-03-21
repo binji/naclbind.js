@@ -22,18 +22,30 @@ var nacl={};
 
   var typeIdHash = {};
 
-  function makeType(id, newType) {
-    assert(id !== 0);
-    assert(!(id in typeIdHash));
+  function makeType(id, typeConstructor, args) {
+    assert(id !== 0, 'makeType: id !== 0');
+    assert(!(id in typeIdHash), 'makeType: id ' + id + ' already exists');
+    var newConstructor = typeConstructor.bind.apply(
+        typeConstructor, [null].concat(args));
+    var newType = new newConstructor();
     if (getTypeId(newType) !== 0) {
       throw new Error('Type ' + newType + ' already made with id ' + id);
     }
+    newType.id = id;
     typeIdHash[id] = newType;
+    return newType;
+  }
+
+  function makeMakeTypeFunction(typeConstructor) {
+    return function(id) {
+      return makeType(id, typeConstructor,
+                      Array.prototype.slice.call(arguments, 1));
+    }
   }
 
   function getTypeId(type) {
     for (var id in typeIdHash) {
-      if (typeIdHash[id].equals(newtype)) {
+      if (typeIdHash[id].equals(type)) {
         return id;
       }
     }
@@ -49,13 +61,12 @@ var nacl={};
   };
 
   //// Type ////////////////////////////////////////////////////////////////////
-  function Type() {}
+  function Type() { this.id = 0; }
 
   Type.prototype.equals = function(other) {
     return false;
   };
 
-  // Convenience functions.
   Type.prototype.isPrimitive = function() {
     return this instanceof PrimitiveType;
   };
@@ -64,29 +75,66 @@ var nacl={};
     return this instanceof PointerType;
   };
 
+  Type.prototype.isInt = function() { return false; }
+  Type.prototype.isSigned = function() { return false; }
+
+  Type.prototype.getPointerType = function() {
+    if (this.pointerType) {
+      return this.pointerType;
+    }
+
+    var pointerType = new PointerType(this);
+    var id = getTypeId(pointerType);
+    if (id === 0) {
+      throw new Error('Pointer type "' + pointerType + '" not defined.');
+    }
+
+    // Get the correct one.
+    this.pointerType = pointerType = typeIdHash[id];
+    return pointerType;
+  };
+
   //// VoidType ////////////////////////////////////////////////////////////////
-  function VoidType() { Type(); }
+  function VoidType() { Type.call(this); }
   VoidType.prototype = new Type();
+  VoidType.prototype.constructor = VoidType;
   VoidType.prototype.sizeof = function() { return 0; }
   VoidType.prototype.toString = function() { return 'void'; }
+
+  VoidType.prototype.equals = function(other) {
+    if (this === other) {
+      return true;
+    }
+
+    return this.constructor === other.constructor;
+  };
 
   //// PrimitiveType ///////////////////////////////////////////////////////////
   function PrimitiveType(name, size, isSigned, isInt) {
     Type.call(this);
     this.name = name;
     this.size = size;
-    this.isSigned = isSigned;
-    this.isInt = isInt;
+    this.isSigned_ = isSigned;
+    this.isInt_ = isInt;
   }
 
   PrimitiveType.prototype = new Type();
+  PrimitiveType.prototype.constructor = PrimitiveType;
+  PrimitiveType.prototype.sizeof = function() { return this.size; };
+  PrimitiveType.prototype.toString = function() { return this.name; };
+  PrimitiveType.prototype.isInt = function() { return this.isInt_; };
+  PrimitiveType.prototype.isSigned = function() { return this.isSigned_; };
 
-  PrimitiveType.prototype.sizeof = function() {
-    return this.size;
-  };
+  PrimitiveType.prototype.equals = function(other) {
+    if (this === other) {
+      return true;
+    }
 
-  PrimitiveType.prototype.toString = function() {
-    return this.name;
+    return this.constructor === other.constructor &&
+           this.size === other.size &&
+           this.name === other.name &&
+           this.isInt_ === other.isInt_ &&
+           this.isSigned_ === other.isSigned_;
   };
 
   //// PointerType /////////////////////////////////////////////////////////////
@@ -96,6 +144,7 @@ var nacl={};
   }
 
   PointerType.prototype = new Type();
+  PointerType.prototype.constructor = PointerType;
 
   PointerType.prototype.sizeof = function() {
     return 4;  // NaCl pointers are always 32-bit.
@@ -103,6 +152,15 @@ var nacl={};
 
   PointerType.prototype.toString = function() {
     return this.baseType.toString() + '*';
+  };
+
+  PointerType.prototype.equals = function(other) {
+    if (this === other) {
+      return true;
+    }
+
+    return this.constructor === other.constructor &&
+           this.baseType.equals(other.baseType);
   };
 
   //// StructField /////////////////////////////////////////////////////////////
@@ -113,11 +171,24 @@ var nacl={};
   }
 
   StructField.prototype.set = function(struct_p, value) {
-    var dst = self.call(self.add, struct_p, this.offset);
-    return self.call(self.set, dst, value);
+    var dst = add(struct_p, this.offset);
+    return set(dst.cast(this.type.getPointerType()), value);
   };
 
-  StructField.prototype.get = function (struct_p) {
+  StructField.prototype.get = function(struct_p) {
+    var ptr = add(struct_p, this.offset);
+    return get(ptr.cast(this.type.getPointerType()));
+  };
+
+  StructField.prototype.equals = function(other) {
+    if (this === other) {
+      return true;
+    }
+
+    return this.constructor === other.constructor &&
+           this.name === other.name &&
+           this.type === other.type &&
+           this.offset === other.offset;
   };
 
   //// StructType //////////////////////////////////////////////////////////////
@@ -127,12 +198,6 @@ var nacl={};
     this.name = name;
     this.fields = {};
   }
-
-  function makeStructType(id, size, name) {
-    var newType = new StructType(size, name);
-    makeType(id, newType);
-    return newType;
-  };
 
   StructType.prototype = new Type();
   StructType.prototype.constructor = StructType;
@@ -145,15 +210,54 @@ var nacl={};
     return this.name;
   };
 
+  StructType.prototype.equals = function(other) {
+    if (this === other) {
+      return true;
+    }
+
+    if (this.constructor !== other.constructor ||
+        this.name !== other.name ||
+        this.size !== other.size) {
+      return false;
+    }
+
+    var thisFieldKeys = Object.keys(this.fields);
+    var otherFieldKeys = Object.keys(other.fields);
+    if (thisFieldKeys.length !== otherFieldKeys.length) {
+      return false;
+    }
+
+    thisFieldKeys = thisFieldKeys.sort();
+    otherFieldKeys = otherFieldKeys.sort();
+
+    for (var i = 0; i < thisFieldKeys.length; ++i) {
+      var thisFieldKey = thisFieldKeys[i];
+      var otherFieldKey = otherFieldKeys[i];
+      if (thisFieldKey !== otherFieldKey) {
+        return false;
+      }
+
+      var thisFieldValue = this.fields[thisFieldKey];
+      var otherFieldValue = other.fields[thisFieldKey];
+      if (!thisFieldValue.equals(otherFieldValue)) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   StructType.prototype.addField = function(name, type, offset) {
-    assert(offset >= 0);
-    assert(offset + type.sizeof() <= this.size);
-    assert(!this.fields.hasOwnProperty(name));
+    assert(offset >= 0, 'addField: offset ' + offset + ' < 0');
+    assert(offset + type.sizeof() <= this.size,
+           'addField: offset ' + offset + ' > size');
+    assert(!this.fields.hasOwnProperty(name),
+           'addField: field ' + name + ' already exists');
     this.fields[name] = new StructField(name, type, offset);
   };
 
   StructType.prototype.malloc = function() {
-    return self.call(malloc, this.sizeof());
+    return malloc(this.sizeof());
   };
 
   //// FunctionType ////////////////////////////////////////////////////////////
@@ -164,6 +268,7 @@ var nacl={};
   }
 
   FunctionType.prototype = new Type();
+  FunctionType.prototype.constructor = FunctionType;
 
   FunctionType.prototype.sizeof = function() {
     return 4;
@@ -178,9 +283,32 @@ var nacl={};
     return s;
   };
 
+  FunctionType.prototype.equals = function(other) {
+    if (this === other) {
+      return true;
+    }
+
+    if (this.constructor !== other.constructor ||
+        !this.retType.equals(other.retType)) {
+      return false;
+    }
+
+    if (this.argTypes.length !== other.argTypes.length) {
+      return false;
+    }
+
+    for (var i = 0; i < this.argTypes.length; ++i) {
+      if (!this.argTypes[i].equals(other.argTypes[i])) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   //// PepperType //////////////////////////////////////////////////////////////
   function PepperType(name, jsPrototype) {
-    Type();
+    Type.call(this);
     this.name = name;
     this.jsPrototype = jsPrototype;
   }
@@ -193,6 +321,38 @@ var nacl={};
 
   PepperType.prototype.toString = function() {
     return this.name;
+  };
+
+  PepperType.prototype.equals = function(other) {
+    if (this === other) {
+      return true;
+    }
+
+    return this.constructor === other.constructor &&
+           this.name === other.name &&
+           this.jsPrototype === other.jsPrototype;
+  };
+
+  //// AliasType ///////////////////////////////////////////////////////////////
+  function AliasType(name, type) {
+    Type.call(this);
+    this.name = name;
+    this.type = type;
+  }
+
+  AliasType.prototype = new Type();
+  AliasType.prototype.constructor = AliasType;
+  AliasType.prototype.sizeof = function() { return this.type.sizeof(); }
+  AliasType.prototype.toString = function() { return this.name; }
+  AliasType.prototype.isPrimitive = function() { return this.type.isPrimitive(); }
+  AliasType.prototype.isPointer = function() { return this.type.isPointer(); }
+  AliasType.prototype.isInt = function() { return this.type.isInt_; };
+  AliasType.prototype.isSigned = function() { return this.type.isSigned_; };
+
+  AliasType.prototype.equals = function(other) {
+    return this.constructor === other.constructor &&
+           this.name === other.name &&
+           this.type.equals(other.type);
   };
 
   // Handle
@@ -248,7 +408,8 @@ var nacl={};
 
     // Quick sanity check.
     this.types.forEach(function(funcType) {
-      assert(funcType instanceof FunctionType);
+      assert(funcType instanceof FunctionType,
+             'CFunction: expected FunctionType');
     });
   }
 
@@ -262,7 +423,7 @@ var nacl={};
     // Display helpful warning.
     var msg;
     msg = 'No overload found for call "' + this.name + '(';
-    msg += args.join(', ');
+    msg += Array.prototype.join.call(args, ', ');
     msg += ')".\n';
     msg += "Possibilities:\n";
     for (var i = 0; i < this.types.length; ++i) {
@@ -286,62 +447,61 @@ var nacl={};
                value <=  9223372036854775807) {
       return int64;
     } else {
-      assert(value > 0);
+      assert(value > 0, 'getIntType: Expected uint64. ' + value + ' <= 0.');
       return uint64;
     }
   };
 
   CFunction.canCoercePointer = function(fromType, toType) {
-    assert(fromType instanceof PointerType);
-    assert(toType instanceof PointerType);
+    assert(fromType.isPointer(),
+           'canCoercePointer: expected pointer, not ' + fromType);
+    assert(toType.isPointer(),
+           'canCoercePointer: expected pointer, not ' + toType);
     // For now, we can only coerce pointers to void*. At some point, C++
     // inheritance could be supported as well.
     if (toType !== void_p) {
-      console.log('Can only coerce to void*, not ' + toType + '.');
+      //console.log('Can only coerce to void*, not ' + toType + '.');
       return false;
     }
     return true;
   };
 
   CFunction.canCoercePrimitive = function(fromType, toType) {
-    assert(fromType instanceof PrimitiveType);
-    assert(toType instanceof PrimitiveType);
+    assert(fromType.isPrimitive(),
+           'canCoercePrimitive: expected primitive, not ' + fromType);
+    assert(toType.isPrimitive(),
+           'canCoercePrimitive: expected primitive, not ' + toType);
 
-    if (fromType.isInt === toType.isInt) {
-      if (fromType.isInt) {
+    if (fromType.isInt() === toType.isInt()) {
+      if (fromType.isInt()) {
         // Both ints.
         if (fromType.sizeof() > toType.sizeof()) {
-          console.log('Argument type is too large: ' + fromType + ' > ' +
-                      toType + '.');
+          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
           return false;
         } else if (fromType.sizeof() === toType.sizeof() &&
-                   fromType.isSigned !== toType.isSigned) {
-          console.log('Signed/unsigned mismatch: ' + fromType + ', ' +
-                      toType + '.');
+                   fromType.isSigned() !== toType.isSigned()) {
+          // console.log('Signed/unsigned mismatch: ' + fromType + ', ' + toType + '.');
           return false;
         }
       } else {
         // Both floats.
         if (fromType.sizeof() > toType.sizeof()) {
-          console.log('Argument type is too large: ' + fromType + ' > ' +
-                      toType + '.');
+          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
           return false;
         }
       }
     } else {
       // One int, one float.
-      if (fromType.isInt) {
+      if (fromType.isInt()) {
         // From int to float.
         if ((toType === float32 && fromType.sizeof() >= 4) ||
             (toType === float64 && fromType.sizeof() == 8)) {
-          console.log('Argument type is too large: ' + fromType + ' > ' +
-                      toType + '.');
+          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
           return false;
         }
       } else {
         // From float to int.
-        console.log('Implicit cast from float to int: ' + fromType + ' => ' +
-                    toType + '.');
+        // console.log('Implicit cast from float to int: ' + fromType + ' => ' + toType + '.');
         return false;
       }
     }
@@ -391,13 +551,19 @@ var nacl={};
     return true;
   };
 
+  function makeFunction(name, types) {
+    var cfunc = new CFunction(name, types);
+    return function() {
+      return call(cfunc, arguments);
+    };
+  }
+
 
   // TODO don't use global...?
   var messages = [];
 
-  function call(func) {
-    assert(func instanceof CFunction);
-    var args = Array.prototype.slice.call(arguments, 1);
+  function call(func, args) {
+    assert(func instanceof CFunction, 'call: Expected func to be CFunction');
     // Find the correct overload.
     var funcType = func.findOverload(args);
     assert(funcType !== null);
@@ -410,10 +576,7 @@ var nacl={};
       ret: handle.id
     };
     for (var i = 0; i < funcType.argTypes.length; ++i) {
-      // TODO check argument against argType.
-      var arg = arguments[i + 1];
-      assert(arg !== undefined);
-
+      var arg = args[i];
       var value;
       if (arg instanceof Handle) {
         value = arg.id;
@@ -429,15 +592,15 @@ var nacl={};
   };
 
   function commit() {
-    assert(arguments.length > 0);
+    assert(arguments.length > 0, 'commit: Expected callback.');
 
     var callback = arguments[arguments.length - 1];
-    assert(callback instanceof Function);
+    assert(callback instanceof Function, 'commit: callback is not Function.');
 
     var args = Array.prototype.slice.call(arguments, 0, -1);
 
     var serializeHandle = function(handle) {
-      assert(handle instanceof Handle);
+      assert(handle instanceof Handle, 'commit: handle is not a Handle.');
       return [handle.id, handle.type.id];
     };
 
@@ -468,43 +631,6 @@ var nacl={};
     });
   };
 
-  // Built-in types. These should be auto-generated so they match NaCl, but for
-  // now just generate them.
-  // TODO intern new types?
-  var void = makeType(1, new VoidType());
-  var int8 = makeType(2, new PrimitiveType('int8', 1, true, true));
-  var uint8 = makeType(3, new PrimitiveType('uint8', 1, false, true));
-  var int16 = makeType(4, new PrimitiveType('int16', 2, true, true));
-  var uint16 = makeType(5, new PrimitiveType('uint16', 2, false, true));
-  var int32 = makeType(6, new PrimitiveType('int32', 4, true, true));
-  var uint32 = makeType(7, new PrimitiveType('uint32', 4, false, true));
-  var int64 = makeType(8, new PrimitiveType('int64', 8, true, true));
-  var uint64 = makeType(9, new PrimitiveType('uint64', 8, false, true));
-  var float32 = makeType(10, new PrimitiveType('float32', 4, false, false));
-  var float64 = makeType(11, new PrimitiveType('float64', 8, false, false));
-  // TODO alias size_t => uint32?
-  var size_t = makeType(12, new PrimitiveType('size_t', 4, false, true));
-
-  var void_p = makeType(13, new PointerType(void));
-  var uint8_p = makeType(14, new PointerType(uint8));
-  var uint32_p = makeType(15, new PointerType(uint32));
-
-  var arrayBuffer = makeType(16, new PepperType('ArrayBuffer', ArrayBuffer));
-  var array = makeType(17, new PepperType('Array', Array));
-  var dictionary = makeType(18, new PepperType('Dictionary', Object));
-  var mallocType = makeType(19, new FunctionType(void_p, size_t));
-  var memsetType = makeType(20, new FunctionType(void, void_p, int32, size_t));
-  var memcpyType = makeType(21, new FunctionType(void, void_p, void_p, size_t));
-  var mapArrayBufferType = makeType(22, new FunctionType(void_p, arrayBuffer));
-  var addVoidpInt32Type = makeType(23, new FunctionType(void_p, void_p, int32));
-
-  // Built-in functions.
-  var malloc = new CFunction('malloc', mallocType);
-  var memset = new CFunction('memset', memsetType);
-  var memcpy = new CFunction('memcpy', memcpyType);
-  var mapArrayBuffer = new CFunction('mapArrayBuffer', mapArrayBufferType);
-  var add = new CFunction('add', addVoidpInt32Type);
-  //var set = new CFunction('set', []);
 
   // NaCl stuff...
   var nextCallbackId = 1;
@@ -519,6 +645,7 @@ var nacl={};
 
     msg.id = id;
     if (moduleLoaded) {
+      console.log(JSON.stringify(msg));
       moduleEl.postMessage(msg);
     } else {
       queuedMessages.push(msg);
@@ -589,37 +716,94 @@ var nacl={};
     document.body.appendChild(listenerEl);
   });
 
+  var makeAliasType = makeMakeTypeFunction(AliasType);
+  var makePepperType = makeMakeTypeFunction(PepperType);
+  var makePointerType = makeMakeTypeFunction(PointerType);
+  var makePrimitiveType = makeMakeTypeFunction(PrimitiveType);
+  var makeStructType = makeMakeTypeFunction(StructType);
+  var makeVoidType = makeMakeTypeFunction(VoidType);
+  var makeFunctionType = makeMakeTypeFunction(FunctionType);
+
+  // Built-in types. These should be auto-generated so they match NaCl, but for
+  // now just generate them.
+  // TODO intern new types?
+  var void_ = makeVoidType(1);
+  var int8 = makePrimitiveType(2, 'int8', 1, true, true);
+  var uint8 = makePrimitiveType(3, 'uint8', 1, false, true);
+  var int16 = makePrimitiveType(4, 'int16', 2, true, true);
+  var uint16 = makePrimitiveType(5, 'uint16', 2, false, true);
+  var int32 = makePrimitiveType(6, 'int32', 4, true, true);
+  var uint32 = makePrimitiveType(7, 'uint32', 4, false, true);
+  var int64 = makePrimitiveType(8, 'int64', 8, true, true);
+  var uint64 = makePrimitiveType(9, 'uint64', 8, false, true);
+  var float32 = makePrimitiveType(10, 'float32', 4, false, false);
+  var float64 = makePrimitiveType(11, 'float64', 8, false, false);
+  var size_t = makeAliasType(12, 'size_t', uint32);
+
+  var void_p = makePointerType(13, void_);
+  var uint8_p = makePointerType(14, uint8);
+  var uint8_pp = makePointerType(15, uint8_p);
+  var uint32_p = makePointerType(16, uint32);
+
+  var arrayBuffer = makePepperType(17, 'ArrayBuffer', ArrayBuffer);
+  var array = makePepperType(18, 'Array', Array);
+  var dictionary = makePepperType(19, 'Dictionary', Object);
+  var mallocType = makeFunctionType(20, void_p, size_t);
+  var memsetType = makeFunctionType(21, void_, void_p, int32, size_t);
+  var memcpyType = makeFunctionType(22, void_, void_p, void_p, size_t);
+  var mapArrayBufferType = makeFunctionType(23, void_p, arrayBuffer);
+  var addVoidpInt32Type = makeFunctionType(24, void_p, void_p, int32);
+  var setUint8pType = makeFunctionType(25, void_, uint8_pp, uint8_p);
+  var setUint32Type = makeFunctionType(26, void_, uint32_p, uint32);
+  var getUint8pType = makeFunctionType(27, uint8_p, uint8_pp);
+  var getUint32Type = makeFunctionType(28, uint32, uint32_p);
+
+  // Built-in functions.
+  var malloc = makeFunction('malloc', mallocType);
+  var memset = makeFunction('memset', memsetType);
+  var memcpy = makeFunction('memcpy', memcpyType);
+  var mapArrayBuffer = makeFunction('mapArrayBuffer', mapArrayBufferType);
+  var add = makeFunction('add', addVoidpInt32Type);
+  var set = makeFunction('set', [setUint8pType, setUint32Type]);
+  var get = makeFunction('get', [getUint8pType, getUint32Type]);
+
+  self.userTypeId = 29;
+
+
   // exported Types
-  self.void = void;
-  self.void_p = void_p;
-  self.int8 = int8;
-  self.uint8 = uint8;
-  self.int16 = int16;
-  self.uint16 = uint16;
-  self.int32 = int32;
-  self.uint32 = uint32;
-  self.int64 = int64;
-  self.uint64 = uint64;
+  self.array = array;
+  self.arrayBuffer = arrayBuffer;
+  self.dictionary = dictionary;
   self.float32 = float32;
   self.float64 = float64;
+  self.int16 = int16;
+  self.int32 = int32;
+  self.int64 = int64;
+  self.int8 = int8;
   self.size_t = size_t;
+  self.uint16 = uint16;
+  self.uint32_p = uint32_p;
+  self.uint32 = uint32;
+  self.uint64 = uint64;
   self.uint8_p = uint8_p;
   self.uint8_pp = uint8_pp;
-  self.uint32_p = uint32_p;
-  self.arrayBuffer = arrayBuffer;
-  self.array = array;
-  self.dictionary = dictionary;
+  self.uint8 = uint8;
+  self.void_p = void_p;
+  self.void = void_;
 
   // exported CFunctions
-  self.malloc = malloc;
-  self.memset = memset;
-  self.memcpy = memcpy;
-  self.mapArrayBuffer = mapArrayBuffer;
   self.add = add;
+  self.malloc = malloc;
+  self.mapArrayBuffer = mapArrayBuffer;
+  self.memcpy = memcpy;
+  self.memset = memset;
 
   // exported functions
+  self.commit = commit;
+  self.makeFunction = makeFunction;
+  self.makeFunctionType = makeFunctionType;
+  self.makePointerType = makePointerType;
   self.makeStructType = makeStructType;
-  self.call;
-  self.commit;
+  self.logTypes = logTypes;
 
 }).call(nacl);
