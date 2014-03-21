@@ -126,7 +126,7 @@ function compress(inputAb, level, bufferSize, callback) {
 
     var inputLeft = inputAb.byteLength - inputOffset;
     var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, bufferSize);
-    var inputSlice = nacl.mapArrayBuffer(ab);
+    var inputSlice = nacl.arrayBufferMap(ab);
 
     z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
     z_stream.fields.avail_in.set(stream, ab.byteLength);
@@ -135,13 +135,30 @@ function compress(inputAb, level, bufferSize, callback) {
 
     var flush = inputLeft < bufferSize ? Z_PARTIAL_FLUSH : Z_FINISH;
     var result = deflate(stream, flush);
-    var avail_in = z_stream.fields.avail_in.get(stream);
-    var avail_out = z_stream.fields.avail_out.get(stream);
+    var availIn = z_stream.fields.avail_in.get(stream);
+    var availOut = z_stream.fields.avail_out.get(stream);
+    var availUsed = nacl.sub(bufferSize, availOut);
+    var outputAb = nacl.arrayBufferCreate(availUsed);
+    var outputAbPtr = nacl.arrayBufferMap(outputAb);
+    nacl.memcpy(outputAbPtr, output, availUsed);
 
-    nacl.commit(result, avail_in, avail_out, stepLoop);
+    nacl.commit(result, availIn, availOut, outputAb, stepLoop);
   }
 
-  function stepLoop(result, avail_in, avail_out) {
+  function stepLoop(result, availIn, availOut, outputAb) {
+    console.log(result, availIn, availOut, outputAb);
+    if (result != Z_OK) {
+      return;
+    }
+
+    if (availIn === 0) {
+      // input underflow. Provide more input.
+    } else if (availOut === 0) {
+      // output overflow. Consume output and finish current input.
+    } else {
+      // Not possible...?
+      return;
+    }
   }
 }
 

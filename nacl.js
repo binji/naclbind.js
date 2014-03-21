@@ -751,23 +751,30 @@ var nacl={};
   var mallocType = makeFunctionType(20, void_p, size_t);
   var memsetType = makeFunctionType(21, void_, void_p, int32, size_t);
   var memcpyType = makeFunctionType(22, void_, void_p, void_p, size_t);
-  var mapArrayBufferType = makeFunctionType(23, void_p, arrayBuffer);
-  var addVoidpInt32Type = makeFunctionType(24, void_p, void_p, int32);
-  var setUint8pType = makeFunctionType(25, void_, uint8_pp, uint8_p);
-  var setUint32Type = makeFunctionType(26, void_, uint32_p, uint32);
-  var getUint8pType = makeFunctionType(27, uint8_p, uint8_pp);
-  var getUint32Type = makeFunctionType(28, uint32, uint32_p);
+  var addVoidpInt32Type = makeFunctionType(23, void_p, void_p, int32);
+  var setUint8pType = makeFunctionType(24, void_, uint8_pp, uint8_p);
+  var setUint32Type = makeFunctionType(25, void_, uint32_p, uint32);
+  var getUint8pType = makeFunctionType(26, uint8_p, uint8_pp);
+  var getUint32Type = makeFunctionType(27, uint32, uint32_p);
+  var subInt32Type = makeFunctionType(28, int32, int32, int32);
+  var subUint32Type = makeFunctionType(29, uint32, uint32, uint32);
+
+  var arrayBufferCreateType = makeFunctionType(30, arrayBuffer, uint32);
+  var arrayBufferMapType = makeFunctionType(31, void_p, arrayBuffer);
+  var arrayBufferUnmapType = makeFunctionType(32, void_, arrayBuffer);
 
   // Built-in functions.
-  var malloc = makeFunction('malloc', mallocType);
-  var memset = makeFunction('memset', memsetType);
-  var memcpy = makeFunction('memcpy', memcpyType);
-  var mapArrayBuffer = makeFunction('mapArrayBuffer', mapArrayBufferType);
   var add = makeFunction('add', addVoidpInt32Type);
-  var set = makeFunction('set', [setUint8pType, setUint32Type]);
+  var arrayBufferCreate = makeFunction('arrayBufferCreate', arrayBufferCreateType);
+  var arrayBufferMap = makeFunction('arrayBufferMap', arrayBufferMapType);
   var get = makeFunction('get', [getUint8pType, getUint32Type]);
+  var malloc = makeFunction('malloc', mallocType);
+  var memcpy = makeFunction('memcpy', memcpyType);
+  var memset = makeFunction('memset', memsetType);
+  var set = makeFunction('set', [setUint8pType, setUint32Type]);
+  var sub = makeFunction('sub', [subInt32Type, subUint32Type]);
 
-  self.userTypeId = 29;
+  self.userTypeId = 33;
 
 
   // exported Types
@@ -793,10 +800,12 @@ var nacl={};
 
   // exported CFunctions
   self.add = add;
+  self.arrayBufferCreate = arrayBufferCreate;
+  self.arrayBufferMap = arrayBufferMap;
   self.malloc = malloc;
-  self.mapArrayBuffer = mapArrayBuffer;
   self.memcpy = memcpy;
   self.memset = memset;
+  self.sub = sub;
 
   // exported functions
   self.commit = commit;

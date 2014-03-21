@@ -266,6 +266,15 @@ class FunctionType : public Type {
     return result;
   }
 
+  Type* ret_type() { return ret_type_; }
+
+  Type* GetArgType(size_t ix) {
+    if (ix >= arg_types_.size()) {
+      return NULL;
+    }
+    return arg_types_[ix];
+  }
+
  private:
   Type* ret_type_;
   std::vector<Type*> arg_types_;
@@ -311,12 +320,16 @@ FunctionType TYPE_memset(21, &TYPE_void, &TYPE_void_p, &TYPE_int32,
                          &TYPE_size_t);
 FunctionType TYPE_memcpy(22, &TYPE_void, &TYPE_void_p, &TYPE_void_p,
                          &TYPE_size_t);
-FunctionType TYPE_mapArrayBuffer(23, &TYPE_void_p, &TYPE_arrayBuffer);
-FunctionType TYPE_add_void_p_int32(24, &TYPE_void_p, &TYPE_void_p, &TYPE_int32);
-FunctionType TYPE_set_uint8_p(25, &TYPE_void, &TYPE_uint8_pp, &TYPE_uint8_p);
-FunctionType TYPE_set_uint32(26, &TYPE_void, &TYPE_uint32_p, &TYPE_uint32);
-FunctionType TYPE_get_uint8_p(27, &TYPE_uint8_p, &TYPE_uint8_pp);
-FunctionType TYPE_get_uint32(28, &TYPE_uint32, &TYPE_uint32_p);
+FunctionType TYPE_add_void_p_int32(23, &TYPE_void_p, &TYPE_void_p, &TYPE_int32);
+FunctionType TYPE_set_uint8_p(24, &TYPE_void, &TYPE_uint8_pp, &TYPE_uint8_p);
+FunctionType TYPE_set_uint32(25, &TYPE_void, &TYPE_uint32_p, &TYPE_uint32);
+FunctionType TYPE_get_uint8_p(26, &TYPE_uint8_p, &TYPE_uint8_pp);
+FunctionType TYPE_get_uint32(27, &TYPE_uint32, &TYPE_uint32_p);
+FunctionType TYPE_sub_int32(28, &TYPE_int32, &TYPE_int32, &TYPE_int32);
+FunctionType TYPE_sub_uint32(29, &TYPE_uint32, &TYPE_uint32, &TYPE_uint32);
+FunctionType TYPE_arrayBufferCreate(30, &TYPE_arrayBuffer, &TYPE_uint32);
+FunctionType TYPE_arrayBufferMap(31, &TYPE_void_p, &TYPE_arrayBuffer);
+FunctionType TYPE_arrayBufferUnmap(32, &TYPE_void, &TYPE_arrayBuffer);
 
 StructField TYPE_z_stream_fields[] = {
   {"next_in", &TYPE_uint8_p, offsetof(z_stream, next_in)},
@@ -327,12 +340,12 @@ StructField TYPE_z_stream_fields[] = {
   {"total_out", &TYPE_uint32, offsetof(z_stream, total_out)},
 };
 StructType TYPE_z_stream(
-    18, "z_stream", sizeof(z_stream),
+    33, "z_stream", sizeof(z_stream),
     sizeof(TYPE_z_stream_fields)/sizeof(TYPE_z_stream_fields[0]),
     TYPE_z_stream_fields);
-PointerType TYPE_z_stream_p(30, &TYPE_z_stream);
+PointerType TYPE_z_stream_p(34, &TYPE_z_stream);
 
-FunctionType TYPE_deflate(31, &TYPE_int32, &TYPE_z_stream_p, &TYPE_int32);
+FunctionType TYPE_deflate(35, &TYPE_int32, &TYPE_z_stream_p, &TYPE_int32);
 
 class Instance : public pp::Instance {
  public:
@@ -364,7 +377,7 @@ class Instance : public pp::Instance {
       ARRAY_INT(handle, 0, id);
       ARRAY_INT(handle, 1, type_id);
 
-      bool is_primitive = true;
+      bool unwrapped = true;
 
       if (type_id == TYPE_int8.id()) {
         values.Set(i, *(int8_t*)ptr);
@@ -388,13 +401,15 @@ class Instance : public pp::Instance {
         values.Set(i, *(double*)ptr);
       //} else if (type_id == TYPE_size_t.id()) {
       //  values.Set(i, *(size_t*)ptr);
+      } else if (type_id == TYPE_arrayBuffer.id()) {
+        values.Set(i, pp::Var(pp::PASS_REF, *((PP_Var*)ptr)));
       } else {
-        is_primitive = false;
+        unwrapped = false;
         // Not a primitive value, send the id.
         values.Set(i, id);
       }
 
-      if (is_primitive) {
+      if (unwrapped) {
         DestroyHandle(id);
       }
     }
@@ -447,6 +462,8 @@ class Instance : public pp::Instance {
     if (cmd == "add") {
       CHECK_TYPE(cmd.c_str(), type, TYPE_add_void_p_int32);
       Handle_add(ret, args);
+    } else if (cmd == "arrayBufferCreate") {
+      Handle_arrayBufferCreate(ret, args);
     } else if (cmd == "deflate") {
       CHECK_TYPE(cmd.c_str(), type, TYPE_deflate);
       Handle_deflate(ret, args);
@@ -458,9 +475,9 @@ class Instance : public pp::Instance {
     } else if (cmd == "malloc") {
       CHECK_TYPE(cmd.c_str(), type, TYPE_malloc);
       Handle_malloc(ret, args);
-    } else if (cmd == "mapArrayBuffer") {
-      CHECK_TYPE(cmd.c_str(), type, TYPE_mapArrayBuffer);
-      Handle_mapArrayBuffer(ret, args);
+    } else if (cmd == "arrayBufferMap") {
+      CHECK_TYPE(cmd.c_str(), type, TYPE_arrayBufferMap);
+      Handle_arrayBufferMap(ret, args);
     } else if (cmd == "memcpy") {
       CHECK_TYPE(cmd.c_str(), type, TYPE_memcpy);
       Handle_memcpy(ret, args);
@@ -469,6 +486,8 @@ class Instance : public pp::Instance {
       Handle_memset(ret, args);
     } else if (cmd == "set") {
       Handle_set(type, ret, args);
+    } else if (cmd == "sub") {
+      Handle_sub(type, ret, args);
     } else {
       printf("Unknown cmd: \"%s\".\n", cmd.c_str());
     }
@@ -480,6 +499,14 @@ class Instance : public pp::Instance {
     void* result = ((uint8_t*)ptr) + addend;
     RegisterHandle(ret_handle, result);
     printf("add(%p, %d) => %p (%d)\n", ptr, addend, result, ret_handle);
+  }
+
+  void Handle_arrayBufferCreate(Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_INT(args, 1, length);
+    pp::VarArrayBuffer array_buffer(length);
+    PP_Var array_buffer_var = array_buffer.Detach();
+    RegisterHandle(ret_handle, new PP_Var(array_buffer_var));
+    printf("arrayBufferCreate(%d) => %d\n", length, ret_handle);
   }
 
   void Handle_deflateInit(Handle ret_handle, const pp::VarArray& args) {
@@ -503,18 +530,18 @@ class Instance : public pp::Instance {
 
   void Handle_get(TypeId id, Handle ret_handle, const pp::VarArray& args) {
     ARRAY_HANDLE(args, 0, ptr);
-    Type* type = Type::Get(id);
+    FunctionType* type = static_cast<FunctionType*>(Type::Get(id));
 
     if (id == TYPE_get_uint8_p.id()) {
-      ARRAY_HANDLE(args, 1, value);
       uint8_t* result = *(uint8_t**)ptr;
       RegisterHandle(ret_handle, result);
-      printf("*(%s)%p => %p\n", type->ToString().c_str(), ptr, result);
+      printf("*(%s)%p => %p\n", type->GetArgType(0)->ToString().c_str(), ptr,
+             result);
     } else if (id == TYPE_get_uint32.id()) {
-      ARRAY_INT(args, 1, value);
       uint32_t result = *(uint32_t*)ptr;
       RegisterHandle(ret_handle, new uint32_t(result));
-      printf("*(%s)%p => %u\n", type->ToString().c_str(), ptr, result);
+      printf("*(%s)%p => %u\n", type->GetArgType(0)->ToString().c_str(), ptr,
+             result);
     } else {
       printf("Unexpected function type: %d (%s)\n", id,
              type->ToString().c_str());
@@ -528,11 +555,11 @@ class Instance : public pp::Instance {
     printf("malloc(%d) => %p (%d)\n", size, result, ret_handle);
   }
 
-  void Handle_mapArrayBuffer(Handle ret_handle, const pp::VarArray& args) {
+  void Handle_arrayBufferMap(Handle ret_handle, const pp::VarArray& args) {
     ARRAY_ARRAYBUFFER(args, 0, buf);
     void* ptr = buf.Map();
     RegisterHandle(ret_handle, ptr);
-    printf("mapArrayBuffer(%lld) => %p (%d)\n", buf.pp_var().value.as_id, ptr,
+    printf("arrayBufferMap(%lld) => %p (%d)\n", buf.pp_var().value.as_id, ptr,
            ret_handle);
   }
 
@@ -554,17 +581,37 @@ class Instance : public pp::Instance {
 
   void Handle_set(TypeId id, Handle ret_handle, const pp::VarArray& args) {
     ARRAY_HANDLE(args, 0, ptr);
-    Type* type = Type::Get(id);
+    FunctionType* type = static_cast<FunctionType*>(Type::Get(id));
 
     if (id == TYPE_set_uint8_p.id()) {
       ARRAY_HANDLE(args, 1, value);
       *(uint8_t**)ptr = (uint8_t*)value;
-      printf("*(%s)%p = %p\n", type->ToString().c_str(), ptr, value);
+      printf("*(%s)%p = %p\n", type->GetArgType(0)->ToString().c_str(), ptr,
+             value);
     } else if (id == TYPE_set_uint32.id()) {
       ARRAY_INT(args, 1, value);
       *(uint32_t*)ptr = value;
-      printf("*(%s)%p = %d\n", type->ToString().c_str(), ptr, value);
+      printf("*(%s)%p = %d\n", type->GetArgType(0)->ToString().c_str(), ptr,
+             value);
     } else {
+      printf("Unexpected function type: %d (%s)\n", id,
+             type->ToString().c_str());
+    }
+  }
+
+  void Handle_sub(TypeId id, Handle ret_handle, const pp::VarArray& args) {
+    ARRAY_INT(args, 0, minuend);
+    ARRAY_INT(args, 1, subtrahend);
+    if (id == TYPE_sub_int32.id()) {
+      int32_t result = minuend - subtrahend;
+      RegisterHandle(ret_handle, new int32_t(result));
+      printf("sub(%d, %d) => %d (%d)\n", minuend, subtrahend, result, ret_handle);
+    } else if (id == TYPE_sub_uint32.id()) {
+      uint32_t result = (uint32_t)minuend - (uint32_t)subtrahend;
+      RegisterHandle(ret_handle, new uint32_t(result));
+      printf("sub(%u, %u) => %u (%d)\n", minuend, subtrahend, result, ret_handle);
+    } else {
+      FunctionType* type = static_cast<FunctionType*>(Type::Get(id));
       printf("Unexpected function type: %d (%s)\n", id,
              type->ToString().c_str());
     }
