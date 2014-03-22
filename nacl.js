@@ -573,6 +573,7 @@ var nacl={};
       cmd: func.name,
       type: funcType.id,
       args: [],
+      argIsHandle: [],
       ret: handle.id
     };
     for (var i = 0; i < funcType.argTypes.length; ++i) {
@@ -584,6 +585,7 @@ var nacl={};
         value = arg;
       }
       message.args.push(value);
+      message.argIsHandle.push(arg instanceof Handle);
     }
 
     messages.push(message);

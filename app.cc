@@ -35,96 +35,89 @@
 #pragma warning(disable : 4355)
 #endif
 
-#define VAR_DICTIONARY(var, newvar)                                       \
-  if (!var.is_dictionary()) {                                             \
-    printf("%s:%d: " #var " is not a dictionary.\n", __FILE__, __LINE__); \
-    return;                                                               \
-  }                                                                       \
+#define ERROR(msg, ...) \
+  fprintf(stderr, "%s:%d: " msg "\n", __FILE__, __LINE__, __VA_ARGS__)
+
+void VarTypeError(const char* file, int line, const char* var_name,
+                  const char* expected_type) {
+  fprintf(stderr, "%s:%d: %s is not of type %s.\n", file, line, var_name,
+          expected_type);
+}
+
+#define CHECK_VARTYPE(var, var_name, type)             \
+  if (!var.is_##type()) {                              \
+    VarTypeError(__FILE__, __LINE__, var_name, #type); \
+    return;                                            \
+  }
+
+#define VAR_DICTIONARY(var, newvar)     \
+  CHECK_VARTYPE(var, #var, dictionary); \
   pp::VarDictionary newvar(var)
 
-#define DICT_INT(var, key)                                            \
-  int32_t key;                                                        \
-  do {                                                                \
-    pp::Var tempvar(var.Get(#key));                                   \
-    if (!tempvar.is_int()) {                                          \
-      printf("%s:%d: " #key " is not an int.\n", __FILE__, __LINE__); \
-      return;                                                         \
-    }                                                                 \
-    key = tempvar.AsInt();                                            \
+#define DICT_INT(var, key)             \
+  int32_t key;                         \
+  do {                                 \
+    pp::Var tempvar(var.Get(#key));    \
+    CHECK_VARTYPE(tempvar, #key, int); \
+    key = tempvar.AsInt();             \
   } while (0)
 
-#define DICT_STRING(var, key)                                            \
-  std::string key;                                                       \
-  do {                                                                   \
-    pp::Var tempvar(var.Get(#key));                                      \
-    if (!tempvar.is_string()) {                                          \
-      printf("%s:%d: " #key " is not an string.\n", __FILE__, __LINE__); \
-      return;                                                            \
-    }                                                                    \
-    key = tempvar.AsString();                                            \
+#define DICT_STRING(var, key)             \
+  std::string key;                        \
+  do {                                    \
+    pp::Var tempvar(var.Get(#key));       \
+    CHECK_VARTYPE(tempvar, #key, string); \
+    key = tempvar.AsString();             \
   } while (0)
 
-#define DICT_ARRAY(var, key)                                            \
-  pp::VarArray key;                                                     \
-  do {                                                                  \
-    pp::Var tempvar(var.Get(#key));                                     \
-    if (!tempvar.is_array()) {                                          \
-      printf("%s:%d: " #key " is not an array.\n", __FILE__, __LINE__); \
-      return;                                                           \
-    }                                                                   \
-    key = pp::VarArray(tempvar);                                        \
+#define DICT_ARRAY(var, key)             \
+  pp::VarArray key;                      \
+  do {                                   \
+    pp::Var tempvar(var.Get(#key));      \
+    CHECK_VARTYPE(tempvar, #key, array); \
+    key = pp::VarArray(tempvar);         \
   } while (0)
 
-#define ARRAY_INT(var, ix, newvar)                                           \
-  int32_t newvar;                                                            \
-  do {                                                                       \
-    pp::Var tempvar(var.Get(ix));                                            \
-    if (!tempvar.is_int()) {                                                 \
-      printf("%s:%d: Argument %d is not an int.\n", __FILE__, __LINE__, ix); \
-      return;                                                                \
-    }                                                                        \
-    newvar = tempvar.AsInt();                                                \
+#define ARRAY_INT(var, ix, newvar)                \
+  int32_t newvar;                                 \
+  do {                                            \
+    pp::Var tempvar(var.Get(ix));                 \
+    CHECK_VARTYPE(tempvar, "Argument " #ix, int); \
+    newvar = tempvar.AsInt();                     \
   } while (0)
 
-#define ARRAY_HANDLE(var, ix, newvar)                                  \
-  void* newvar;                                                        \
-  do {                                                                 \
-    ARRAY_INT(var, ix, newvar##int);                                   \
-    newvar = GetHandle(newvar##int);                                   \
-    if (!newvar) {                                                     \
-      printf("%s:%d: Argument %d is not an valid handle.\n", __FILE__, \
-             __LINE__, ix);                                            \
-      return;                                                          \
-    }                                                                  \
+#define ARRAY_HANDLE(var, ix, newvar)                  \
+  void* newvar;                                        \
+  do {                                                 \
+    ARRAY_INT(var, ix, newvar##int);                   \
+    newvar = GetHandle(newvar##int);                   \
+    if (!newvar) {                                     \
+      ERROR("Argument %d is not a valid handle.", ix); \
+      return;                                          \
+    }                                                  \
   } while (0)
 
-#define ARRAY_ARRAY(var, ix, newvar)                                           \
-  pp::VarArray newvar;                                                         \
-  do {                                                                         \
-    pp::Var tempvar(var.Get(ix));                                              \
-    if (!tempvar.is_array()) {                                                 \
-      printf("%s:%d: Argument %d is not an array.\n", __FILE__, __LINE__, ix); \
-      return;                                                                  \
-    }                                                                          \
-    newvar = pp::VarArray(tempvar);                                            \
+#define ARRAY_ARRAY(var, ix, newvar)                \
+  pp::VarArray newvar;                              \
+  do {                                              \
+    pp::Var tempvar(var.Get(ix));                   \
+    CHECK_VARTYPE(tempvar, "Argument " #ix, array); \
+    newvar = pp::VarArray(tempvar);                 \
   } while (0)
 
-#define ARRAY_ARRAYBUFFER(var, ix, newvar)                             \
-  pp::VarArrayBuffer newvar;                                           \
-  do {                                                                 \
-    pp::Var tempvar(var.Get(ix));                                      \
-    if (!tempvar.is_array_buffer()) {                                  \
-      printf("%s:%d: Argument %d is not an array buffer.\n", __FILE__, \
-             __LINE__, ix);                                            \
-      return;                                                          \
-    }                                                                  \
-    newvar = pp::VarArrayBuffer(tempvar);                              \
+#define ARRAY_ARRAYBUFFER(var, ix, newvar)                 \
+  pp::VarArrayBuffer newvar;                               \
+  do {                                                     \
+    pp::Var tempvar(var.Get(ix));                          \
+    CHECK_VARTYPE(tempvar, "Argument " #ix, array_buffer); \
+    newvar = pp::VarArrayBuffer(tempvar);                  \
   } while (0)
 
-#define CHECK_TYPE(cmd, type, expected)                                      \
-  if (type != expected.id()) {                                               \
-    printf("%s:%d: Type mismatch calling %s, %d != %d (%s).\n", __FILE__,    \
-           __LINE__, cmd, type, expected.id(), expected.ToString().c_str()); \
+#define CHECK_TYPE(type, expected)                                         \
+  if (type != &expected) {                                                 \
+    ERROR("Type mismatch calling %s, expected %s got %s.\n", __FUNCTION__, \
+          expected.ToString().c_str(), type->ToString().c_str());          \
+    return;                                                                \
   }
 
 typedef int32_t TypeId;
@@ -138,7 +131,7 @@ class Type {
   explicit Type(TypeId id) : id_(id) {
     TypeMap::iterator iter = g_type_map.find(id);
     if (iter != g_type_map.end()) {
-      printf("Type id %d already used!\n", id);
+      ERROR("Type id %d already used!\n", id);
       return;
     }
 
@@ -214,8 +207,7 @@ class StructType : public Type {
 
 class FunctionType : public Type {
  public:
-  FunctionType(TypeId id, Type* ret_type)
-      : Type(id), ret_type_(ret_type) {}
+  FunctionType(TypeId id, Type* ret_type) : Type(id), ret_type_(ret_type) {}
 
   FunctionType(TypeId id, Type* ret_type, Type* arg0)
       : Type(id), ret_type_(ret_type) {
@@ -332,26 +324,96 @@ FunctionType TYPE_arrayBufferMap(31, &TYPE_void_p, &TYPE_arrayBuffer);
 FunctionType TYPE_arrayBufferUnmap(32, &TYPE_void, &TYPE_arrayBuffer);
 
 StructField TYPE_z_stream_fields[] = {
-  {"next_in", &TYPE_uint8_p, offsetof(z_stream, next_in)},
-  {"avail_in", &TYPE_uint32, offsetof(z_stream, avail_in)},
-  {"total_in", &TYPE_uint32, offsetof(z_stream, total_in)},
-  {"next_out", &TYPE_uint8_p, offsetof(z_stream, next_out)},
-  {"avail_out", &TYPE_uint32, offsetof(z_stream, avail_out)},
-  {"total_out", &TYPE_uint32, offsetof(z_stream, total_out)},
-};
-StructType TYPE_z_stream(
-    33, "z_stream", sizeof(z_stream),
-    sizeof(TYPE_z_stream_fields)/sizeof(TYPE_z_stream_fields[0]),
-    TYPE_z_stream_fields);
+    {"next_in", &TYPE_uint8_p, offsetof(z_stream, next_in)},
+    {"avail_in", &TYPE_uint32, offsetof(z_stream, avail_in)},
+    {"total_in", &TYPE_uint32, offsetof(z_stream, total_in)},
+    {"next_out", &TYPE_uint8_p, offsetof(z_stream, next_out)},
+    {"avail_out", &TYPE_uint32, offsetof(z_stream, avail_out)},
+    {"total_out", &TYPE_uint32, offsetof(z_stream, total_out)}, };
+StructType TYPE_z_stream(33, "z_stream", sizeof(z_stream),
+                         sizeof(TYPE_z_stream_fields) /
+                             sizeof(TYPE_z_stream_fields[0]),
+                         TYPE_z_stream_fields);
 PointerType TYPE_z_stream_p(34, &TYPE_z_stream);
 
 FunctionType TYPE_deflate(35, &TYPE_int32, &TYPE_z_stream_p, &TYPE_int32);
 
+
+typedef int32_t Handle;
+typedef std::map<Handle, void*> HandleMap;
+HandleMap g_handle_map;
+
+void* GetHandle(Handle handle) {
+  HandleMap::iterator iter = g_handle_map.find(handle);
+  if (iter == g_handle_map.end()) return NULL;
+  return iter->second;
+}
+
+void RegisterHandle(Handle handle, void* pointer) {
+  HandleMap::iterator iter = g_handle_map.find(handle);
+  if (iter != g_handle_map.end()) {
+    ERROR("RegisterHandle: handle %d is already registered.\n", handle);
+    return;
+  }
+
+  g_handle_map.insert(HandleMap::value_type(handle, pointer));
+}
+
+void DestroyHandle(Handle handle) {
+  HandleMap::iterator iter = g_handle_map.find(handle);
+  if (iter == g_handle_map.end()) {
+    ERROR("DestroyHandle: handle %d doesn't exist.\n", handle);
+    return;
+  }
+
+  g_handle_map.erase(iter);
+}
+
+
+#if 0
+class CommandProcessor {
+ public:
+  CommandProcessor(FunctionType* func_type, const pp::VarArray& args,
+                   const pp::VarArray& arg_is_handle)
+      : func_type_(func_type),
+        args_(args),
+        arg_is_handle_(arg_is_handle) {}
+
+  bool IsTypeValid(FunctionType* expected) {
+    return func_type == expected;
+  }
+
+  template <typename T>
+  bool Get(int index, T* out_value) const {
+    pp::Var arg = args_.Get(index);
+    if (IsHandle(index)) {
+      if (!arg.is_int()) {
+        return false;
+      }
+
+      Handle handle = arg.AsInt();
+      return GetHandleValue<T>(handle, out_value);
+    } else {
+      return GetValue<T>(arg, out_value);
+    }
+  }
+
+  bool IsHandle(int index) const {
+    pp::Var var = arg_is_handle_.Get(index);
+    return var.is_bool() ? var.AsBool() : false;
+  }
+
+ private:
+  FunctionType* func_type_;
+  pp::VarArray args_;
+  pp::VarArray arg_is_handle_;
+};
+#endif
+
 class Instance : public pp::Instance {
  public:
   explicit Instance(PP_Instance instance)
-      : pp::Instance(instance),
-        callback_factory_(this) {}
+      : pp::Instance(instance), callback_factory_(this) {}
 
   virtual bool Init(uint32_t argc, const char* argn[], const char* argv[]) {
     return true;
@@ -390,17 +452,17 @@ class Instance : public pp::Instance {
       } else if (type_id == TYPE_int32.id()) {
         values.Set(i, *(int32_t*)ptr);
       } else if (type_id == TYPE_uint32.id()) {
-        values.Set(i, (int32_t)*(uint32_t*)ptr);
-//       } else if (type_id == TYPE_int64.id()) {
-//         values.Set(i, *(int64_t*)ptr);
-//       } else if (type_id == TYPE_uint64.id()) {
-//         values.Set(i, *(uint64_t*)ptr);
+        values.Set(i, (int32_t) * (uint32_t*)ptr);
+        //       } else if (type_id == TYPE_int64.id()) {
+        //         values.Set(i, *(int64_t*)ptr);
+        //       } else if (type_id == TYPE_uint64.id()) {
+        //         values.Set(i, *(uint64_t*)ptr);
       } else if (type_id == TYPE_float32.id()) {
         values.Set(i, *(float*)ptr);
       } else if (type_id == TYPE_float64.id()) {
         values.Set(i, *(double*)ptr);
-      //} else if (type_id == TYPE_size_t.id()) {
-      //  values.Set(i, *(size_t*)ptr);
+        //} else if (type_id == TYPE_size_t.id()) {
+        //  values.Set(i, *(size_t*)ptr);
       } else if (type_id == TYPE_arrayBuffer.id()) {
         values.Set(i, pp::Var(pp::PASS_REF, *((PP_Var*)ptr)));
       } else {
@@ -421,79 +483,45 @@ class Instance : public pp::Instance {
   }
 
  private:
-  typedef int32_t Handle;
-  typedef std::map<Handle, void*> HandleMap;
-  HandleMap handle_map_;
-
-  void* GetHandle(Handle handle) {
-    HandleMap::iterator iter = handle_map_.find(handle);
-    if (iter == handle_map_.end())
-      return NULL;
-    return iter->second;
-  }
-
-  void RegisterHandle(Handle handle, void* pointer) {
-    HandleMap::iterator iter = handle_map_.find(handle);
-    if (iter != handle_map_.end()) {
-      printf("RegisterHandle: handle %d is already registered.\n", handle);
-      return;
-    }
-
-    handle_map_.insert(HandleMap::value_type(handle, pointer));
-  }
-
-  void DestroyHandle(Handle handle) {
-    HandleMap::iterator iter = handle_map_.find(handle);
-    if (iter == handle_map_.end()) {
-      printf("DestroyHandle: handle %d doesn't exist.\n", handle);
-      return;
-    }
-
-    handle_map_.erase(iter);
-  }
-
   void HandleCommand(const pp::Var& msg) {
     VAR_DICTIONARY(msg, dictionary);
     DICT_STRING(dictionary, cmd);
     DICT_INT(dictionary, type);
     DICT_ARRAY(dictionary, args);
+    DICT_ARRAY(dictionary, argIsHandle);
     DICT_INT(dictionary, ret);
+    FunctionType* func_type = static_cast<FunctionType*>(Type::Get(type));
 
     if (cmd == "add") {
-      CHECK_TYPE(cmd.c_str(), type, TYPE_add_void_p_int32);
-      Handle_add(ret, args);
+      Handle_add(func_type, ret, args, argIsHandle);
     } else if (cmd == "arrayBufferCreate") {
-      Handle_arrayBufferCreate(ret, args);
-    } else if (cmd == "deflate") {
-      CHECK_TYPE(cmd.c_str(), type, TYPE_deflate);
-      Handle_deflate(ret, args);
-    } else if (cmd == "deflateInit") {
-      CHECK_TYPE(cmd.c_str(), type, TYPE_deflate);
-      Handle_deflateInit(ret, args);
-    } else if (cmd == "get") {
-      Handle_get(type, ret, args);
-    } else if (cmd == "malloc") {
-      CHECK_TYPE(cmd.c_str(), type, TYPE_malloc);
-      Handle_malloc(ret, args);
+      Handle_arrayBufferCreate(func_type, ret, args, argIsHandle);
     } else if (cmd == "arrayBufferMap") {
-      CHECK_TYPE(cmd.c_str(), type, TYPE_arrayBufferMap);
-      Handle_arrayBufferMap(ret, args);
+      Handle_arrayBufferMap(func_type, ret, args, argIsHandle);
+    } else if (cmd == "deflate") {
+      Handle_deflate(func_type, ret, args, argIsHandle);
+    } else if (cmd == "deflateInit") {
+      Handle_deflateInit(func_type, ret, args, argIsHandle);
+    } else if (cmd == "get") {
+      Handle_get(func_type, ret, args, argIsHandle);
+    } else if (cmd == "malloc") {
+      Handle_malloc(func_type, ret, args, argIsHandle);
     } else if (cmd == "memcpy") {
-      CHECK_TYPE(cmd.c_str(), type, TYPE_memcpy);
-      Handle_memcpy(ret, args);
+      Handle_memcpy(func_type, ret, args, argIsHandle);
     } else if (cmd == "memset") {
-      CHECK_TYPE(cmd.c_str(), type, TYPE_memset);
-      Handle_memset(ret, args);
+      Handle_memset(func_type, ret, args, argIsHandle);
     } else if (cmd == "set") {
-      Handle_set(type, ret, args);
+      Handle_set(func_type, ret, args, argIsHandle);
     } else if (cmd == "sub") {
-      Handle_sub(type, ret, args);
+      Handle_sub(func_type, ret, args, argIsHandle);
     } else {
-      printf("Unknown cmd: \"%s\".\n", cmd.c_str());
+      ERROR("Unknown cmd: \"%s\".\n", cmd.c_str());
     }
   }
 
-  void Handle_add(Handle ret_handle, const pp::VarArray& args) {
+  void Handle_add(FunctionType* func_type, Handle ret_handle,
+                  const pp::VarArray& args, const pp::VarArray& arg_is_handle) {
+    CHECK_TYPE(func_type, TYPE_add_void_p_int32);
     ARRAY_HANDLE(args, 0, ptr);
     ARRAY_INT(args, 1, addend);
     void* result = ((uint8_t*)ptr) + addend;
@@ -501,7 +529,10 @@ class Instance : public pp::Instance {
     printf("add(%p, %d) => %p (%d)\n", ptr, addend, result, ret_handle);
   }
 
-  void Handle_arrayBufferCreate(Handle ret_handle, const pp::VarArray& args) {
+  void Handle_arrayBufferCreate(FunctionType* func_type, Handle ret_handle,
+                                const pp::VarArray& args,
+                                const pp::VarArray& arg_is_handle) {
+    CHECK_TYPE(func_type, TYPE_arrayBufferCreate);
     ARRAY_INT(args, 1, length);
     pp::VarArrayBuffer array_buffer(length);
     PP_Var array_buffer_var = array_buffer.Detach();
@@ -509,7 +540,32 @@ class Instance : public pp::Instance {
     printf("arrayBufferCreate(%d) => %d\n", length, ret_handle);
   }
 
-  void Handle_deflateInit(Handle ret_handle, const pp::VarArray& args) {
+  void Handle_arrayBufferMap(FunctionType* func_type, Handle ret_handle,
+                             const pp::VarArray& args,
+                             const pp::VarArray& arg_is_handle) {
+    CHECK_TYPE(func_type, TYPE_arrayBufferMap);
+    ARRAY_ARRAYBUFFER(args, 0, buf);
+    void* ptr = buf.Map();
+    RegisterHandle(ret_handle, ptr);
+    printf("arrayBufferMap(%lld) => %p (%d)\n", buf.pp_var().value.as_id, ptr,
+           ret_handle);
+  }
+
+  void Handle_deflate(FunctionType* func_type, Handle ret_handle,
+                      const pp::VarArray& args,
+                      const pp::VarArray& arg_is_handle) {
+    CHECK_TYPE(func_type, TYPE_deflate);
+    ARRAY_HANDLE(args, 0, stream);
+    ARRAY_INT(args, 1, flush);
+    int result = deflate((z_stream*)stream, flush);
+    RegisterHandle(ret_handle, new int32_t(result));
+    printf("deflate(%p, %d) => %d\n", stream, flush, result);
+  }
+
+  void Handle_deflateInit(FunctionType* func_type, Handle ret_handle,
+                          const pp::VarArray& args,
+                          const pp::VarArray& arg_is_handle) {
+    CHECK_TYPE(func_type, TYPE_deflate);
     ARRAY_HANDLE(args, 0, stream);
     ARRAY_INT(args, 1, level);
     int result = deflateInit((z_stream*)stream, level);
@@ -520,50 +576,39 @@ class Instance : public pp::Instance {
     printf("deflateInit(%p, %d) => %d\n", stream, level, result);
   }
 
-  void Handle_deflate(Handle ret_handle, const pp::VarArray& args) {
-    ARRAY_HANDLE(args, 0, stream);
-    ARRAY_INT(args, 1, flush);
-    int result = deflate((z_stream*)stream, flush);
-    RegisterHandle(ret_handle, new int32_t(result));
-    printf("deflate(%p, %d) => %d\n", stream, flush, result);
-  }
-
-  void Handle_get(TypeId id, Handle ret_handle, const pp::VarArray& args) {
+  void Handle_get(FunctionType* func_type, Handle ret_handle,
+                  const pp::VarArray& args, const pp::VarArray& arg_is_handle) {
     ARRAY_HANDLE(args, 0, ptr);
-    FunctionType* type = static_cast<FunctionType*>(Type::Get(id));
 
-    if (id == TYPE_get_uint8_p.id()) {
+    if (func_type == &TYPE_get_uint8_p) {
       uint8_t* result = *(uint8_t**)ptr;
       RegisterHandle(ret_handle, result);
-      printf("*(%s)%p => %p\n", type->GetArgType(0)->ToString().c_str(), ptr,
-             result);
-    } else if (id == TYPE_get_uint32.id()) {
+      printf("*(%s)%p => %p\n", func_type->GetArgType(0)->ToString().c_str(),
+             ptr, result);
+    } else if (func_type == &TYPE_get_uint32) {
       uint32_t result = *(uint32_t*)ptr;
       RegisterHandle(ret_handle, new uint32_t(result));
-      printf("*(%s)%p => %u\n", type->GetArgType(0)->ToString().c_str(), ptr,
-             result);
+      printf("*(%s)%p => %u\n", func_type->GetArgType(0)->ToString().c_str(),
+             ptr, result);
     } else {
-      printf("Unexpected function type: %d (%s)\n", id,
-             type->ToString().c_str());
+      printf("Unexpected function type: %s\n", func_type->ToString().c_str());
     }
   }
 
-  void Handle_malloc(Handle ret_handle, const pp::VarArray& args) {
+  void Handle_malloc(FunctionType* func_type, Handle ret_handle,
+                     const pp::VarArray& args,
+                     const pp::VarArray& arg_is_handle) {
+    CHECK_TYPE(func_type, TYPE_malloc);
     ARRAY_INT(args, 0, size);
     void* result = malloc(size);
     RegisterHandle(ret_handle, result);
     printf("malloc(%d) => %p (%d)\n", size, result, ret_handle);
   }
 
-  void Handle_arrayBufferMap(Handle ret_handle, const pp::VarArray& args) {
-    ARRAY_ARRAYBUFFER(args, 0, buf);
-    void* ptr = buf.Map();
-    RegisterHandle(ret_handle, ptr);
-    printf("arrayBufferMap(%lld) => %p (%d)\n", buf.pp_var().value.as_id, ptr,
-           ret_handle);
-  }
-
-  void Handle_memcpy(Handle ret_handle, const pp::VarArray& args) {
+  void Handle_memcpy(FunctionType* func_type, Handle ret_handle,
+                     const pp::VarArray& args,
+                     const pp::VarArray& arg_is_handle) {
+    CHECK_TYPE(func_type, TYPE_memcpy);
     ARRAY_HANDLE(args, 0, dst);
     ARRAY_HANDLE(args, 1, src);
     ARRAY_INT(args, 2, size);
@@ -571,7 +616,10 @@ class Instance : public pp::Instance {
     printf("memcpy(%p, %p, %d)\n", dst, src, size);
   }
 
-  void Handle_memset(Handle ret_handle, const pp::VarArray& args) {
+  void Handle_memset(FunctionType* func_type, Handle ret_handle,
+                     const pp::VarArray& args,
+                     const pp::VarArray& arg_is_handle) {
+    CHECK_TYPE(func_type, TYPE_memset);
     ARRAY_HANDLE(args, 0, buffer);
     ARRAY_INT(args, 1, value);
     ARRAY_INT(args, 2, size);
@@ -579,41 +627,41 @@ class Instance : public pp::Instance {
     printf("memset(%p, %d, %d)\n", buffer, value, size);
   }
 
-  void Handle_set(TypeId id, Handle ret_handle, const pp::VarArray& args) {
+  void Handle_set(FunctionType* func_type, Handle ret_handle,
+                  const pp::VarArray& args, const pp::VarArray& arg_is_handle) {
     ARRAY_HANDLE(args, 0, ptr);
-    FunctionType* type = static_cast<FunctionType*>(Type::Get(id));
 
-    if (id == TYPE_set_uint8_p.id()) {
+    if (func_type == &TYPE_set_uint8_p) {
       ARRAY_HANDLE(args, 1, value);
       *(uint8_t**)ptr = (uint8_t*)value;
-      printf("*(%s)%p = %p\n", type->GetArgType(0)->ToString().c_str(), ptr,
-             value);
-    } else if (id == TYPE_set_uint32.id()) {
+      printf("*(%s)%p = %p\n", func_type->GetArgType(0)->ToString().c_str(),
+             ptr, value);
+    } else if (func_type == &TYPE_set_uint32) {
       ARRAY_INT(args, 1, value);
       *(uint32_t*)ptr = value;
-      printf("*(%s)%p = %d\n", type->GetArgType(0)->ToString().c_str(), ptr,
-             value);
+      printf("*(%s)%p = %d\n", func_type->GetArgType(0)->ToString().c_str(),
+             ptr, value);
     } else {
-      printf("Unexpected function type: %d (%s)\n", id,
-             type->ToString().c_str());
+      ERROR("Unexpected function type: %s\n", func_type->ToString().c_str());
     }
   }
 
-  void Handle_sub(TypeId id, Handle ret_handle, const pp::VarArray& args) {
+  void Handle_sub(FunctionType* func_type, Handle ret_handle,
+                  const pp::VarArray& args, const pp::VarArray& arg_is_handle) {
     ARRAY_INT(args, 0, minuend);
     ARRAY_INT(args, 1, subtrahend);
-    if (id == TYPE_sub_int32.id()) {
+    if (func_type == &TYPE_sub_int32) {
       int32_t result = minuend - subtrahend;
       RegisterHandle(ret_handle, new int32_t(result));
-      printf("sub(%d, %d) => %d (%d)\n", minuend, subtrahend, result, ret_handle);
-    } else if (id == TYPE_sub_uint32.id()) {
+      printf("sub(%d, %d) => %d (%d)\n", minuend, subtrahend, result,
+             ret_handle);
+    } else if (func_type == &TYPE_sub_uint32) {
       uint32_t result = (uint32_t)minuend - (uint32_t)subtrahend;
       RegisterHandle(ret_handle, new uint32_t(result));
-      printf("sub(%u, %u) => %u (%d)\n", minuend, subtrahend, result, ret_handle);
+      printf("sub(%u, %u) => %u (%d)\n", minuend, subtrahend, result,
+             ret_handle);
     } else {
-      FunctionType* type = static_cast<FunctionType*>(Type::Get(id));
-      printf("Unexpected function type: %d (%s)\n", id,
-             type->ToString().c_str());
+      ERROR("Unexpected function type: %s\n", func_type->ToString().c_str());
     }
   }
 
