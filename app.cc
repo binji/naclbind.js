@@ -135,7 +135,6 @@ class Type {
   virtual ~Type() {}
   virtual size_t Size() = 0;
   virtual std::string ToString() = 0;
-  virtual bool IsPrimitiveType() { return false; }
 
   TypeId id() { return id_; }
 
@@ -181,6 +180,8 @@ class Type {
     return true;
   }
 
+  virtual void DestroyValue(void* ptr) {}
+
  private:
   TypeId id_;
 };
@@ -191,7 +192,6 @@ class VoidType : public Type {
 
   virtual size_t Size() { return 0; }
   virtual std::string ToString() { return "void"; }
-  virtual bool IsPrimitiveType() { return false; }
 };
 
 template <typename T>
@@ -202,7 +202,6 @@ class PrimitiveType : public Type {
 
   virtual size_t Size() { return sizeof(T); }
   virtual std::string ToString() { return name_; }
-  virtual bool IsPrimitiveType() { return true; }
 
   virtual bool GetValue(void* ptr, int8_t* out_value) {
     return GetValue<int8_t>(ptr, out_value);
@@ -242,6 +241,10 @@ class PrimitiveType : public Type {
 
   virtual bool GetValue(void* ptr, double* out_value) {
     return GetValue<double>(ptr, out_value);
+  }
+
+  virtual void DestroyValue(void* ptr) {
+    delete static_cast<T*>(ptr);
   }
 
  private:
@@ -379,6 +382,18 @@ class PepperType : public Type {
     return true;
   }
 
+  virtual void DestroyValue(void* ptr) {
+    if (var_type_ != PP_VARTYPE_ARRAY_BUFFER) {
+      return;
+    }
+
+    PP_Var* var_ptr = static_cast<PP_Var*>(ptr);
+    // Pass the reference count to this var, it will be cleaned up at the
+    // function scope exit.
+    pp::Var var(pp::PASS_REF, *static_cast<PP_Var*>(ptr));
+    delete var_ptr;
+  }
+
  private:
   const char* name_;
   PP_VarType var_type_;
@@ -514,12 +529,15 @@ void RegisterHandle(Handle handle, pp::VarArrayBuffer* array_buffer) {
 }
 
 void DestroyHandle(Handle handle) {
+  printf("Destroying handle %d\n", handle);
   HandleMap::iterator iter = g_handle_map.find(handle);
   if (iter == g_handle_map.end()) {
     ERROR("DestroyHandle: handle %d doesn't exist.\n", handle);
     return;
   }
 
+  HandleObject& hobj = iter->second;
+  hobj.type->DestroyValue(hobj.ptr);
   g_handle_map.erase(iter);
 }
 
@@ -665,7 +683,6 @@ class Instance : public pp::Instance {
     pp::VarArray values;
     values.SetLength(handles.GetLength());
 
-
     // Handles to return to the JavaScript.
     for (uint32_t i = 0; i < handles.GetLength(); ++i) {
       ARRAY_ARRAY(handles, i, handle);
@@ -698,7 +715,7 @@ class Instance : public pp::Instance {
         //} else if (type_id == TYPE_size_t.id()) {
         //  values.Set(i, *(size_t*)ptr);
       } else if (type_id == TYPE_arrayBuffer.id()) {
-        values.Set(i, pp::Var(pp::PASS_REF, *((PP_Var*)ptr)));
+        values.Set(i, pp::Var(*(static_cast<PP_Var*>(ptr))));
       } else {
         unwrapped = false;
         // Not a primitive value, send the id.
