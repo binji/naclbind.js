@@ -19,6 +19,7 @@
 #include <zlib.h>
 
 #include <map>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -90,11 +91,12 @@ void VarTypeError(const char* file, int line, const char* var_name,
   void* newvar;                                        \
   do {                                                 \
     ARRAY_INT(var, ix, newvar##int);                   \
-    newvar = GetHandle(newvar##int);                   \
-    if (!newvar) {                                     \
+    HandleObject hobj;                                 \
+    if (!GetHandle(newvar##int, &hobj)) {              \
       ERROR("Argument %d is not a valid handle.", ix); \
       return;                                          \
     }                                                  \
+    newvar = hobj.ptr;                                 \
   } while (0)
 
 #define ARRAY_ARRAY(var, ix, newvar)                \
@@ -153,22 +155,92 @@ class Type {
     return iter->second;
   }
 
+  virtual bool GetValue(void* ptr, int8_t* out_value) { return false; }
+  virtual bool GetValue(void* ptr, uint8_t* out_value) { return false; }
+  virtual bool GetValue(void* ptr, int16_t* out_value) { return false; }
+  virtual bool GetValue(void* ptr, uint16_t* out_value) { return false; }
+  virtual bool GetValue(void* ptr, int32_t* out_value) { return false; }
+  virtual bool GetValue(void* ptr, uint32_t* out_value) { return false; }
+  virtual bool GetValue(void* ptr, int64_t* out_value) { return false; }
+  virtual bool GetValue(void* ptr, uint64_t* out_value) { return false; }
+  virtual bool GetValue(void* ptr, float* out_value) { return false; }
+  virtual bool GetValue(void* ptr, double* out_value) { return false; }
+  virtual bool GetValue(void* ptr, void** out_value) { return false; }
+  virtual bool GetValue(void* ptr, pp::VarArrayBuffer* out_value) {
+    return false;
+  }
+
  private:
   TypeId id_;
 };
 
+class VoidType : public Type {
+ public:
+  explicit VoidType(TypeId id) : Type(id) {}
+
+  virtual size_t Size() { return 0; }
+  virtual std::string ToString() { return "void"; }
+  virtual bool IsPrimitiveType() { return false; }
+};
+
+template <typename T>
 class PrimitiveType : public Type {
  public:
-  PrimitiveType(TypeId id, const char* name, size_t size)
-      : Type(id), name_(name), size_(size) {}
+  PrimitiveType(TypeId id, const char* name)
+      : Type(id), name_(name) {}
 
-  virtual size_t Size() { return size_; }
+  virtual size_t Size() { return sizeof(T); }
   virtual std::string ToString() { return name_; }
   virtual bool IsPrimitiveType() { return true; }
 
+  template <typename U>
+  bool GetValue(void* ptr, U* out_value) {
+    *out_value = *static_cast<T*>(ptr);
+    return true;
+  }
+
+  virtual bool GetValue(void* ptr, int8_t* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, uint8_t* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, int16_t* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, uint16_t* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, int32_t* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, uint32_t* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, int64_t* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, uint64_t* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, float* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, double* out_value) {
+    return GetValue(ptr, out_value);
+  }
+
  private:
   const char* name_;
-  size_t size_;
 };
 
 class PointerType : public Type {
@@ -282,23 +354,32 @@ class PepperType : public Type {
 
   PP_VarType var_type() const { return var_type_; }
 
+  virtual bool GetValue(void* ptr, pp::VarArrayBuffer* out_value) {
+    if (var_type_ != PP_VARTYPE_ARRAY_BUFFER) {
+      return false;
+    }
+    pp::Var var(*static_cast<PP_Var*>(ptr));
+    *out_value = pp::VarArrayBuffer(var);
+    return true;
+  }
+
  private:
   const char* name_;
   PP_VarType var_type_;
 };
 
-PrimitiveType TYPE_void(1, "void", 0);
-PrimitiveType TYPE_int8(2, "int8", 1);
-PrimitiveType TYPE_uint8(3, "uint8", 1);
-PrimitiveType TYPE_int16(4, "int16", 2);
-PrimitiveType TYPE_uint16(5, "uint16", 2);
-PrimitiveType TYPE_int32(6, "int32", 4);
-PrimitiveType TYPE_uint32(7, "uint32", 4);
-PrimitiveType TYPE_int64(8, "int64", 8);
-PrimitiveType TYPE_uint64(9, "uint64", 8);
-PrimitiveType TYPE_float32(10, "float32", 4);
-PrimitiveType TYPE_float64(11, "float64", 8);
-PrimitiveType TYPE_size_t(12, "size_t", 4);
+VoidType TYPE_void(1);
+PrimitiveType<int8_t> TYPE_int8(2, "int8");
+PrimitiveType<uint8_t> TYPE_uint8(3, "uint8");
+PrimitiveType<int16_t> TYPE_int16(4, "int16");
+PrimitiveType<uint16_t> TYPE_uint16(5, "uint16");
+PrimitiveType<int32_t> TYPE_int32(6, "int32");
+PrimitiveType<uint32_t> TYPE_uint32(7, "uint32");
+PrimitiveType<int64_t> TYPE_int64(8, "int64");
+PrimitiveType<int64_t> TYPE_uint64(9, "uint64");
+PrimitiveType<float> TYPE_float32(10, "float32");
+PrimitiveType<double> TYPE_float64(11, "float64");
+PrimitiveType<size_t> TYPE_size_t(12, "size_t");
 
 PointerType TYPE_void_p(13, &TYPE_void);
 PointerType TYPE_uint8_p(14, &TYPE_uint8);
@@ -340,23 +421,45 @@ FunctionType TYPE_deflate(35, &TYPE_int32, &TYPE_z_stream_p, &TYPE_int32);
 
 
 typedef int32_t Handle;
-typedef std::map<Handle, void*> HandleMap;
+
+struct HandleObject {
+  HandleObject() : ptr(NULL), type(NULL) {}
+  HandleObject(void* ptr, Type* type) : ptr(ptr), type(type) {}
+
+  void* ptr;
+  Type* type;
+};
+
+typedef std::map<Handle, HandleObject> HandleMap;
 HandleMap g_handle_map;
 
-void* GetHandle(Handle handle) {
+bool GetHandle(Handle handle, HandleObject* out_hobj) {
   HandleMap::iterator iter = g_handle_map.find(handle);
-  if (iter == g_handle_map.end()) return NULL;
-  return iter->second;
+  if (iter == g_handle_map.end()) return false;
+  *out_hobj = iter->second;
+  return true;
 }
 
-void RegisterHandle(Handle handle, void* pointer) {
+template <typename T>
+bool GetHandleValue(Handle handle, T* out_value) {
+  HandleObject hobj;
+  if (!GetHandle(handle, &hobj)) {
+    return false;
+  }
+
+  Type* src_type = hobj.type;
+  return src_type->GetValue(hobj.ptr, out_value);
+}
+
+void RegisterHandle(Handle handle, void* pointer, Type* type) {
   HandleMap::iterator iter = g_handle_map.find(handle);
   if (iter != g_handle_map.end()) {
     ERROR("RegisterHandle: handle %d is already registered.\n", handle);
     return;
   }
 
-  g_handle_map.insert(HandleMap::value_type(handle, pointer));
+  g_handle_map.insert(
+      HandleMap::value_type(handle, HandleObject(pointer, type)));
 }
 
 void DestroyHandle(Handle handle) {
@@ -370,7 +473,80 @@ void DestroyHandle(Handle handle) {
 }
 
 
-#if 0
+template <typename T>
+bool GetVarValue(const pp::Var& var, T* out_value);
+
+template <typename T>
+bool GetVarIntegerValue(const pp::Var& var, T* out_value) {
+  if (!var.is_int()) {
+    return false;
+  }
+
+  *out_value = var.AsInt();
+  return true;
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, int8_t* out_value) {
+  return GetVarIntegerValue(var, out_value);
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, uint8_t* out_value) {
+  return GetVarIntegerValue(var, out_value);
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, int16_t* out_value) {
+  return GetVarIntegerValue(var, out_value);
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, uint16_t* out_value) {
+  return GetVarIntegerValue(var, out_value);
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, int32_t* out_value) {
+  return GetVarIntegerValue(var, out_value);
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, uint32_t* out_value) {
+  return GetVarIntegerValue(var, out_value);
+}
+
+template <typename T>
+bool GetVarFloatValue(const pp::Var& var, T* out_value) {
+  if (!var.is_double()) {
+    return false;
+  }
+
+  *out_value = var.AsDouble();
+  return true;
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, float* out_value) {
+  return GetVarFloatValue(var, out_value);
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, double* out_value) {
+  return GetVarFloatValue(var, out_value);
+}
+
+template <>
+bool GetVarValue(const pp::Var& var, pp::VarArrayBuffer* out_value) {
+  if (!var.is_array_buffer()) {
+    return false;
+  }
+
+  *out_value = pp::VarArrayBuffer(var);
+  return true;
+}
+
+
 class CommandProcessor {
  public:
   CommandProcessor(FunctionType* func_type, const pp::VarArray& args,
@@ -380,7 +556,7 @@ class CommandProcessor {
         arg_is_handle_(arg_is_handle) {}
 
   bool IsTypeValid(FunctionType* expected) {
-    return func_type == expected;
+    return func_type_ == expected;
   }
 
   template <typename T>
@@ -394,7 +570,7 @@ class CommandProcessor {
       Handle handle = arg.AsInt();
       return GetHandleValue<T>(handle, out_value);
     } else {
-      return GetValue<T>(arg, out_value);
+      return GetVarValue<T>(arg, out_value);
     }
   }
 
@@ -408,7 +584,7 @@ class CommandProcessor {
   pp::VarArray args_;
   pp::VarArray arg_is_handle_;
 };
-#endif
+
 
 class Instance : public pp::Instance {
  public:
@@ -492,6 +668,8 @@ class Instance : public pp::Instance {
     DICT_INT(dictionary, ret);
     FunctionType* func_type = static_cast<FunctionType*>(Type::Get(type));
 
+    CommandProcessor cmdproc(func_type, args, argIsHandle);
+
     if (cmd == "add") {
       Handle_add(func_type, ret, args, argIsHandle);
     } else if (cmd == "arrayBufferCreate") {
@@ -519,13 +697,18 @@ class Instance : public pp::Instance {
     }
   }
 
-  void Handle_add(FunctionType* func_type, Handle ret_handle,
-                  const pp::VarArray& args, const pp::VarArray& arg_is_handle) {
+  void Handle_add(const CommandProcessor& cmdproc, Handle ret_handle) {
     CHECK_TYPE(func_type, TYPE_add_void_p_int32);
+    uint8_t* ptr;
+    if (!cmdproc.Get(0, ptr)) {
+      ERROR("Argument 0 is not of type uint8_t*");
+      return;
+    }
+
     ARRAY_HANDLE(args, 0, ptr);
     ARRAY_INT(args, 1, addend);
     void* result = ((uint8_t*)ptr) + addend;
-    RegisterHandle(ret_handle, result);
+    RegisterHandle(ret_handle, result, &TYPE_void_p);
     printf("add(%p, %d) => %p (%d)\n", ptr, addend, result, ret_handle);
   }
 
@@ -536,7 +719,7 @@ class Instance : public pp::Instance {
     ARRAY_INT(args, 1, length);
     pp::VarArrayBuffer array_buffer(length);
     PP_Var array_buffer_var = array_buffer.Detach();
-    RegisterHandle(ret_handle, new PP_Var(array_buffer_var));
+    RegisterHandle(ret_handle, new PP_Var(array_buffer_var), &TYPE_arrayBuffer);
     printf("arrayBufferCreate(%d) => %d\n", length, ret_handle);
   }
 
@@ -546,7 +729,7 @@ class Instance : public pp::Instance {
     CHECK_TYPE(func_type, TYPE_arrayBufferMap);
     ARRAY_ARRAYBUFFER(args, 0, buf);
     void* ptr = buf.Map();
-    RegisterHandle(ret_handle, ptr);
+    RegisterHandle(ret_handle, ptr, &TYPE_void_p);
     printf("arrayBufferMap(%lld) => %p (%d)\n", buf.pp_var().value.as_id, ptr,
            ret_handle);
   }
@@ -558,7 +741,7 @@ class Instance : public pp::Instance {
     ARRAY_HANDLE(args, 0, stream);
     ARRAY_INT(args, 1, flush);
     int result = deflate((z_stream*)stream, flush);
-    RegisterHandle(ret_handle, new int32_t(result));
+    RegisterHandle(ret_handle, new int32_t(result), &TYPE_int32);
     printf("deflate(%p, %d) => %d\n", stream, flush, result);
   }
 
@@ -572,7 +755,7 @@ class Instance : public pp::Instance {
 
     // TODO(binji): putting the result in allocated memory kinda sucks.
     // Something better here?
-    RegisterHandle(ret_handle, new int32_t(result));
+    RegisterHandle(ret_handle, new int32_t(result), &TYPE_int32);
     printf("deflateInit(%p, %d) => %d\n", stream, level, result);
   }
 
@@ -582,12 +765,12 @@ class Instance : public pp::Instance {
 
     if (func_type == &TYPE_get_uint8_p) {
       uint8_t* result = *(uint8_t**)ptr;
-      RegisterHandle(ret_handle, result);
+      RegisterHandle(ret_handle, result, &TYPE_uint8_p);
       printf("*(%s)%p => %p\n", func_type->GetArgType(0)->ToString().c_str(),
              ptr, result);
     } else if (func_type == &TYPE_get_uint32) {
       uint32_t result = *(uint32_t*)ptr;
-      RegisterHandle(ret_handle, new uint32_t(result));
+      RegisterHandle(ret_handle, new uint32_t(result), &TYPE_uint32);
       printf("*(%s)%p => %u\n", func_type->GetArgType(0)->ToString().c_str(),
              ptr, result);
     } else {
@@ -601,7 +784,7 @@ class Instance : public pp::Instance {
     CHECK_TYPE(func_type, TYPE_malloc);
     ARRAY_INT(args, 0, size);
     void* result = malloc(size);
-    RegisterHandle(ret_handle, result);
+    RegisterHandle(ret_handle, result, &TYPE_void_p);
     printf("malloc(%d) => %p (%d)\n", size, result, ret_handle);
   }
 
@@ -652,12 +835,12 @@ class Instance : public pp::Instance {
     ARRAY_INT(args, 1, subtrahend);
     if (func_type == &TYPE_sub_int32) {
       int32_t result = minuend - subtrahend;
-      RegisterHandle(ret_handle, new int32_t(result));
+      RegisterHandle(ret_handle, new int32_t(result), &TYPE_int32);
       printf("sub(%d, %d) => %d (%d)\n", minuend, subtrahend, result,
              ret_handle);
     } else if (func_type == &TYPE_sub_uint32) {
       uint32_t result = (uint32_t)minuend - (uint32_t)subtrahend;
-      RegisterHandle(ret_handle, new uint32_t(result));
+      RegisterHandle(ret_handle, new uint32_t(result), &TYPE_uint32);
       printf("sub(%u, %u) => %u (%d)\n", minuend, subtrahend, result,
              ret_handle);
     } else {
