@@ -115,13 +115,6 @@ void VarTypeError(const char* file, int line, const char* var_name,
     newvar = pp::VarArrayBuffer(tempvar);                  \
   } while (0)
 
-#define CHECK_TYPE(type, expected)                                         \
-  if (type != &expected) {                                                 \
-    ERROR("Type mismatch calling %s, expected %s got %s.\n", __FUNCTION__, \
-          expected.ToString().c_str(), type->ToString().c_str());          \
-    return;                                                                \
-  }
-
 typedef int32_t TypeId;
 class Type;
 
@@ -155,6 +148,9 @@ class Type {
     return iter->second;
   }
 
+  template <typename T>
+  static Type* Get() { return NULL; }
+
   virtual bool GetValue(void* ptr, int8_t* out_value) { return false; }
   virtual bool GetValue(void* ptr, uint8_t* out_value) { return false; }
   virtual bool GetValue(void* ptr, int16_t* out_value) { return false; }
@@ -168,6 +164,21 @@ class Type {
   virtual bool GetValue(void* ptr, void** out_value) { return false; }
   virtual bool GetValue(void* ptr, pp::VarArrayBuffer* out_value) {
     return false;
+  }
+
+  template <typename T>
+  bool GetValue(void* ptr, T* out_value);
+
+  template <typename T>
+  bool GetValue(void* ptr, T** out_value) {
+    void* void_ptr;
+    if (!GetValue(ptr, &void_ptr)) {
+      ERROR("Can't get void pointer. %d", 0);
+      return false;
+    }
+
+    *out_value = static_cast<T*>(void_ptr);
+    return true;
   }
 
  private:
@@ -193,53 +204,53 @@ class PrimitiveType : public Type {
   virtual std::string ToString() { return name_; }
   virtual bool IsPrimitiveType() { return true; }
 
+  virtual bool GetValue(void* ptr, int8_t* out_value) {
+    return GetValue<int8_t>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, uint8_t* out_value) {
+    return GetValue<uint8_t>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, int16_t* out_value) {
+    return GetValue<int16_t>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, uint16_t* out_value) {
+    return GetValue<uint16_t>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, int32_t* out_value) {
+    return GetValue<int32_t>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, uint32_t* out_value) {
+    return GetValue<uint32_t>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, int64_t* out_value) {
+    return GetValue<int64_t>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, uint64_t* out_value) {
+    return GetValue<uint64_t>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, float* out_value) {
+    return GetValue<float>(ptr, out_value);
+  }
+
+  virtual bool GetValue(void* ptr, double* out_value) {
+    return GetValue<double>(ptr, out_value);
+  }
+
+ private:
   template <typename U>
   bool GetValue(void* ptr, U* out_value) {
     *out_value = *static_cast<T*>(ptr);
     return true;
   }
 
-  virtual bool GetValue(void* ptr, int8_t* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, uint8_t* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, int16_t* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, uint16_t* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, int32_t* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, uint32_t* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, int64_t* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, uint64_t* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, float* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
-  virtual bool GetValue(void* ptr, double* out_value) {
-    return GetValue(ptr, out_value);
-  }
-
- private:
   const char* name_;
 };
 
@@ -248,6 +259,11 @@ class PointerType : public Type {
   PointerType(TypeId id, Type* base_type) : Type(id), base_type_(base_type) {}
   virtual size_t Size() { return 4; }
   virtual std::string ToString() { return base_type_->ToString() + "*"; }
+
+  virtual bool GetValue(void* ptr, void** out_value) {
+    *out_value = static_cast<void*>(ptr);
+    return true;
+  }
 
  private:
   Type* base_type_;
@@ -420,6 +436,19 @@ PointerType TYPE_z_stream_p(34, &TYPE_z_stream);
 FunctionType TYPE_deflate(35, &TYPE_int32, &TYPE_z_stream_p, &TYPE_int32);
 
 
+template <> Type* Type::Get<int8_t>() { return &TYPE_int8; }
+template <> Type* Type::Get<uint8_t>() { return &TYPE_uint8; }
+template <> Type* Type::Get<int16_t>() { return &TYPE_int16; }
+template <> Type* Type::Get<uint16_t>() { return &TYPE_uint16; }
+template <> Type* Type::Get<int32_t>() { return &TYPE_int32; }
+template <> Type* Type::Get<uint32_t>() { return &TYPE_uint32; }
+template <> Type* Type::Get<int64_t>() { return &TYPE_int64; }
+template <> Type* Type::Get<uint64_t>() { return &TYPE_uint64; }
+template <> Type* Type::Get<float>() { return &TYPE_float32; }
+template <> Type* Type::Get<double>() { return &TYPE_float64; }
+template <> Type* Type::Get<void*>() { return &TYPE_void_p; }
+
+
 typedef int32_t Handle;
 
 struct HandleObject {
@@ -435,7 +464,10 @@ HandleMap g_handle_map;
 
 bool GetHandle(Handle handle, HandleObject* out_hobj) {
   HandleMap::iterator iter = g_handle_map.find(handle);
-  if (iter == g_handle_map.end()) return false;
+  if (iter == g_handle_map.end()) {
+    return false;
+  }
+
   *out_hobj = iter->second;
   return true;
 }
@@ -444,6 +476,7 @@ template <typename T>
 bool GetHandleValue(Handle handle, T* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
+    ERROR("GetHandleValue: Invalid handle %d.", handle);
     return false;
   }
 
@@ -462,6 +495,24 @@ void RegisterHandle(Handle handle, void* pointer, Type* type) {
       HandleMap::value_type(handle, HandleObject(pointer, type)));
 }
 
+template <typename T>
+void RegisterHandle(Handle handle, T arg) {
+  // TODO(binji): putting the result in allocated memory kinda sucks.
+  // Something better here?
+  RegisterHandle(handle, new T(arg), Type::Get<T>());
+}
+
+template <typename T>
+void RegisterHandle(Handle handle, T* pointer) {
+  RegisterHandle(handle, pointer, Type::Get<T*>());
+}
+
+template <>
+void RegisterHandle(Handle handle, pp::VarArrayBuffer* array_buffer) {
+  PP_Var var = array_buffer->Detach();
+  RegisterHandle(handle, new PP_Var(var), &TYPE_arrayBuffer);
+}
+
 void DestroyHandle(Handle handle) {
   HandleMap::iterator iter = g_handle_map.find(handle);
   if (iter == g_handle_map.end()) {
@@ -474,7 +525,9 @@ void DestroyHandle(Handle handle) {
 
 
 template <typename T>
-bool GetVarValue(const pp::Var& var, T* out_value);
+bool GetVarValue(const pp::Var& var, T* out_value) {
+  return false;
+}
 
 template <typename T>
 bool GetVarIntegerValue(const pp::Var& var, T* out_value) {
@@ -555,7 +608,9 @@ class CommandProcessor {
         args_(args),
         arg_is_handle_(arg_is_handle) {}
 
-  bool IsTypeValid(FunctionType* expected) {
+  FunctionType* func_type() const { return func_type_; }
+
+  bool IsTypeValid(FunctionType* expected) const {
     return func_type_ == expected;
   }
 
@@ -564,6 +619,7 @@ class CommandProcessor {
     pp::Var arg = args_.Get(index);
     if (IsHandle(index)) {
       if (!arg.is_int()) {
+        ERROR("Expected Handle, but arg %d is not int.", index);
         return false;
       }
 
@@ -601,12 +657,14 @@ class Instance : public pp::Instance {
     DICT_ARRAY(dictionary, msgs);
     DICT_ARRAY(dictionary, handles);
 
+    printf("Commands:\n");
     for (uint32_t i = 0; i < msgs.GetLength(); ++i) {
       HandleCommand(msgs.Get(i));
     }
 
     pp::VarArray values;
     values.SetLength(handles.GetLength());
+
 
     // Handles to return to the JavaScript.
     for (uint32_t i = 0; i < handles.GetLength(); ++i) {
@@ -671,181 +729,189 @@ class Instance : public pp::Instance {
     CommandProcessor cmdproc(func_type, args, argIsHandle);
 
     if (cmd == "add") {
-      Handle_add(func_type, ret, args, argIsHandle);
+      Handle_add(cmdproc, ret);
     } else if (cmd == "arrayBufferCreate") {
-      Handle_arrayBufferCreate(func_type, ret, args, argIsHandle);
+      Handle_arrayBufferCreate(cmdproc, ret);
     } else if (cmd == "arrayBufferMap") {
-      Handle_arrayBufferMap(func_type, ret, args, argIsHandle);
+      Handle_arrayBufferMap(cmdproc, ret);
     } else if (cmd == "deflate") {
-      Handle_deflate(func_type, ret, args, argIsHandle);
+      Handle_deflate(cmdproc, ret);
     } else if (cmd == "deflateInit") {
-      Handle_deflateInit(func_type, ret, args, argIsHandle);
+      Handle_deflateInit(cmdproc, ret);
     } else if (cmd == "get") {
-      Handle_get(func_type, ret, args, argIsHandle);
+      Handle_get(cmdproc, ret);
     } else if (cmd == "malloc") {
-      Handle_malloc(func_type, ret, args, argIsHandle);
+      Handle_malloc(cmdproc, ret);
     } else if (cmd == "memcpy") {
-      Handle_memcpy(func_type, ret, args, argIsHandle);
+      Handle_memcpy(cmdproc, ret);
     } else if (cmd == "memset") {
-      Handle_memset(func_type, ret, args, argIsHandle);
+      Handle_memset(cmdproc, ret);
     } else if (cmd == "set") {
-      Handle_set(func_type, ret, args, argIsHandle);
+      Handle_set(cmdproc, ret);
     } else if (cmd == "sub") {
-      Handle_sub(func_type, ret, args, argIsHandle);
+      Handle_sub(cmdproc, ret);
     } else {
       ERROR("Unknown cmd: \"%s\".\n", cmd.c_str());
     }
   }
 
-  void Handle_add(const CommandProcessor& cmdproc, Handle ret_handle) {
-    CHECK_TYPE(func_type, TYPE_add_void_p_int32);
-    uint8_t* ptr;
-    if (!cmdproc.Get(0, ptr)) {
-      ERROR("Argument 0 is not of type uint8_t*");
-      return;
-    }
+#define CHECK_TYPE(expected)                                           \
+  if (!cmdproc.IsTypeValid(&expected)) {                               \
+    ERROR("In %s: Type mismatch. expected %s got %s.\n", __FUNCTION__, \
+          expected.ToString().c_str(),                                 \
+          cmdproc.func_type()->ToString().c_str());                    \
+    return;                                                            \
+  }
 
-    ARRAY_HANDLE(args, 0, ptr);
-    ARRAY_INT(args, 1, addend);
+#define ARG(ix, type, newvar)                                                 \
+  type newvar;                                                                \
+  if (!cmdproc.Get(ix, &newvar)) {                                            \
+    ERROR("In %s: Argument %d cannot be converted to type %s.", __FUNCTION__, \
+          ix, #type);                                                         \
+    return;                                                                   \
+  }
+
+#define BEGIN \
+  if (false) {}
+
+#define TYPE(name) \
+  else if (cmdproc.func_type() == &name)
+
+#define END                                                       \
+  else {                                                          \
+    printf("In %s: Unexpected function type: %s\n", __FUNCTION__, \
+        cmdproc.func_type()->ToString().c_str());                 \
+  }
+
+  void Handle_add(const CommandProcessor& cmdproc, Handle ret_handle) {
+    CHECK_TYPE(TYPE_add_void_p_int32);
+    ARG(0, void*, ptr);
+    ARG(1, int32_t, addend);
+
     void* result = ((uint8_t*)ptr) + addend;
-    RegisterHandle(ret_handle, result, &TYPE_void_p);
+    RegisterHandle(ret_handle, result);
     printf("add(%p, %d) => %p (%d)\n", ptr, addend, result, ret_handle);
   }
 
-  void Handle_arrayBufferCreate(FunctionType* func_type, Handle ret_handle,
-                                const pp::VarArray& args,
-                                const pp::VarArray& arg_is_handle) {
-    CHECK_TYPE(func_type, TYPE_arrayBufferCreate);
-    ARRAY_INT(args, 1, length);
+  void Handle_arrayBufferCreate(const CommandProcessor& cmdproc,
+                                Handle ret_handle) {
+    CHECK_TYPE(TYPE_arrayBufferCreate);
+    ARG(0, uint32_t, length);
     pp::VarArrayBuffer array_buffer(length);
-    PP_Var array_buffer_var = array_buffer.Detach();
-    RegisterHandle(ret_handle, new PP_Var(array_buffer_var), &TYPE_arrayBuffer);
-    printf("arrayBufferCreate(%d) => %d\n", length, ret_handle);
+    // Grab the id here because the var is detached in RegisterHandle.
+    uint64_t id = array_buffer.pp_var().value.as_id;
+    RegisterHandle(ret_handle, &array_buffer);
+    printf("arrayBufferCreate(%d) => %lld (%d)\n", length, id, ret_handle);
   }
 
-  void Handle_arrayBufferMap(FunctionType* func_type, Handle ret_handle,
-                             const pp::VarArray& args,
-                             const pp::VarArray& arg_is_handle) {
-    CHECK_TYPE(func_type, TYPE_arrayBufferMap);
-    ARRAY_ARRAYBUFFER(args, 0, buf);
+  void Handle_arrayBufferMap(const CommandProcessor& cmdproc,
+                             Handle ret_handle) {
+    CHECK_TYPE(TYPE_arrayBufferMap);
+    ARG(0, pp::VarArrayBuffer, buf);
     void* ptr = buf.Map();
-    RegisterHandle(ret_handle, ptr, &TYPE_void_p);
+    RegisterHandle(ret_handle, ptr);
     printf("arrayBufferMap(%lld) => %p (%d)\n", buf.pp_var().value.as_id, ptr,
            ret_handle);
   }
 
-  void Handle_deflate(FunctionType* func_type, Handle ret_handle,
-                      const pp::VarArray& args,
-                      const pp::VarArray& arg_is_handle) {
-    CHECK_TYPE(func_type, TYPE_deflate);
-    ARRAY_HANDLE(args, 0, stream);
-    ARRAY_INT(args, 1, flush);
-    int result = deflate((z_stream*)stream, flush);
-    RegisterHandle(ret_handle, new int32_t(result), &TYPE_int32);
+  void Handle_deflate(const CommandProcessor& cmdproc, Handle ret_handle) {
+    CHECK_TYPE(TYPE_deflate);
+    ARG(0, z_stream*, stream);
+    ARG(1, int, flush);
+    int result = deflate(stream, flush);
+    RegisterHandle(ret_handle, result);
     printf("deflate(%p, %d) => %d\n", stream, flush, result);
   }
 
-  void Handle_deflateInit(FunctionType* func_type, Handle ret_handle,
-                          const pp::VarArray& args,
-                          const pp::VarArray& arg_is_handle) {
-    CHECK_TYPE(func_type, TYPE_deflate);
-    ARRAY_HANDLE(args, 0, stream);
-    ARRAY_INT(args, 1, level);
-    int result = deflateInit((z_stream*)stream, level);
+  void Handle_deflateInit(const CommandProcessor& cmdproc, Handle ret_handle) {
+    CHECK_TYPE(TYPE_deflate);
+    ARG(0, z_stream*, stream);
+    ARG(1, int, level);
+    int result = deflateInit(stream, level);
 
-    // TODO(binji): putting the result in allocated memory kinda sucks.
-    // Something better here?
-    RegisterHandle(ret_handle, new int32_t(result), &TYPE_int32);
+    RegisterHandle(ret_handle, result);
     printf("deflateInit(%p, %d) => %d\n", stream, level, result);
   }
 
-  void Handle_get(FunctionType* func_type, Handle ret_handle,
-                  const pp::VarArray& args, const pp::VarArray& arg_is_handle) {
-    ARRAY_HANDLE(args, 0, ptr);
-
-    if (func_type == &TYPE_get_uint8_p) {
-      uint8_t* result = *(uint8_t**)ptr;
-      RegisterHandle(ret_handle, result, &TYPE_uint8_p);
-      printf("*(%s)%p => %p\n", func_type->GetArgType(0)->ToString().c_str(),
-             ptr, result);
-    } else if (func_type == &TYPE_get_uint32) {
-      uint32_t result = *(uint32_t*)ptr;
-      RegisterHandle(ret_handle, new uint32_t(result), &TYPE_uint32);
-      printf("*(%s)%p => %u\n", func_type->GetArgType(0)->ToString().c_str(),
-             ptr, result);
-    } else {
-      printf("Unexpected function type: %s\n", func_type->ToString().c_str());
-    }
+  void Handle_get(const CommandProcessor& cmdproc, Handle ret_handle) {
+    BEGIN
+      TYPE(TYPE_get_uint8_p) {
+        ARG(0, uint8_t**, ptr);
+        uint8_t* result = *ptr;
+        RegisterHandle(ret_handle, result);
+        printf("*(uint8_t**)%p => %p\n", ptr, result);
+      }
+      TYPE(TYPE_get_uint32) {
+        ARG(0, uint32_t*, ptr);
+        uint32_t result = *ptr;
+        RegisterHandle(ret_handle, result);
+        printf("*(uint32_t*)%p => %u\n", ptr, result);
+      }
+    END
   }
 
-  void Handle_malloc(FunctionType* func_type, Handle ret_handle,
-                     const pp::VarArray& args,
-                     const pp::VarArray& arg_is_handle) {
-    CHECK_TYPE(func_type, TYPE_malloc);
-    ARRAY_INT(args, 0, size);
+  void Handle_malloc(const CommandProcessor& cmdproc, Handle ret_handle) {
+    CHECK_TYPE(TYPE_malloc);
+    ARG(0, size_t, size);
     void* result = malloc(size);
-    RegisterHandle(ret_handle, result, &TYPE_void_p);
+    RegisterHandle(ret_handle, result);
     printf("malloc(%d) => %p (%d)\n", size, result, ret_handle);
   }
 
-  void Handle_memcpy(FunctionType* func_type, Handle ret_handle,
-                     const pp::VarArray& args,
-                     const pp::VarArray& arg_is_handle) {
-    CHECK_TYPE(func_type, TYPE_memcpy);
-    ARRAY_HANDLE(args, 0, dst);
-    ARRAY_HANDLE(args, 1, src);
-    ARRAY_INT(args, 2, size);
+  void Handle_memcpy(const CommandProcessor& cmdproc, Handle ret_handle) {
+    CHECK_TYPE(TYPE_memcpy);
+    ARG(0, void*, dst);
+    ARG(1, void*, src);
+    ARG(2, size_t, size);
     memcpy(dst, src, size);
     printf("memcpy(%p, %p, %d)\n", dst, src, size);
   }
 
-  void Handle_memset(FunctionType* func_type, Handle ret_handle,
-                     const pp::VarArray& args,
-                     const pp::VarArray& arg_is_handle) {
-    CHECK_TYPE(func_type, TYPE_memset);
-    ARRAY_HANDLE(args, 0, buffer);
-    ARRAY_INT(args, 1, value);
-    ARRAY_INT(args, 2, size);
+  void Handle_memset(const CommandProcessor& cmdproc, Handle ret_handle) {
+    CHECK_TYPE(TYPE_memset);
+    ARG(0, void*, buffer);
+    ARG(1, int, value);
+    ARG(2, size_t, size);
     memset(buffer, value, size);
     printf("memset(%p, %d, %d)\n", buffer, value, size);
   }
 
-  void Handle_set(FunctionType* func_type, Handle ret_handle,
-                  const pp::VarArray& args, const pp::VarArray& arg_is_handle) {
-    ARRAY_HANDLE(args, 0, ptr);
-
-    if (func_type == &TYPE_set_uint8_p) {
-      ARRAY_HANDLE(args, 1, value);
-      *(uint8_t**)ptr = (uint8_t*)value;
-      printf("*(%s)%p = %p\n", func_type->GetArgType(0)->ToString().c_str(),
-             ptr, value);
-    } else if (func_type == &TYPE_set_uint32) {
-      ARRAY_INT(args, 1, value);
-      *(uint32_t*)ptr = value;
-      printf("*(%s)%p = %d\n", func_type->GetArgType(0)->ToString().c_str(),
-             ptr, value);
-    } else {
-      ERROR("Unexpected function type: %s\n", func_type->ToString().c_str());
-    }
+  void Handle_set(const CommandProcessor& cmdproc, Handle ret_handle) {
+    BEGIN
+      TYPE(TYPE_set_uint8_p) {
+        ARG(0, uint8_t**, ptr);
+        ARG(1, uint8_t*, value);
+        *ptr = value;
+        printf("*(uint8_t*)%p = %p\n", ptr, value);
+      }
+      TYPE(TYPE_set_uint32) {
+        ARG(0, uint32_t*, ptr);
+        ARG(1, uint32_t, value);
+        *ptr = value;
+        printf("*(uint32_t)%p = %d\n", ptr, value);
+      }
+    END
   }
 
-  void Handle_sub(FunctionType* func_type, Handle ret_handle,
-                  const pp::VarArray& args, const pp::VarArray& arg_is_handle) {
-    ARRAY_INT(args, 0, minuend);
-    ARRAY_INT(args, 1, subtrahend);
-    if (func_type == &TYPE_sub_int32) {
-      int32_t result = minuend - subtrahend;
-      RegisterHandle(ret_handle, new int32_t(result), &TYPE_int32);
-      printf("sub(%d, %d) => %d (%d)\n", minuend, subtrahend, result,
-             ret_handle);
-    } else if (func_type == &TYPE_sub_uint32) {
-      uint32_t result = (uint32_t)minuend - (uint32_t)subtrahend;
-      RegisterHandle(ret_handle, new uint32_t(result), &TYPE_uint32);
-      printf("sub(%u, %u) => %u (%d)\n", minuend, subtrahend, result,
-             ret_handle);
-    } else {
-      ERROR("Unexpected function type: %s\n", func_type->ToString().c_str());
-    }
+  void Handle_sub(const CommandProcessor& cmdproc, Handle ret_handle) {
+    BEGIN
+      TYPE(TYPE_sub_int32) {
+        ARG(0, int32_t, minuend);
+        ARG(1, int32_t, subtrahend);
+        int32_t result = minuend - subtrahend;
+        RegisterHandle(ret_handle, result);
+        printf("sub(%d, %d) => %d (%d)\n", minuend, subtrahend, result,
+               ret_handle);
+      }
+      TYPE(TYPE_sub_uint32) {
+        ARG(0, uint32_t, minuend);
+        ARG(1, uint32_t, subtrahend);
+        int32_t result = minuend - subtrahend;
+        RegisterHandle(ret_handle, result);
+        printf("sub(%u, %u) => %u (%d)\n", minuend, subtrahend, result,
+               ret_handle);
+      }
+    END
   }
 
  private:

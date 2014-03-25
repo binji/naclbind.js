@@ -41,6 +41,7 @@ function resizeArrayBuffer(ab, newByteLength) {
 }
 
 function copyToArrayBuffer(dst, dstOffset, src) {
+  var srcLength = src.byteLength;
   if (dst === null) {
     dst = new ArrayBuffer(srcLength);
   }
@@ -117,50 +118,91 @@ function compress(inputAb, level, bufferSize, callback) {
 
   var output = nacl.malloc(bufferSize);
   var result = deflateInit(stream, level);
-  nacl.commit(result, step);
+  nacl.commit(result, onDeflateInit);
 
-  function step(result) {
-    if (result != Z_OK) {
+  function onDeflateInit(result) {
+    if (result !== Z_OK) {
+      // TODO(binji): error callback?
       return;
     }
 
-    var inputLeft = inputAb.byteLength - inputOffset;
-    var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, bufferSize);
-    var inputSlice = nacl.arrayBufferMap(ab);
+    deflateMore();
+  }
 
+  function deflateMore() {
+    var inputOffsetEnd = inputOffset + bufferSize;
+    var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, inputOffsetEnd);
+    var inputSlice = nacl.arrayBufferMap(inputSliceAb);
     z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
-    z_stream.fields.avail_in.set(stream, ab.byteLength);
+    z_stream.fields.avail_in.set(stream, inputSliceAb.byteLength);
     z_stream.fields.next_out.set(stream, output.cast(nacl.uint8_p));
     z_stream.fields.avail_out.set(stream, bufferSize);
+    deflateContinue();
+  }
 
-    var flush = inputLeft < bufferSize ? Z_PARTIAL_FLUSH : Z_FINISH;
+  function deflateContinue() {
+    var inputLeft = inputAb.byteLength - inputOffset;
+    var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
+    var preAvailIn = z_stream.fields.avail_in.get(stream);
     var result = deflate(stream, flush);
     var availIn = z_stream.fields.avail_in.get(stream);
     var availOut = z_stream.fields.avail_out.get(stream);
-    var availUsed = nacl.sub(bufferSize, availOut);
-    var outputAb = nacl.arrayBufferCreate(availUsed);
-    var outputAbPtr = nacl.arrayBufferMap(outputAb);
-    nacl.memcpy(outputAbPtr, output, availUsed);
-
-    nacl.commit(result, availIn, availOut, outputAb, stepLoop);
+    var outUsed = nacl.sub(bufferSize, availOut);
+    var compressedAb = nacl.arrayBufferCreate(outUsed);
+    var outputAbPtr = nacl.arrayBufferMap(compressedAb);
+    nacl.memcpy(outputAbPtr, output, outUsed);
+    nacl.commit(result, preAvailIn, availIn, availOut, compressedAb, onDeflate);
   }
 
-  function stepLoop(result, availIn, availOut, outputAb) {
-    console.log(result, availIn, availOut, outputAb);
-    if (result != Z_OK) {
+  function onDeflate(result, preAvailIn, availIn, availOut, compressedAb) {
+    if (result !== Z_OK && result !== Z_STREAM_END) {
+      // TODO(binji): error callback?
+      return;
+    }
+
+    // Consume output.
+    outputAb = copyToArrayBuffer(outputAb, outputOffset, compressedAb);
+    outputOffset += compressedAb.byteLength;
+
+    if (result === Z_STREAM_END) {
+      callback(outputAb);
       return;
     }
 
     if (availIn === 0) {
       // input underflow. Provide more input.
+      inputOffset += preAvailIn;
+      deflateMore();
     } else if (availOut === 0) {
-      // output overflow. Consume output and finish current input.
+      // output overflow. Finish current input.
+      deflateContinue();
     } else {
       // Not possible...?
+      console.log('onDeflate called with availOut = ' + availOut +
+                  ' and availIn = ' + availIn + '?');
       return;
     }
   }
 }
 
-var ab = new ArrayBuffer(10);
-compress(ab, 6, 1024, function() { console.log('done!'); });
+
+function makeArrayBuffer(length, add, mul) {
+  var newAb = new ArrayBuffer(length);
+  var view = new Uint8Array(newAb);
+  var value = 0;
+  for (var i = 0; i < length; ++i) {
+    value = ((value + add) * mul) & 255;
+    view[i] = value;
+  }
+  return newAb;
+}
+
+
+var ab = makeArrayBuffer(8192, 11, 93);
+compress(ab, 9, 2048, function(outputAb) {
+  var before = ab.byteLength;
+  var after = outputAb.byteLength;
+  console.log('done! orig = ' + before +
+              ' comp = ' + after +
+              ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
+});

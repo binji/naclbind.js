@@ -647,7 +647,6 @@ var nacl={};
 
     msg.id = id;
     if (moduleLoaded) {
-      console.log(JSON.stringify(msg));
       moduleEl.postMessage(msg);
     } else {
       queuedMessages.push(msg);
