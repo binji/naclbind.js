@@ -106,7 +106,7 @@ var deflateType = nacl.makeFunctionType(nacl.userTypeId + 2, nacl.int32, z_strea
 var deflateInit = nacl.makeFunction('deflateInit', deflateType);
 var deflate = nacl.makeFunction('deflate', deflateType);
 
-nacl.logTypes();
+// nacl.logTypes();
 
 function compress(inputAb, level, bufferSize, callback) {
   var inputOffset = 0;

@@ -38,7 +38,6 @@
 
 #include "error.h"
 #include "type.h"
-#include "gen_types.h"
 
 void VarTypeError(const char* file, int line, const char* var_name,
                   const char* expected_type) {
@@ -182,7 +181,6 @@ void RegisterHandle(Handle handle, pp::VarArrayBuffer* array_buffer) {
 }
 
 void DestroyHandle(Handle handle) {
-  printf("Destroying handle %d\n", handle);
   HandleMap::iterator iter = g_handle_map.find(handle);
   if (iter == g_handle_map.end()) {
     ERROR("DestroyHandle: handle %d doesn't exist.\n", handle);
@@ -397,6 +395,8 @@ class Instance : public pp::Instance {
     FunctionType* func_type = static_cast<FunctionType*>(Type::Get(type));
 
     CommandProcessor cmdproc(func_type, args, argIsHandle);
+
+    printf("HandleCommand: %s\n", cmd.c_str());
 
     if (cmd == "add") {
       Handle_add(cmdproc, ret);

@@ -17,8 +17,10 @@
 #include <assert.h>
 #include <stdio.h>
 
-extern Type** g_type_map;
-extern const int kNumTypes;
+#include <zlib.h>
+
+const int kNumTypes = 36;
+Type* g_type_map[kNumTypes];
 
 VoidType TYPE_void(1);
 PrimitiveType<int8_t> TYPE_int8(2, "int8");
@@ -56,20 +58,20 @@ FunctionType TYPE_arrayBufferCreate(30, &TYPE_arrayBuffer, &TYPE_uint32);
 FunctionType TYPE_arrayBufferMap(31, &TYPE_void_p, &TYPE_arrayBuffer);
 FunctionType TYPE_arrayBufferUnmap(32, &TYPE_void, &TYPE_arrayBuffer);
 
+StructField TYPE_z_stream_fields[] = {
+    {"next_in", &TYPE_uint8_p, offsetof(z_stream, next_in)},
+    {"avail_in", &TYPE_uint32, offsetof(z_stream, avail_in)},
+    {"total_in", &TYPE_uint32, offsetof(z_stream, total_in)},
+    {"next_out", &TYPE_uint8_p, offsetof(z_stream, next_out)},
+    {"avail_out", &TYPE_uint32, offsetof(z_stream, avail_out)},
+    {"total_out", &TYPE_uint32, offsetof(z_stream, total_out)}, };
+StructType TYPE_z_stream(33, "z_stream", sizeof(z_stream),
+                         sizeof(TYPE_z_stream_fields) /
+                             sizeof(TYPE_z_stream_fields[0]),
+                         TYPE_z_stream_fields);
+PointerType TYPE_z_stream_p(34, &TYPE_z_stream);
+FunctionType TYPE_deflate(35, &TYPE_int32, &TYPE_z_stream_p, &TYPE_int32);
 
-Type::Type(TypeId id) : id_(id) {
-  printf("Initializing type: %d %p\n", id, this);
-  assert(id >= 0 && id <= kNumTypes);
-  assert(g_type_map[id] == NULL);
-  g_type_map[id] = this;
-}
-
-// static
-Type* Type::Get(TypeId id) {
-  assert(id >= 0 && id <= kNumTypes);
-  assert(g_type_map[id] != NULL);
-  return g_type_map[id];
-}
 
 template <> Type* Type::Get<int8_t>() { return &TYPE_int8; }
 template <> Type* Type::Get<uint8_t>() { return &TYPE_uint8; }
@@ -82,6 +84,20 @@ template <> Type* Type::Get<uint64_t>() { return &TYPE_uint64; }
 template <> Type* Type::Get<float>() { return &TYPE_float32; }
 template <> Type* Type::Get<double>() { return &TYPE_float64; }
 template <> Type* Type::Get<void*>() { return &TYPE_void_p; }
+
+
+Type::Type(TypeId id) : id_(id) {
+  assert(id >= 0 && id <= kNumTypes);
+  assert(g_type_map[id] == NULL);
+  g_type_map[id] = this;
+}
+
+// static
+Type* Type::Get(TypeId id) {
+  assert(id >= 0 && id <= kNumTypes);
+  assert(g_type_map[id] != NULL);
+  return g_type_map[id];
+}
 
 VoidType::VoidType(TypeId id) : Type(id) {}
 

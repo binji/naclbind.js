@@ -78,6 +78,18 @@ class Type {
   TypeId id_;
 };
 
+template <> Type* Type::Get<int8_t>();
+template <> Type* Type::Get<uint8_t>();
+template <> Type* Type::Get<int16_t>();
+template <> Type* Type::Get<uint16_t>();
+template <> Type* Type::Get<int32_t>();
+template <> Type* Type::Get<uint32_t>();
+template <> Type* Type::Get<int64_t>();
+template <> Type* Type::Get<uint64_t>();
+template <> Type* Type::Get<float>();
+template <> Type* Type::Get<double>();
+template <> Type* Type::Get<void*>();
+
 class VoidType : public Type {
  public:
   explicit VoidType(TypeId id);
@@ -214,7 +226,6 @@ class PepperType : public Type {
   PP_VarType var_type_;
 };
 
-
 // Builtin types.
 extern VoidType TYPE_void;
 extern PrimitiveType<int8_t> TYPE_int8;
@@ -248,5 +259,11 @@ extern FunctionType TYPE_sub_uint32;
 extern FunctionType TYPE_arrayBufferCreate;
 extern FunctionType TYPE_arrayBufferMap;
 extern FunctionType TYPE_arrayBufferUnmap;
+
+// Generated.
+extern StructType TYPE_z_stream;
+extern PointerType TYPE_z_stream_p;
+extern FunctionType TYPE_deflate;
+
 
 #endif  // TYPE_H_

@@ -9,10 +9,15 @@ var nacl={};
   var self = this;
 
   var moduleName = 'zlib-nacl';
-  var nmf = 'pnacl/Debug/zlib.nmf';
-  var mimetype = 'application/x-nacl';
-  //var nmf = 'pnacl/Release/zlib.nmf';
-  //var mimetype = 'application/x-pnacl';
+  var nmf;
+  var mimetype;
+  if (false) {
+    nmf = 'pnacl/Debug/zlib.nmf';
+    mimetype = 'application/x-nacl';
+  } else {
+    nmf = 'pnacl/Release/zlib.nmf';
+    mimetype = 'application/x-pnacl';
+  }
 
   function assert(cond, msg) {
     if (!cond) {

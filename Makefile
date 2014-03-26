@@ -15,7 +15,7 @@ include $(NACL_SDK_ROOT)/tools/common.mk
 PORTS = zlib
 TARGET = zlib
 CFLAGS += -Wall
-SOURCES = app.cc type.cc gen_types.cc
+SOURCES = app.cc type.cc
 LIBS = z ppapi_cpp ppapi
 
 .PHONY: ports
