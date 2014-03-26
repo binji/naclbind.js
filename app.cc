@@ -38,6 +38,7 @@
 
 #include "error.h"
 #include "type.h"
+#include "handle.h"
 
 void VarTypeError(const char* file, int line, const char* var_name,
                   const char* expected_type) {
@@ -114,83 +115,6 @@ void VarTypeError(const char* file, int line, const char* var_name,
     CHECK_VARTYPE(tempvar, "Argument " #ix, array_buffer); \
     newvar = pp::VarArrayBuffer(tempvar);                  \
   } while (0)
-
-
-typedef int32_t Handle;
-
-struct HandleObject {
-  HandleObject() : ptr(NULL), type(NULL) {}
-  HandleObject(void* ptr, Type* type) : ptr(ptr), type(type) {}
-
-  void* ptr;
-  Type* type;
-};
-
-typedef std::map<Handle, HandleObject> HandleMap;
-HandleMap g_handle_map;
-
-bool GetHandle(Handle handle, HandleObject* out_hobj) {
-  HandleMap::iterator iter = g_handle_map.find(handle);
-  if (iter == g_handle_map.end()) {
-    return false;
-  }
-
-  *out_hobj = iter->second;
-  return true;
-}
-
-template <typename T>
-bool GetHandleValue(Handle handle, T* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
-    ERROR("GetHandleValue: Invalid handle %d.", handle);
-    return false;
-  }
-
-  Type* src_type = hobj.type;
-  return src_type->GetValue(hobj.ptr, out_value);
-}
-
-void RegisterHandle(Handle handle, void* pointer, Type* type) {
-  HandleMap::iterator iter = g_handle_map.find(handle);
-  if (iter != g_handle_map.end()) {
-    ERROR("RegisterHandle: handle %d is already registered.\n", handle);
-    return;
-  }
-
-  g_handle_map.insert(
-      HandleMap::value_type(handle, HandleObject(pointer, type)));
-}
-
-template <typename T>
-void RegisterHandle(Handle handle, T arg) {
-  // TODO(binji): putting the result in allocated memory kinda sucks.
-  // Something better here?
-  RegisterHandle(handle, new T(arg), Type::Get<T>());
-}
-
-template <typename T>
-void RegisterHandle(Handle handle, T* pointer) {
-  RegisterHandle(handle, pointer, Type::Get<T*>());
-}
-
-template <>
-void RegisterHandle(Handle handle, pp::VarArrayBuffer* array_buffer) {
-  PP_Var var = array_buffer->Detach();
-  RegisterHandle(handle, new PP_Var(var), &TYPE_arrayBuffer);
-}
-
-void DestroyHandle(Handle handle) {
-  HandleMap::iterator iter = g_handle_map.find(handle);
-  if (iter == g_handle_map.end()) {
-    ERROR("DestroyHandle: handle %d doesn't exist.\n", handle);
-    return;
-  }
-
-  HandleObject& hobj = iter->second;
-  hobj.type->DestroyValue(hobj.ptr);
-  g_handle_map.erase(iter);
-}
 
 
 template <typename T>
