@@ -12,17 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdio.h>
+#ifndef INTERFACES_H_
+#define INTERFACES_H_
 
-#define ERROR(msg) \
-  fprintf(stderr, "%s:%d:(%s): " msg "\n", __FILE__, __LINE__, __FUNCTION__)
+#include <ppapi/c/pp_instance.h>
+#include <ppapi/c/ppb.h>
+#include <ppapi/c/ppb_var.h>
+#include <ppapi/c/ppb_var_array.h>
+#include <ppapi/c/ppb_var_array_buffer.h>
+#include <ppapi/c/ppb_var_dictionary.h>
 
-#define VERROR(msg, ...) \
-  fprintf(stderr, "%s:%d:(%s): " msg "\n", __FILE__, __LINE__, __FUNCTION__, \
-          __VA_ARGS__)
+extern PP_Instance g_pp_instance;
+extern struct PPB_Var_1_1* g_ppb_var;
+extern struct PPB_VarArray_1_0* g_ppb_var_array;
+extern struct PPB_VarArrayBuffer_1_0* g_ppb_var_array_buffer;
+extern struct PPB_VarDictionary_1_0* g_ppb_var_dictionary;
 
-#define ERROR_IF(cond, msg) \
-  if (!(cond)) { ERROR(msg); return; }
+void InitInterfaces(PP_Instance, PPB_GetInterface);
 
-#define VERROR_IF(cond, msg, ...) \
-  if (!(cond)) { VERROR(msg, __VA_ARGS__); return; }
+#endif  // INTERFACES_H_

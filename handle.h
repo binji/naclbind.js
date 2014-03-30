@@ -15,57 +15,62 @@
 #ifndef HANDLE_H_
 #define HANDLE_H_
 
+#include <stdint.h>
+
+#include <ppapi/c/pp_var.h>
+
 #include "type.h"
 
-#include <map>
+typedef union {
+  int8_t int8;
+  uint8_t uint8;
+  int16_t int16;
+  uint16_t uint16;
+  int32_t int32;
+  uint32_t uint32;
+  int64_t int64;
+  uint64_t uint64;
+  float float32;
+  double float64;
+  void* voidp;
+  struct PP_Var var;
+} HandleValue;
+
+typedef struct {
+  Type type;
+  HandleValue value;
+} HandleObject;
 
 typedef int32_t Handle;
 
-struct HandleObject {
-  HandleObject() : ptr(NULL), type(NULL) {}
-  HandleObject(void* ptr, Type* type) : ptr(ptr), type(type) {}
+bool RegisterHandle(Handle, Type, HandleValue);
+bool RegisterHandleInt8(Handle, int8_t);
+bool RegisterHandleUint8(Handle, uint8_t);
+bool RegisterHandleInt16(Handle, int16_t);
+bool RegisterHandleUint16(Handle, uint16_t);
+bool RegisterHandleInt32(Handle, int32_t);
+bool RegisterHandleUint32(Handle, uint32_t);
+bool RegisterHandleInt64(Handle, int64_t);
+bool RegisterHandleUint64(Handle, uint64_t);
+bool RegisterHandleFloat(Handle, float);
+bool RegisterHandleDouble(Handle, double);
+bool RegisterHandleVoidp(Handle, void*);
+bool RegisterHandleVar(Handle, struct PP_Var);
+bool GetHandle(Handle, HandleObject*);
+bool GetHandleInt8(Handle, int8_t*);
+bool GetHandleUint8(Handle, uint8_t*);
+bool GetHandleInt16(Handle, int16_t*);
+bool GetHandleUint16(Handle, uint16_t*);
+bool GetHandleInt32(Handle, int32_t*);
+bool GetHandleUint32(Handle, uint32_t*);
+bool GetHandleInt64(Handle, int32_t*);
+bool GetHandleUint64(Handle, uint32_t*);
+bool GetHandleFloat(Handle, float*);
+bool GetHandleDouble(Handle, double*);
+bool GetHandleVoidp(Handle, void**);
+bool GetHandleVar(Handle, struct PP_Var*);
+void DestroyHandle(Handle);
 
-  void* ptr;
-  Type* type;
-};
-
-typedef std::map<Handle, HandleObject> HandleMap;
-extern HandleMap g_handle_map;
-
-bool GetHandle(Handle handle, HandleObject* out_hobj);
-template <typename T>
-bool GetHandleValue(Handle handle, T* out_value);
-void RegisterHandle(Handle handle, void* pointer, Type* type);
-template <typename T>
-void RegisterHandle(Handle handle, T arg);
-template <typename T>
-void RegisterHandle(Handle handle, T* pointer);
-template <>
-void RegisterHandle(Handle handle, pp::VarArrayBuffer* array_buffer);
-void DestroyHandle(Handle handle);
-
-template <typename T>
-bool GetHandleValue(Handle handle, T* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
-    ERROR("GetHandleValue: Invalid handle %d.", handle);
-    return false;
-  }
-
-  Type* src_type = hobj.type;
-  return src_type->GetValue(hobj.ptr, out_value);
-}
-
-template <typename T>
-void RegisterHandle(Handle handle, T arg) {
-  // TODO(binji): putting the result in allocated memory kinda sucks.
-  // Something better here?
-  RegisterHandle(handle, new T(arg), Type::Get<T>());
-}
-
-template <typename T>
-void RegisterHandle(Handle handle, T* pointer) {
-  RegisterHandle(handle, pointer, Type::Get<T*>());
-}
+bool HandleToVar(Handle, struct PP_Var*);
 
 #endif  // HANDLE_H_

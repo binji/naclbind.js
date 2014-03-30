@@ -12,17 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdio.h>
+#ifndef COMMANDS_H_
+#define COMMANDS_H_
 
-#define ERROR(msg) \
-  fprintf(stderr, "%s:%d:(%s): " msg "\n", __FILE__, __LINE__, __FUNCTION__)
+#include "message.h"
 
-#define VERROR(msg, ...) \
-  fprintf(stderr, "%s:%d:(%s): " msg "\n", __FILE__, __LINE__, __FUNCTION__, \
-          __VA_ARGS__)
+void HandleCommand(Command* command);
 
-#define ERROR_IF(cond, msg) \
-  if (!(cond)) { ERROR(msg); return; }
-
-#define VERROR_IF(cond, msg, ...) \
-  if (!(cond)) { VERROR(msg, __VA_ARGS__); return; }
+#endif  // COMMANDS_H_
