@@ -15,7 +15,7 @@
 #ifndef TYPE_H_
 #define TYPE_H_
 
-enum Type {
+typedef enum {
   TYPE_VOID = 1,
   TYPE_INT8 = 2,
   TYPE_UINT8 = 3,
@@ -52,7 +52,7 @@ enum Type {
   TYPE_Z_STREAM_P = 34,
   TYPE_FUNC_DEFLATE = 35,
   NUM_TYPES
-};
+} Type;
 
 const char* TypeToString(Type);
 

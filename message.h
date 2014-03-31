@@ -23,22 +23,22 @@
 #include "type.h"
 
 typedef struct {
-  PP_Var var;
+  struct PP_Var var;
   int32_t id;
-  PP_Var commands;
-  PP_Var ret_handles;
+  struct PP_Var commands;
+  struct PP_Var ret_handles;
 } Message;
 
 typedef struct {
-  PP_Var var;
+  struct PP_Var var;
   const char* command;
   Type type;
-  PP_Var args;
-  PP_Var arg_is_handle;
+  struct PP_Var args;
+  struct PP_Var arg_is_handle;
   int32_t ret_handle;
 } Command;
 
-Message* CreateMessage(PP_Var);
+Message* CreateMessage(struct PP_Var);
 void DestroyMessage(Message*);
 int32_t GetMessageCommandCount(Message*);
 Command* GetMessageCommand(Message*, int32_t index);
@@ -49,6 +49,6 @@ bool GetMessageRetHandle(Message*, int32_t index,
 void DestroyCommand(Command*);
 int32_t GetCommandArgCount(Command*);
 bool GetCommandArg(Command*, int32_t index,
-                   PP_Var* out_var, bool* out_is_handle);
+                   struct PP_Var* out_var, bool* out_is_handle);
 
 #endif  // MESSAGE_H_

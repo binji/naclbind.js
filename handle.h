@@ -15,6 +15,7 @@
 #ifndef HANDLE_H_
 #define HANDLE_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <ppapi/c/pp_var.h>

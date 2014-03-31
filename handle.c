@@ -14,27 +14,95 @@
 
 #include "handle.h"
 
-#include <ppapi/c/pp_var.h>
+#include <assert.h>
 
-#include <map>
+#include <ppapi/c/pp_var.h>
 
 #include "error.h"
 #include "var.h"
 
-typedef std::map<Handle, HandleObject> HandleMap;
-HandleMap g_handle_map;
+#define HANDLE_MAP_INITIAL_CAPACITY 16
 
-bool RegisterHandle(Handle handle, Type type, HandleValue value) {
-  HandleMap::iterator iter = g_handle_map.find(handle);
-  if (iter != g_handle_map.end()) {
-    VERROR("handle %d is already registered.\n", handle);
+typedef struct {
+  Handle handle;
+  HandleObject object;
+} HandleMapPair;
+
+static HandleMapPair* s_handle_map = NULL;
+static size_t s_handle_map_size = 0;
+static size_t s_handle_map_capacity = 0;
+
+static bool ResizeHandleMap(size_t new_capacity) {
+  assert(s_handle_map_size <= new_capacity)
+  HandleMapPair* new_map = malloc(sizeof(HandleMapPair) * new_capacity);
+  if (!new_map) {
     return false;
   }
 
-  HandleObject hobj;
-  hobj.type = type;
-  hobj.value = value;
-  g_handle_map.insert(HandleMap::value_type(handle, hobj));
+  memcpy(new_map, s_handle_map, sizeof(HandleMapPair) * s_handle_map_size);
+  free(s_handle_map);
+  s_handle_map = new_map;
+  return true;
+}
+
+bool RegisterHandle(Handle handle, Type type, HandleValue value) {
+  if (!s_handle_map) {
+    s_handle_map = malloc(sizeof(HandleMapPair) * HANDLE_MAP_INITIAL_CAPACITY);
+    if (!s_handle_map) {
+      ERROR("Out of memory");
+      return false;
+    }
+    s_handle_map_capacity = HANDLE_MAP_INITIAL_CAPACITY;
+  }
+
+  if (s_handle_map_size == s_handle_map_capacity) {
+    if (!ResizeHandleMap(s_handle_map_capacity * 2)) {
+      ERROR("Out of memory");
+      return false;
+    }
+  }
+
+  HandleMapPair* pair = NULL;
+
+  if (s_handle_map_size == 0) {
+    assert(s_handle_map_capacity > 0);
+    pair = &s_handle_map[0];
+  } else {
+    // Fast case, the new handle is larger than all other handles.
+    if (handle > s_handle_map[s_handle_map_size - 1].handle) {
+      pair = &s_handle_map[s_handle_map_size];
+    } else {
+      // Binary search to find the insertion point.
+      size_t lo_ix = 0;  // Inclusive
+      size_t hi_ix = s_handle_map_size;  // Exclusive
+      while (lo_ix < hi_ix) {
+        size_t mid_ix = (lo_ix + hi_ix) / 2;
+        Handle mid_handle = s_handle_map[mid_ix].handle;
+        if (handle > mid_handle) {
+          lo_ix = mid_ix + 1;
+        } else if (handle < mid_handle) {
+          hi_ix = mid_ix;
+        } else {
+          VERROR("handle %d is already registered.\n", handle);
+          return false;
+        }
+      }
+
+      // Move everything after the insertion point down.
+      size_t insert_ix = lo_ix;
+      if (insert_ix < s_handle_map_size) {
+        memmove(&s_handle_map[insert_ix + 1], &s_handle_map[insert_ix],
+                sizeof(HandleMapPair) * (s_handle_map_size - insert_ix));
+      }
+
+      pair = &s_handle_map[insert_ix];
+    }
+  }
+
+  pair->handle = handle;
+  pair->object.type = type;
+  pair->object.value = value;
+  s_handle_map_size++;
   return true;
 }
 

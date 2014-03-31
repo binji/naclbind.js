@@ -198,7 +198,7 @@ function makeArrayBuffer(length, add, mul) {
 }
 
 
-var ab = makeArrayBuffer(8192, 11, 93);
+var ab = makeArrayBuffer(8192, 2, 1);
 compress(ab, 9, 2048, function(outputAb) {
   var before = ab.byteLength;
   var after = outputAb.byteLength;

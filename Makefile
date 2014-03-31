@@ -14,15 +14,14 @@ include $(NACL_SDK_ROOT)/tools/common.mk
 
 PORTS = zlib
 TARGET = zlib
-CFLAGS += -Wall
+CFLAGS += -Wall -std=c99
 SOURCES = \
-  app.cc \
-  commands.cc \
-  handle.cc \
-  interfaces.cc \
-  message.cc \
-  type.cc \
-  var.cc \
+  commands.c \
+  handle.c \
+  interfaces.c \
+  message.c \
+  type.c \
+  var.c \
 
 LIBS = z ppapi_cpp ppapi
 
