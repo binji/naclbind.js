@@ -118,6 +118,14 @@ function commitPromise() {
   });
 }
 
+function resolveWith() {
+  return Promise.resolve(arguments);
+}
+
+function rejectWith() {
+  return Promise.reject(arguments);
+}
+
 function compress(inputAb, level, bufferSize) {
   var stream;
   var output;
@@ -171,7 +179,7 @@ function compress(inputAb, level, bufferSize) {
       var compressedAb = args[4];
 
       if (result !== Z_OK && result !== Z_STREAM_END) {
-        return Promise.reject([result]);
+        return rejectWith(result);
       }
 
       // Consume output.
@@ -179,7 +187,7 @@ function compress(inputAb, level, bufferSize) {
       outputOffset += compressedAb.byteLength;
 
       if (result === Z_STREAM_END) {
-        return Promise.resolve([outputAb]);
+        return resolveWith(outputAb);
       }
 
       if (availIn === 0) {
@@ -193,7 +201,7 @@ function compress(inputAb, level, bufferSize) {
         // Not possible...?
         console.log('onDeflate called with availOut = ' + availOut +
                     ' and availIn = ' + availIn + '?');
-        return Promise.reject([null]);
+        return rejectWith(null);
       }
     }
 

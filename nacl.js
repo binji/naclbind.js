@@ -638,6 +638,15 @@ var nacl={};
     });
   };
 
+  function NaClPromise(f) {
+    Promise.call(this, f);
+  }
+  NaClPromise.prototype = Promise.prototype;
+  NaClPromise.prototype.constructor = NaClPromise;
+
+  NaClPromise.prototype.thenApply = function(f) {
+  };
+
 
   // NaCl stuff...
   var nextCallbackId = 1;
