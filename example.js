@@ -108,24 +108,6 @@ var deflate = nacl.makeFunction('deflate', deflateType);
 
 // nacl.logTypes();
 
-function commitPromise() {
-  var args = Array.prototype.slice.call(arguments);
-  return new Promise(function(resolve) {
-    args.push(function() {
-      resolve(arguments);
-    });
-    nacl.commit.apply(null, args);
-  });
-}
-
-function resolveWith() {
-  return Promise.resolve(arguments);
-}
-
-function rejectWith() {
-  return Promise.reject(arguments);
-}
-
 function compress(inputAb, level, bufferSize) {
   var stream;
   var output;
@@ -139,13 +121,12 @@ function compress(inputAb, level, bufferSize) {
 
     output = nacl.malloc(bufferSize);
     var result = deflateInit(stream, level);
-    return commitPromise(result);
-  }).then(function(args) {
-    var result = args[0];
+    return nacl.commitPromise(result);
+  }).thenApply(function(result) {
     if (result !== Z_OK) {
-      return Promise.reject([result]);
+      return nacl.reject(result);
     }
-  }).then(function() {
+  }).thenApply(function() {
     function deflateMore() {
       var inputOffsetEnd = inputOffset + bufferSize;
       var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, inputOffsetEnd);
@@ -168,18 +149,13 @@ function compress(inputAb, level, bufferSize) {
       var compressedAb = nacl.arrayBufferCreate(outUsed);
       var outputAbPtr = nacl.arrayBufferMap(compressedAb);
       nacl.memcpy(outputAbPtr, output, outUsed);
-      return commitPromise(result, preAvailIn, availIn, availOut, compressedAb);
+      return nacl.commitPromise(result, preAvailIn, availIn, availOut,
+                                compressedAb);
     }
 
-    function onDeflate(args) {
-      var result = args[0];
-      var preAvailIn = args[1];
-      var availIn = args[2];
-      var availOut = args[3];
-      var compressedAb = args[4];
-
+    function onDeflate(result, preAvailIn, availIn, availOut, compressedAb) {
       if (result !== Z_OK && result !== Z_STREAM_END) {
-        return rejectWith(result);
+        return nacl.reject(result);
       }
 
       // Consume output.
@@ -187,34 +163,32 @@ function compress(inputAb, level, bufferSize) {
       outputOffset += compressedAb.byteLength;
 
       if (result === Z_STREAM_END) {
-        return resolveWith(outputAb);
+        return nacl.resolve(outputAb);
       }
 
       if (availIn === 0) {
         // input underflow. Provide more input.
         inputOffset += preAvailIn;
-        return deflateMore().then(onDeflate);
+        return deflateMore().thenApply(onDeflate);
       } else if (availOut === 0) {
         // output overflow. Finish current input.
-        return deflateContinue().then(onDeflate);
+        return deflateContinue().thenApply(onDeflate);
       } else {
         // Not possible...?
         console.log('onDeflate called with availOut = ' + availOut +
                     ' and availIn = ' + availIn + '?');
-        return rejectWith(null);
+        return nacl.reject(null);
       }
     }
 
-    return deflateMore().then(onDeflate);
-  }).then(function(args) {
-    var outputAb = args[0];
+    return deflateMore().thenApply(onDeflate);
+  }).thenApply(function(outputAb) {
     return outputAb;
-  }).catch(function(args) {
-    var result = args[0];
+  }).catch(function(result) {
     nacl.free(stream);
     nacl.free(output);
-    return commitPromise().then(function() {
-      return Promise.reject(result);
+    return nacl.commitPromise().thenApply(function() {
+      return nacl.reject(result);
     });
   });
 }

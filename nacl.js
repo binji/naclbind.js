@@ -644,8 +644,35 @@ var nacl={};
   NaClPromise.prototype = Promise.prototype;
   NaClPromise.prototype.constructor = NaClPromise;
 
-  NaClPromise.prototype.thenApply = function(f) {
+  NaClPromise.prototype.thenApply = function(resolve, reject) {
+    return Promise.prototype.then.call(this, function(args) {
+      return resolve.apply(this, args);
+    }, function(args) {
+      if (reject) {
+        return reject.call(this, args);
+      } else {
+        return Promise.reject(args);
+      }
+    });
   };
+
+  function commitPromise() {
+    var args = Array.prototype.slice.call(arguments);
+    return new Promise(function(resolve) {
+      args.push(function() {
+        resolve(arguments);
+      });
+      nacl.commit.apply(null, args);
+    });
+  }
+
+  function resolve() {
+    return Promise.resolve(arguments);
+  }
+
+  function reject(value) {
+    return Promise.reject(value);
+  }
 
 
   // NaCl stuff...
@@ -833,10 +860,13 @@ var nacl={};
 
   // exported functions
   self.commit = commit;
+  self.commitPromise = commitPromise;
   self.makeFunction = makeFunction;
   self.makeFunctionType = makeFunctionType;
   self.makePointerType = makePointerType;
   self.makeStructType = makeStructType;
   self.logTypes = logTypes;
+  self.reject = reject;
+  self.resolve = resolve;
 
 }).call(nacl);
