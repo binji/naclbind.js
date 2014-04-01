@@ -13,16 +13,18 @@
 // limitations under the License.
 
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 
 #include <zlib.h>
 
-#include <ppapi/c/pp_var.h>
-#include <ppapi/cpp/instance.h>
-#include <ppapi/cpp/module.h>
-#include <ppapi/cpp/var.h>
-#include <ppapi/utility/completion_callback_factory.h>
+#include <ppapi/c/pp_errors.h>
+#include <ppapi/c/pp_module.h>
+#include <ppapi/c/ppb.h>
+#include <ppapi/c/ppb_instance.h>
+#include <ppapi/c/ppb_var.h>
+#include <ppapi/c/ppp.h>
+#include <ppapi/c/ppp_instance.h>
+#include <ppapi/c/ppp_messaging.h>
 
 #ifdef WIN32
 #undef PostMessage
@@ -36,71 +38,91 @@
 #include "message.h"
 #include "var.h"
 
-class Instance : public pp::Instance {
- public:
-  explicit Instance(PP_Instance instance)
-      : pp::Instance(instance), callback_factory_(this) {}
+static PPB_GetInterface get_browser_interface = NULL;
 
-  virtual bool Init(uint32_t argc, const char* argn[], const char* argv[]) {
-    InitInterfaces(pp_instance(), pp::Module::Get()->get_browser_interface());
-    return true;
+static PP_Bool Instance_DidCreate(PP_Instance instance,
+                                  uint32_t argc,
+                                  const char* argn[],
+                                  const char* argv[]) {
+  InitInterfaces(instance, get_browser_interface);
+  return PP_TRUE;
+}
+
+static void Instance_DidDestroy(PP_Instance instance) {}
+
+static void Instance_DidChangeView(PP_Instance instance,
+                                   PP_Resource view_resource) {}
+
+static void Instance_DidChangeFocus(PP_Instance instance, PP_Bool has_focus) {}
+
+static PP_Bool Instance_HandleDocumentLoad(PP_Instance instance,
+                                           PP_Resource url_loader) {
+  return PP_FALSE;
+}
+
+static void Messaging_HandleMessage(PP_Instance instance, struct PP_Var var) {
+  Message* message = CreateMessage(var);
+  int32_t command_count = GetMessageCommandCount(message);
+  for (int32_t i = 0; i < command_count; ++i) {
+    Command* command = GetMessageCommand(message, i);
+    HandleCommand(command);
+    DestroyCommand(command);
   }
 
-  virtual void HandleMessage(const pp::Var& var) {
-    PP_Var pp_var = var.pp_var();
-    Message* message = CreateMessage(pp_var);
-    int32_t command_count = GetMessageCommandCount(message);
-    for (int32_t i = 0; i < command_count; ++i) {
-      Command* command = GetMessageCommand(message, i);
-      HandleCommand(command);
-      DestroyCommand(command);
+  int32_t ret_handle_count = GetMessageRetHandleCount(message);
+  struct PP_Var values_var;
+  CreateArrayVar(&values_var);
+  for (int32_t i = 0; i < ret_handle_count; ++i) {
+    Handle handle;
+    Type type;
+    if (!GetMessageRetHandle(message, i, &handle, &type)) {
+      VERROR("Bad ret handle at index %d", i);
+      continue;
     }
 
-    int32_t ret_handle_count = GetMessageRetHandleCount(message);
-    PP_Var values_var;
-    CreateArrayVar(&values_var);
-    for (int32_t i = 0; i < ret_handle_count; ++i) {
-      Handle handle;
-      Type type;
-      if (!GetMessageRetHandle(message, i, &handle, &type)) {
-        VERROR("Bad ret handle at index %d", i);
-        continue;
-      }
-
-      PP_Var value_var;
-      if (!HandleToVar(handle, &value_var)) {
-        VERROR("Unable to convert handle %d (index %d) to var", handle, i);
-        continue;
-      }
-
-      SetArrayVar(&values_var, i, value_var);
+    struct PP_Var value_var;
+    if (!HandleToVar(handle, &value_var)) {
+      VERROR("Unable to convert handle %d (index %d) to var", handle, i);
+      continue;
     }
 
-    PP_Var response;
-    CreateDictVar(&response);
-    SetDictVar(&response, "id", PP_MakeInt32(message->id));
-    SetDictVar(&response, "values", values_var);
-    PostMessage(pp::Var(response));
-    ReleaseVar(&response);
-
-    DestroyMessage(message);
+    SetArrayVar(&values_var, i, value_var);
   }
 
- private:
-  pp::CompletionCallbackFactory<Instance> callback_factory_;
-};
+  struct PP_Var response;
+  CreateDictVar(&response);
+  SetDictVar(&response, "id", PP_MakeInt32(message->id));
+  SetDictVar(&response, "values", values_var);
+  g_ppb_messaging->PostMessage(g_pp_instance, response);
+  ReleaseVar(&response);
 
-class Module : public pp::Module {
- public:
-  Module() : pp::Module() {}
-  virtual ~Module() {}
+  DestroyMessage(message);
+}
 
-  virtual pp::Instance* CreateInstance(PP_Instance instance) {
-    return new Instance(instance);
+
+PP_EXPORT int32_t PPP_InitializeModule(PP_Module a_module_id,
+                                       PPB_GetInterface get_browser) {
+  get_browser_interface = get_browser;
+  return PP_OK;
+}
+
+PP_EXPORT const void* PPP_GetInterface(const char* interface_name) {
+  if (strcmp(interface_name, PPP_INSTANCE_INTERFACE_1_1) == 0) {
+    static PPP_Instance instance_interface = {
+      &Instance_DidCreate,
+      &Instance_DidDestroy,
+      &Instance_DidChangeView,
+      &Instance_DidChangeFocus,
+      &Instance_HandleDocumentLoad,
+    };
+    return &instance_interface;
+  } else if (strcmp(interface_name, PPP_MESSAGING_INTERFACE_1_0) == 0) {
+    static PPP_Messaging messaging_interface = {
+      &Messaging_HandleMessage,
+    };
+    return &messaging_interface;
   }
-};
+  return NULL;
+}
 
-namespace pp {
-Module* CreateModule() { return new ::Module(); }
-}  // namespace pp
-
+PP_EXPORT void PPP_ShutdownModule() {}

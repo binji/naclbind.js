@@ -17,6 +17,7 @@
 
 #include <ppapi/c/pp_instance.h>
 #include <ppapi/c/ppb.h>
+#include <ppapi/c/ppb_messaging.h>
 #include <ppapi/c/ppb_var.h>
 #include <ppapi/c/ppb_var_array.h>
 #include <ppapi/c/ppb_var_array_buffer.h>
@@ -27,6 +28,7 @@ extern struct PPB_Var_1_1* g_ppb_var;
 extern struct PPB_VarArray_1_0* g_ppb_var_array;
 extern struct PPB_VarArrayBuffer_1_0* g_ppb_var_array_buffer;
 extern struct PPB_VarDictionary_1_0* g_ppb_var_dictionary;
+extern struct PPB_Messaging_1_0* g_ppb_messaging;
 
 void InitInterfaces(PP_Instance, PPB_GetInterface);
 

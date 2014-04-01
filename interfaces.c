@@ -21,6 +21,7 @@ struct PPB_Var_1_1* g_ppb_var = NULL;
 struct PPB_VarArray_1_0* g_ppb_var_array = NULL;
 struct PPB_VarArrayBuffer_1_0* g_ppb_var_array_buffer = NULL;
 struct PPB_VarDictionary_1_0* g_ppb_var_dictionary = NULL;
+struct PPB_Messaging_1_0* g_ppb_messaging = NULL;
 
 void InitInterfaces(PP_Instance instance, PPB_GetInterface get_interface) {
   g_pp_instance = instance;
@@ -31,4 +32,6 @@ void InitInterfaces(PP_Instance instance, PPB_GetInterface get_interface) {
       PPB_VAR_ARRAY_BUFFER_INTERFACE_1_0);
   g_ppb_var_dictionary = (struct PPB_VarDictionary_1_0*)get_interface(
       PPB_VAR_DICTIONARY_INTERFACE_1_0);
+  g_ppb_messaging = (struct PPB_Messaging_1_0*)get_interface(
+      PPB_MESSAGING_INTERFACE_1_0);
 }

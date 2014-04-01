@@ -108,7 +108,19 @@ var deflate = nacl.makeFunction('deflate', deflateType);
 
 // nacl.logTypes();
 
-function compress(inputAb, level, bufferSize, callback) {
+/*
+function commitPromise() {
+  var args = Array.prototype.slice.call(arguments);
+  return new Promise(function(resolve) {
+    args.push(function() {
+      resolve(arguments);
+    });
+    nacl.commit.apply(null, args);
+  });
+}
+*/
+
+function compress(inputAb, level, bufferSize, callback, errback) {
   var inputOffset = 0;
   var outputAb = null;
   var outputOffset = 0;
@@ -122,7 +134,9 @@ function compress(inputAb, level, bufferSize, callback) {
 
   function onDeflateInit(result) {
     if (result !== Z_OK) {
-      // TODO(binji): error callback?
+      nacl.free(stream);
+      nacl.free(output);
+      nacl.commit(function() { errback(result); });
       return;
     }
 
@@ -156,7 +170,9 @@ function compress(inputAb, level, bufferSize, callback) {
 
   function onDeflate(result, preAvailIn, availIn, availOut, compressedAb) {
     if (result !== Z_OK && result !== Z_STREAM_END) {
-      // TODO(binji): error callback?
+      nacl.free(stream);
+      nacl.free(output);
+      nacl.commit(function() { errback(result); });
       return;
     }
 
@@ -165,7 +181,9 @@ function compress(inputAb, level, bufferSize, callback) {
     outputOffset += compressedAb.byteLength;
 
     if (result === Z_STREAM_END) {
-      callback(outputAb);
+      nacl.free(stream);
+      nacl.free(output);
+      nacl.commit(onDone);
       return;
     }
 
@@ -183,6 +201,10 @@ function compress(inputAb, level, bufferSize, callback) {
       return;
     }
   }
+
+  function onDone() {
+    callback(outputAb);
+  }
 }
 
 
@@ -191,18 +213,20 @@ function makeArrayBuffer(length, add, mul) {
   var view = new Uint8Array(newAb);
   var value = 0;
   for (var i = 0; i < length; ++i) {
-    value = ((value + add) * mul) & 255;
-    view[i] = value;
+    value = ((value + add) * mul) | 0;
+    view[i] = value & 255;
   }
   return newAb;
 }
 
 
-var ab = makeArrayBuffer(8192, 2, 1);
-compress(ab, 9, 2048, function(outputAb) {
+var ab = makeArrayBuffer(16384, 1337, 0xc0dedead);
+compress(ab, 6, 2048, function(outputAb) {
   var before = ab.byteLength;
   var after = outputAb.byteLength;
   console.log('done! orig = ' + before +
               ' comp = ' + after +
               ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
+}, function(err) {
+  console.log('done... error ' + err);
 });

@@ -751,36 +751,42 @@ var nacl={};
   var uint8_pp = makePointerType(15, uint8_p);
   var uint32_p = makePointerType(16, uint32);
 
-  var arrayBuffer = makePepperType(17, 'ArrayBuffer', ArrayBuffer);
-  var array = makePepperType(18, 'Array', Array);
-  var dictionary = makePepperType(19, 'Dictionary', Object);
-  var mallocType = makeFunctionType(20, void_p, size_t);
-  var memsetType = makeFunctionType(21, void_, void_p, int32, size_t);
-  var memcpyType = makeFunctionType(22, void_, void_p, void_p, size_t);
-  var addVoidpInt32Type = makeFunctionType(23, void_p, void_p, int32);
-  var setUint8pType = makeFunctionType(24, void_, uint8_pp, uint8_p);
-  var setUint32Type = makeFunctionType(25, void_, uint32_p, uint32);
-  var getUint8pType = makeFunctionType(26, uint8_p, uint8_pp);
-  var getUint32Type = makeFunctionType(27, uint32, uint32_p);
-  var subInt32Type = makeFunctionType(28, int32, int32, int32);
-  var subUint32Type = makeFunctionType(29, uint32, uint32, uint32);
+  var var_ = makePepperType(17, 'Var', undefined);
+  var arrayBuffer = makePepperType(18, 'ArrayBuffer', ArrayBuffer);
+  var array = makePepperType(19, 'Array', Array);
+  var dictionary = makePepperType(20, 'Dictionary', Object);
+  var addRefReleaseType = makeFunctionType(21, void_, var_);
+  var freeType = makeFunctionType(22, void_, void_p);
+  var mallocType = makeFunctionType(23, void_p, size_t);
+  var memsetType = makeFunctionType(24, void_, void_p, int32, size_t);
+  var memcpyType = makeFunctionType(25, void_, void_p, void_p, size_t);
+  var addVoidpInt32Type = makeFunctionType(26, void_p, void_p, int32);
+  var setUint8pType = makeFunctionType(27, void_, uint8_pp, uint8_p);
+  var setUint32Type = makeFunctionType(28, void_, uint32_p, uint32);
+  var getUint8pType = makeFunctionType(29, uint8_p, uint8_pp);
+  var getUint32Type = makeFunctionType(30, uint32, uint32_p);
+  var subInt32Type = makeFunctionType(31, int32, int32, int32);
+  var subUint32Type = makeFunctionType(32, uint32, uint32, uint32);
 
-  var arrayBufferCreateType = makeFunctionType(30, arrayBuffer, uint32);
-  var arrayBufferMapType = makeFunctionType(31, void_p, arrayBuffer);
-  var arrayBufferUnmapType = makeFunctionType(32, void_, arrayBuffer);
+  var arrayBufferCreateType = makeFunctionType(33, arrayBuffer, uint32);
+  var arrayBufferMapType = makeFunctionType(34, void_p, arrayBuffer);
+  var arrayBufferUnmapType = makeFunctionType(35, void_, arrayBuffer);
 
   // Built-in functions.
   var add = makeFunction('add', addVoidpInt32Type);
+  var addRef = makeFunction('addRef', addRefReleaseType);
   var arrayBufferCreate = makeFunction('arrayBufferCreate', arrayBufferCreateType);
   var arrayBufferMap = makeFunction('arrayBufferMap', arrayBufferMapType);
+  var free = makeFunction('free', freeType);
   var get = makeFunction('get', [getUint8pType, getUint32Type]);
   var malloc = makeFunction('malloc', mallocType);
   var memcpy = makeFunction('memcpy', memcpyType);
   var memset = makeFunction('memset', memsetType);
+  var release = makeFunction('release', addRefReleaseType);
   var set = makeFunction('set', [setUint8pType, setUint32Type]);
   var sub = makeFunction('sub', [subInt32Type, subUint32Type]);
 
-  self.userTypeId = 33;
+  self.userTypeId = 36;
 
 
   // exported Types
@@ -806,11 +812,14 @@ var nacl={};
 
   // exported CFunctions
   self.add = add;
+  self.addRef = addRef;
   self.arrayBufferCreate = arrayBufferCreate;
   self.arrayBufferMap = arrayBufferMap;
+  self.free = free;
   self.malloc = malloc;
   self.memcpy = memcpy;
   self.memset = memset;
+  self.release = release;
   self.sub = sub;
 
   // exported functions

@@ -15,11 +15,11 @@
 #ifndef HANDLE_H_
 #define HANDLE_H_
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #include <ppapi/c/pp_var.h>
 
+#include "bool.h"
 #include "type.h"
 
 typedef union {
@@ -64,8 +64,8 @@ bool GetHandleInt16(Handle, int16_t*);
 bool GetHandleUint16(Handle, uint16_t*);
 bool GetHandleInt32(Handle, int32_t*);
 bool GetHandleUint32(Handle, uint32_t*);
-bool GetHandleInt64(Handle, int32_t*);
-bool GetHandleUint64(Handle, uint32_t*);
+bool GetHandleInt64(Handle, int64_t*);
+bool GetHandleUint64(Handle, uint64_t*);
 bool GetHandleFloat(Handle, float*);
 bool GetHandleDouble(Handle, double*);
 bool GetHandleVoidp(Handle, void**);

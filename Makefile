@@ -14,8 +14,9 @@ include $(NACL_SDK_ROOT)/tools/common.mk
 
 PORTS = zlib
 TARGET = zlib
-CFLAGS += -Wall -std=c99
+CFLAGS += -Wall # -std=c99
 SOURCES = \
+  app.c \
   commands.c \
   handle.c \
   interfaces.c \

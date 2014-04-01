@@ -19,6 +19,7 @@
 
 #include <ppapi/c/pp_var.h>
 
+#include "bool.h"
 #include "handle.h"
 #include "type.h"
 

@@ -17,6 +17,8 @@
 
 #include <ppapi/c/pp_var.h>
 
+#include "bool.h"
+
 void AddRefVar(struct PP_Var*);
 void ReleaseVar(struct PP_Var*);
 

@@ -15,6 +15,8 @@
 #include "handle.h"
 
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <ppapi/c/pp_var.h>
 
@@ -33,32 +35,26 @@ static size_t s_handle_map_size = 0;
 static size_t s_handle_map_capacity = 0;
 
 static bool ResizeHandleMap(size_t new_capacity) {
-  assert(s_handle_map_size <= new_capacity)
-  HandleMapPair* new_map = malloc(sizeof(HandleMapPair) * new_capacity);
-  if (!new_map) {
-    return false;
+  assert(s_handle_map_size <= new_capacity);
+  s_handle_map = realloc(s_handle_map, sizeof(HandleMapPair) * new_capacity);
+  s_handle_map_capacity = new_capacity;
+  if (!s_handle_map) {
+    ERROR("Out of memory");
+    return FALSE;
   }
-
-  memcpy(new_map, s_handle_map, sizeof(HandleMapPair) * s_handle_map_size);
-  free(s_handle_map);
-  s_handle_map = new_map;
-  return true;
+  return TRUE;
 }
 
 bool RegisterHandle(Handle handle, Type type, HandleValue value) {
   if (!s_handle_map) {
-    s_handle_map = malloc(sizeof(HandleMapPair) * HANDLE_MAP_INITIAL_CAPACITY);
-    if (!s_handle_map) {
-      ERROR("Out of memory");
-      return false;
+    if (!ResizeHandleMap(HANDLE_MAP_INITIAL_CAPACITY)) {
+      return FALSE;
     }
-    s_handle_map_capacity = HANDLE_MAP_INITIAL_CAPACITY;
   }
 
   if (s_handle_map_size == s_handle_map_capacity) {
     if (!ResizeHandleMap(s_handle_map_capacity * 2)) {
-      ERROR("Out of memory");
-      return false;
+      return FALSE;
     }
   }
 
@@ -84,7 +80,7 @@ bool RegisterHandle(Handle handle, Type type, HandleValue value) {
           hi_ix = mid_ix;
         } else {
           VERROR("handle %d is already registered.\n", handle);
-          return false;
+          return FALSE;
         }
       }
 
@@ -103,7 +99,7 @@ bool RegisterHandle(Handle handle, Type type, HandleValue value) {
   pair->object.type = type;
   pair->object.value = value;
   s_handle_map_size++;
-  return true;
+  return TRUE;
 }
 
 bool RegisterHandleInt8(Handle handle, int8_t value) {
@@ -185,200 +181,211 @@ bool RegisterHandleVar(Handle handle, struct PP_Var value) {
     case PP_VARTYPE_DICTIONARY:
       return RegisterHandle(handle, TYPE_DICTIONARY, hval);
     default:
-      return false;
+      return FALSE;
   }
 }
 
 bool GetHandle(Handle handle, HandleObject* out_handle_object) {
-  HandleMap::iterator iter = g_handle_map.find(handle);
-  if (iter == g_handle_map.end()) {
-    return false;
+  // Binary search.
+  size_t lo_ix = 0;  // Inclusive
+  size_t hi_ix = s_handle_map_size;  // Exclusive
+  while (lo_ix < hi_ix) {
+    size_t mid_ix = (lo_ix + hi_ix) / 2;
+    Handle mid_handle = s_handle_map[mid_ix].handle;
+    if (handle > mid_handle) {
+      lo_ix = mid_ix + 1;
+    } else if (handle < mid_handle) {
+      hi_ix = mid_ix;
+    } else {
+
+      *out_handle_object = s_handle_map[mid_ix].object;
+      return TRUE;
+    }
   }
 
-  *out_handle_object = iter->second;
-  return true;
+  return FALSE;
 }
 
 bool GetHandleInt8(Handle handle, int8_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_INT8) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_INT8));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.int8;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleUint8(Handle handle, uint8_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_UINT8) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_UINT8));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.uint8;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleInt16(Handle handle, int16_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_INT16) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_INT16));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.int16;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleUint16(Handle handle, uint16_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_UINT16) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_UINT16));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.uint16;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleInt32(Handle handle, int32_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_INT32) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_INT32));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.int32;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleUint32(Handle handle, uint32_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_UINT32) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_UINT32));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.uint32;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleInt64(Handle handle, int64_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_INT64) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_INT64));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.int64;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleUint64(Handle handle, uint64_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_UINT64) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_UINT64));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.uint64;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleFloat(Handle handle, float* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_FLOAT) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_FLOAT));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.float32;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleDouble(Handle handle, double* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_DOUBLE) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_DOUBLE));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.float64;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleVoidp(Handle handle, void** out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_VOID_P) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(TYPE_VOID_P));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.voidp;
-  return true;
+  return TRUE;
 }
 
 bool GetHandleVar(Handle handle, struct PP_Var* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   if (hobj.type != TYPE_ARRAY_BUFFER &&
@@ -386,39 +393,58 @@ bool GetHandleVar(Handle handle, struct PP_Var* out_value) {
       hobj.type != TYPE_DICTIONARY) {
     VERROR("handle %d is of type %s. Expected %s.\n", handle,
           TypeToString(hobj.type), TypeToString(hobj.type));
-    return false;
+    return FALSE;
   }
 
   *out_value = hobj.value.var;
-  return true;
+  return TRUE;
 }
 
 void DestroyHandle(Handle handle) {
-  HandleMap::iterator iter = g_handle_map.find(handle);
-  if (iter == g_handle_map.end()) {
-    VERROR("handle %d doesn't exist.\n", handle);
+  HandleMapPair* pair = NULL;
+
+  // Binary search.
+  size_t lo_ix = 0;  // Inclusive
+  size_t hi_ix = s_handle_map_size;  // Exclusive
+  size_t mid_ix;
+  while (lo_ix < hi_ix) {
+    mid_ix = (lo_ix + hi_ix) / 2;
+    Handle mid_handle = s_handle_map[mid_ix].handle;
+    if (handle > mid_handle) {
+      lo_ix = mid_ix + 1;
+    } else if (handle < mid_handle) {
+      hi_ix = mid_ix;
+    } else {
+      pair = &s_handle_map[mid_ix];
+    }
+  }
+
+  if (pair == NULL) {
     return;
   }
 
-  HandleObject& hobj = iter->second;
-
-  switch (hobj.type) {
+  switch (pair->object.type) {
     case TYPE_ARRAY_BUFFER:
     case TYPE_ARRAY:
     case TYPE_DICTIONARY:
-      ReleaseVar(&hobj.value.var);
+      ReleaseVar(&pair->object.value.var);
       break;
     default:
       break;
   }
 
-  g_handle_map.erase(iter);
+  size_t remove_ix = mid_ix;
+  if (remove_ix + 1 < s_handle_map_size) {
+    memmove(&s_handle_map[remove_ix], &s_handle_map[remove_ix + 1],
+            sizeof(HandleMapPair) * (s_handle_map_size - (remove_ix + 1)));
+  }
+  s_handle_map_size--;
 }
 
 bool HandleToVar(Handle handle, struct PP_Var* var) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
-    return false;
+    return FALSE;
   }
 
   switch (hobj.type) {
@@ -463,8 +489,8 @@ bool HandleToVar(Handle handle, struct PP_Var* var) {
     default:
       VERROR("Don't know how to convert handle %d with type %s to var", handle,
              TypeToString(hobj.type));
-      return false;
+      return FALSE;
   }
 
-  return true;
+  return TRUE;
 }

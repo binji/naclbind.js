@@ -19,20 +19,25 @@
 #include <string.h>
 #include <zlib.h>
 
+#include "bool.h"
 #include "error.h"
 #include "interfaces.h"
 #include "type.h"
 #include "var.h"
 
 static void Handle_add(Command* command);
+static void Handle_addRef(Command* command);
 static void Handle_arrayBufferCreate(Command* command);
 static void Handle_arrayBufferMap(Command* command);
+static void Handle_arrayBufferUnmap(Command* command);
 static void Handle_deflate(Command* command);
 static void Handle_deflateInit(Command* command);
+static void Handle_free(Command* command);
 static void Handle_get(Command* command);
 static void Handle_malloc(Command* command);
 static void Handle_memcpy(Command* command);
 static void Handle_memset(Command* command);
+static void Handle_release(Command* command);
 static void Handle_set(Command* command);
 static void Handle_sub(Command* command);
 
@@ -44,14 +49,18 @@ typedef struct {
 
 static NameFunc g_FuncMap[] = {
   {"add", Handle_add},
+  {"addRef", Handle_addRef},
   {"arrayBufferCreate", Handle_arrayBufferCreate},
   {"arrayBufferMap", Handle_arrayBufferMap},
+  {"arrayBufferUnmap", Handle_arrayBufferUnmap},
   {"deflate", Handle_deflate},
   {"deflateInit", Handle_deflateInit},
+  {"free", Handle_free},
   {"get", Handle_get},
   {"malloc", Handle_malloc},
   {"memcpy", Handle_memcpy},
   {"memset", Handle_memset},
+  {"release", Handle_release},
   {"set", Handle_set},
   {"sub", Handle_sub},
   {NULL, NULL},
@@ -83,25 +92,25 @@ static bool GetArgVoidp(Command* command, int32_t index, void** out_value) {
   bool arg_handle;
   if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
     VERROR("Can't get arg %d", index);
-    return false;
+    return FALSE;
   }
   if (!arg_handle) {
     VERROR("Expected arg %d to be handle", index);
-    return false;
+    return FALSE;
   }
   int32_t arg_handle_int;
   if (!GetVarInt32(&arg_var, &arg_handle_int)) {
     VERROR("Expected handle arg %d to be int32_t", index);
-    return false;
+    return FALSE;
   }
 
   Handle handle = arg_handle_int;
   if (!GetHandleVoidp(handle, out_value)) {
     VERROR("Expected arg %d handle's value to be void*", index);
-    return false;
+    return FALSE;
   }
 
-  return true;
+  return TRUE;
 }
 
 static bool GetArgInt32(Command* command, int32_t index, int32_t* out_value) {
@@ -109,28 +118,28 @@ static bool GetArgInt32(Command* command, int32_t index, int32_t* out_value) {
   bool arg_handle;
   if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
     VERROR("Can't get arg %d", index);
-    return false;
+    return FALSE;
   }
   if (arg_handle) {
     int32_t arg_handle_int;
     if (!GetVarInt32(&arg_var, &arg_handle_int)) {
       VERROR("Expected handle arg %d to be int32_t", index);
-      return false;
+      return FALSE;
     }
 
     Handle handle = arg_handle_int;
     if (!GetHandleInt32(handle, out_value)) {
       VERROR("Expected arg %d handle's value to be int32_t", index);
-      return false;
+      return FALSE;
     }
   } else {
     if (!GetVarInt32(&arg_var, out_value)) {
       VERROR("Expected arg %d to be int32_t", index);
-      return false;
+      return FALSE;
     }
   }
 
-  return true;
+  return TRUE;
 }
 
 static bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
@@ -138,28 +147,28 @@ static bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
   bool arg_handle;
   if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
     VERROR("Can't get arg %d", index);
-    return false;
+    return FALSE;
   }
   if (arg_handle) {
     int32_t arg_handle_int;
     if (!GetVarInt32(&arg_var, &arg_handle_int)) {
       VERROR("Expected handle arg %d to be int32_t", index);
-      return false;
+      return FALSE;
     }
 
     Handle handle = arg_handle_int;
     if (!GetHandleUint32(handle, out_value)) {
       VERROR("Expected arg %d handle's value to be uint32_t", index);
-      return false;
+      return FALSE;
     }
   } else {
     if (!GetVarUint32(&arg_var, out_value)) {
       VERROR("Expected arg %d to be uint32_t", index);
-      return false;
+      return FALSE;
     }
   }
 
-  return true;
+  return TRUE;
 }
 
 static bool GetArgVar(Command* command, int32_t index,
@@ -168,25 +177,25 @@ static bool GetArgVar(Command* command, int32_t index,
   bool arg_handle;
   if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
     VERROR("Can't get arg %d", index);
-    return false;
+    return FALSE;
   }
   if (arg_handle) {
     int32_t arg_handle_int;
     if (!GetVarInt32(&arg_var, &arg_handle_int)) {
       VERROR("Expected handle arg %d to be int32_t", index);
-      return false;
+      return FALSE;
     }
 
     Handle handle = arg_handle_int;
     if (!GetHandleVar(handle, out_value)) {
       VERROR("Expected arg %d handle's value to be uint32_t", index);
-      return false;
+      return FALSE;
     }
   } else {
     *out_value = arg_var;
   }
 
-  return true;
+  return TRUE;
 }
 
 
@@ -202,6 +211,14 @@ void Handle_add(Command* command) {
   printf("add(%p, %d) => %p (%d)\n", arg0, arg1, result, command->ret_handle);
 }
 
+void Handle_addRef(Command* command) {
+  TYPE_CHECK(TYPE_FUNC_ADDREF_RELEASE);
+  struct PP_Var arg0;
+  if (!GetArgVar(command, 0, &arg0)) return;
+  g_ppb_var->AddRef(arg0);
+  printf("addRef(%lld)\n", arg0.value.as_id);
+}
+
 void Handle_arrayBufferCreate(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_BUFFER_CREATE);
   uint32_t arg0;
@@ -212,6 +229,8 @@ void Handle_arrayBufferCreate(Command* command) {
     return;
   }
   RegisterHandleVar(command->ret_handle, result);
+  // NOTE: releasing Var here so it is owned by the handle.
+  ReleaseVar(&result);
   printf("arrayBufferCreate(%u) => %lld (%d)\n", arg0, result.value.as_id,
          command->ret_handle);
 }
@@ -224,6 +243,14 @@ void Handle_arrayBufferMap(Command* command) {
   RegisterHandleVoidp(command->ret_handle, result);
   printf("arrayBufferMap(%lld) => %p (%d)\n", arg0.value.as_id,
          result, command->ret_handle);
+}
+
+void Handle_arrayBufferUnmap(Command* command) {
+  TYPE_CHECK(TYPE_FUNC_ARRAY_BUFFER_UNMAP);
+  struct PP_Var arg0;
+  if (!GetArgVar(command, 0, &arg0)) return;
+  g_ppb_var_array_buffer->Unmap(arg0);
+  printf("arrayBufferUnmap(%lld)\n", arg0.value.as_id);
 }
 
 void Handle_deflate(Command* command) {
@@ -248,6 +275,14 @@ void Handle_deflateInit(Command* command) {
   int result = deflateInit(arg0, arg1);
   RegisterHandleInt32(command->ret_handle, result);
   printf("deflateInit(%p, %d) => %d\n", arg0, arg1, result);
+}
+
+void Handle_free(Command* command) {
+  TYPE_CHECK(TYPE_FUNC_FREE);
+  void* arg0;
+  if (!GetArgVoidp(command, 0, &arg0)) return;
+  free(arg0);
+  printf("free(%p)\n", arg0);
 }
 
 void Handle_get(Command* command) {
@@ -297,6 +332,7 @@ void Handle_memcpy(Command* command) {
   if (!GetArgVoidp(command, 0, &dst)) return;
   if (!GetArgVoidp(command, 1, &src)) return;
   if (!GetArgUint32(command, 2, &size)) return;
+  memcpy(dst, src, size);
   printf("memcpy(%p, %p, %u)\n", dst, src, size);
 }
 
@@ -308,7 +344,16 @@ void Handle_memset(Command* command) {
   if (!GetArgVoidp(command, 0, &buffer)) return;
   if (!GetArgInt32(command, 1, &value)) return;
   if (!GetArgUint32(command, 2, &size)) return;
+  memset(buffer, value, size);
   printf("memset(%p, %d, %u)\n", buffer, value, size);
+}
+
+void Handle_release(Command* command) {
+  TYPE_CHECK(TYPE_FUNC_ADDREF_RELEASE);
+  struct PP_Var arg0;
+  if (!GetArgVar(command, 0, &arg0)) return;
+  g_ppb_var->Release(arg0);
+  printf("release(%lld)\n", arg0.value.as_id);
 }
 
 void Handle_set(Command* command) {

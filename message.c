@@ -15,21 +15,20 @@
 #include "message.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <stdio.h>
 
 #include "error.h"
 #include "interfaces.h"
 #include "var.h"
 
-Message* CreateMessage(PP_Var var) {
+Message* CreateMessage(struct PP_Var var) {
   Message* message = (Message*)malloc(sizeof(Message));
   message->var = var;
   AddRefVar(&message->var);
 
-  PP_Var id_var = GetDictVar(&var, "id");
+  struct PP_Var id_var = GetDictVar(&var, "id");
   if (!GetVarInt32(&id_var, &message->id)) {
     goto fail;
   }
@@ -66,10 +65,10 @@ Command* GetMessageCommand(Message* message, int32_t index) {
   assert(index < GetMessageCommandCount(message));
 
   Command* command;
-  PP_Var var;
-  PP_Var cmd_var;
-  PP_Var type_var;
-  PP_Var ret_handle_var;
+  struct PP_Var var;
+  struct PP_Var cmd_var;
+  struct PP_Var type_var;
+  struct PP_Var ret_handle_var;
   uint32_t cmd_length;
   const char* cmd;
 
@@ -147,25 +146,25 @@ bool GetMessageRetHandle(Message* message, int32_t index,
                          Handle* out_handle, Type* out_type) {
   assert(index < GetMessageRetHandleCount(message));
 
-  PP_Var ret_handle = GetArrayVar(&message->ret_handles, index);
+  struct PP_Var ret_handle = GetArrayVar(&message->ret_handles, index);
   if (ret_handle.type != PP_VARTYPE_ARRAY) {
-    return false;
+    return FALSE;
   }
 
-  PP_Var handle_var = GetArrayVar(&ret_handle, 0);
+  struct PP_Var handle_var = GetArrayVar(&ret_handle, 0);
   if (!GetVarInt32(&handle_var, out_handle)) {
-    return false;
+    return FALSE;
   }
 
-  PP_Var type_var = GetArrayVar(&ret_handle, 1);
+  struct PP_Var type_var = GetArrayVar(&ret_handle, 1);
   int32_t type;
   if (!GetVarInt32(&type_var, &type)) {
-    return false;
+    return FALSE;
   }
 
   *out_type = (Type)type;
 
-  return true;
+  return TRUE;
 }
 
 void DestroyCommand(Command* command) {
@@ -180,15 +179,15 @@ int32_t GetCommandArgCount(Command* command) {
 }
 
 bool GetCommandArg(Command* command, int32_t index,
-                   PP_Var* out_var, bool* out_is_handle) {
+                   struct PP_Var* out_var, bool* out_is_handle) {
   assert(index < GetCommandArgCount(command));
 
-  PP_Var is_handle_var = GetArrayVar(&command->arg_is_handle, index);
+  struct PP_Var is_handle_var = GetArrayVar(&command->arg_is_handle, index);
   if (is_handle_var.type != PP_VARTYPE_BOOL) {
-    return false;
+    return FALSE;
   }
 
   *out_is_handle = is_handle_var.value.as_bool;
   *out_var = GetArrayVar(&command->args, index);
-  return true;
+  return TRUE;
 }
