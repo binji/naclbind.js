@@ -115,7 +115,7 @@ function compress(inputAb, level, bufferSize) {
   var outputAb = null;
   var outputOffset = 0;
 
-  return Promise.resolve().then(function() {
+  return nacl.resolve().then(function() {
     stream = z_stream.malloc().cast(z_stream_p);
     nacl.memset(stream, 0, z_stream.sizeof());
 
@@ -127,6 +127,8 @@ function compress(inputAb, level, bufferSize) {
       return nacl.reject(result);
     }
   }).thenApply(function() {
+    return deflateMore();
+
     function deflateMore() {
       var inputOffsetEnd = inputOffset + bufferSize;
       var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, inputOffsetEnd);
@@ -150,7 +152,7 @@ function compress(inputAb, level, bufferSize) {
       var outputAbPtr = nacl.arrayBufferMap(compressedAb);
       nacl.memcpy(outputAbPtr, output, outUsed);
       return nacl.commitPromise(result, preAvailIn, availIn, availOut,
-                                compressedAb);
+                                compressedAb).thenApply(onDeflate);
     }
 
     function onDeflate(result, preAvailIn, availIn, availOut, compressedAb) {
@@ -169,10 +171,10 @@ function compress(inputAb, level, bufferSize) {
       if (availIn === 0) {
         // input underflow. Provide more input.
         inputOffset += preAvailIn;
-        return deflateMore().thenApply(onDeflate);
+        return deflateMore();
       } else if (availOut === 0) {
         // output overflow. Finish current input.
-        return deflateContinue().thenApply(onDeflate);
+        return deflateContinue();
       } else {
         // Not possible...?
         console.log('onDeflate called with availOut = ' + availOut +
@@ -181,15 +183,12 @@ function compress(inputAb, level, bufferSize) {
       }
     }
 
-    return deflateMore().thenApply(onDeflate);
   }).thenApply(function(outputAb) {
     return outputAb;
-  }).catch(function(result) {
+  }).finally(function() {
     nacl.free(stream);
     nacl.free(output);
-    return nacl.commitPromise().thenApply(function() {
-      return nacl.reject(result);
-    });
+    return nacl.commitPromise();
   });
 }
 

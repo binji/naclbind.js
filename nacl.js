@@ -638,27 +638,59 @@ var nacl={};
     });
   };
 
-  function NaClPromise(f) {
-    Promise.call(this, f);
+  function wrapPromise(p) {
+    if (p instanceof NaClPromise) {
+      return p;
+    }
+    return new NaClPromise(p);
   }
-  NaClPromise.prototype = Promise.prototype;
+
+  function NaClPromise(f) {
+    if (f instanceof Promise) {
+      this.promise = f;
+    } else {
+      this.promise = new Promise(f);
+    }
+  }
+  NaClPromise.prototype = Object.create(Promise.prototype);
   NaClPromise.prototype.constructor = NaClPromise;
 
+  NaClPromise.resolve = function(x) {
+    return new NaClPromise(function(resolve) { resolve(x); });
+  };
+
+  NaClPromise.reject = function(x) {
+    return new NaClPromise(function(resolve, reject) { reject(x); });
+  };
+
+  NaClPromise.prototype.then = function(resolve, reject) {
+    return wrapPromise(this.promise.then(resolve, reject));
+  };
+
+  NaClPromise.prototype.catch = function(reject) {
+    return wrapPromise(this.promise.catch(reject));
+  };
+
   NaClPromise.prototype.thenApply = function(resolve, reject) {
-    return Promise.prototype.then.call(this, function(args) {
-      return resolve.apply(this, args);
-    }, function(args) {
-      if (reject) {
-        return reject.call(this, args);
-      } else {
-        return Promise.reject(args);
-      }
+    return this.then(function(args) {
+      return resolve.apply(null, args);
+    }, reject);
+  };
+
+  function return1(x) { return function() { return x; } }
+  function reject1(x) { return function() { return NaClPromise.reject(x); } }
+
+  NaClPromise.prototype.finally = function(f) {
+    return this.promise.then(function(x) {
+      return NaClPromise.resolve().then(f).then(return1(x));
+    }, function(x) {
+      return NaClPromise.resolve().then(f).then(reject1(x));
     });
   };
 
   function commitPromise() {
     var args = Array.prototype.slice.call(arguments);
-    return new Promise(function(resolve) {
+    return new NaClPromise(function(resolve) {
       args.push(function() {
         resolve(arguments);
       });
@@ -667,11 +699,11 @@ var nacl={};
   }
 
   function resolve() {
-    return Promise.resolve(arguments);
+    return NaClPromise.resolve(arguments);
   }
 
   function reject(value) {
-    return Promise.reject(value);
+    return NaClPromise.reject(value);
   }
 
 
