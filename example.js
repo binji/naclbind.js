@@ -108,7 +108,6 @@ var deflate = nacl.makeFunction('deflate', deflateType);
 
 // nacl.logTypes();
 
-/*
 function commitPromise() {
   var args = Array.prototype.slice.call(arguments);
   return new Promise(function(resolve) {
@@ -118,97 +117,102 @@ function commitPromise() {
     nacl.commit.apply(null, args);
   });
 }
-*/
 
-function compress(inputAb, level, bufferSize, callback, errback) {
+function compress(inputAb, level, bufferSize) {
+  var stream;
+  var output;
   var inputOffset = 0;
   var outputAb = null;
   var outputOffset = 0;
 
-  var stream = z_stream.malloc().cast(z_stream_p);
-  nacl.memset(stream, 0, z_stream.sizeof());
+  return Promise.resolve().then(function() {
+    stream = z_stream.malloc().cast(z_stream_p);
+    nacl.memset(stream, 0, z_stream.sizeof());
 
-  var output = nacl.malloc(bufferSize);
-  var result = deflateInit(stream, level);
-  nacl.commit(result, onDeflateInit);
-
-  function onDeflateInit(result) {
+    output = nacl.malloc(bufferSize);
+    var result = deflateInit(stream, level);
+    return commitPromise(result);
+  }).then(function(args) {
+    var result = args[0];
     if (result !== Z_OK) {
-      nacl.free(stream);
-      nacl.free(output);
-      nacl.commit(function() { errback(result); });
-      return;
+      return Promise.reject([result]);
+    }
+  }).then(function() {
+    function deflateMore() {
+      var inputOffsetEnd = inputOffset + bufferSize;
+      var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, inputOffsetEnd);
+      var inputSlice = nacl.arrayBufferMap(inputSliceAb);
+      z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
+      z_stream.fields.avail_in.set(stream, inputSliceAb.byteLength);
+      z_stream.fields.next_out.set(stream, output.cast(nacl.uint8_p));
+      z_stream.fields.avail_out.set(stream, bufferSize);
+      return deflateContinue();
     }
 
-    deflateMore();
-  }
-
-  function deflateMore() {
-    var inputOffsetEnd = inputOffset + bufferSize;
-    var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, inputOffsetEnd);
-    var inputSlice = nacl.arrayBufferMap(inputSliceAb);
-    z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
-    z_stream.fields.avail_in.set(stream, inputSliceAb.byteLength);
-    z_stream.fields.next_out.set(stream, output.cast(nacl.uint8_p));
-    z_stream.fields.avail_out.set(stream, bufferSize);
-    deflateContinue();
-  }
-
-  function deflateContinue() {
-    var inputLeft = inputAb.byteLength - inputOffset;
-    var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
-    var preAvailIn = z_stream.fields.avail_in.get(stream);
-    var result = deflate(stream, flush);
-    var availIn = z_stream.fields.avail_in.get(stream);
-    var availOut = z_stream.fields.avail_out.get(stream);
-    var outUsed = nacl.sub(bufferSize, availOut);
-    var compressedAb = nacl.arrayBufferCreate(outUsed);
-    var outputAbPtr = nacl.arrayBufferMap(compressedAb);
-    nacl.memcpy(outputAbPtr, output, outUsed);
-    nacl.commit(result, preAvailIn, availIn, availOut, compressedAb, onDeflate);
-  }
-
-  function onDeflate(result, preAvailIn, availIn, availOut, compressedAb) {
-    if (result !== Z_OK && result !== Z_STREAM_END) {
-      nacl.free(stream);
-      nacl.free(output);
-      nacl.commit(function() { errback(result); });
-      return;
+    function deflateContinue() {
+      var inputLeft = inputAb.byteLength - inputOffset;
+      var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
+      var preAvailIn = z_stream.fields.avail_in.get(stream);
+      var result = deflate(stream, flush);
+      var availIn = z_stream.fields.avail_in.get(stream);
+      var availOut = z_stream.fields.avail_out.get(stream);
+      var outUsed = nacl.sub(bufferSize, availOut);
+      var compressedAb = nacl.arrayBufferCreate(outUsed);
+      var outputAbPtr = nacl.arrayBufferMap(compressedAb);
+      nacl.memcpy(outputAbPtr, output, outUsed);
+      return commitPromise(result, preAvailIn, availIn, availOut, compressedAb);
     }
 
-    // Consume output.
-    outputAb = copyToArrayBuffer(outputAb, outputOffset, compressedAb);
-    outputOffset += compressedAb.byteLength;
+    function onDeflate(args) {
+      var result = args[0];
+      var preAvailIn = args[1];
+      var availIn = args[2];
+      var availOut = args[3];
+      var compressedAb = args[4];
 
-    if (result === Z_STREAM_END) {
-      nacl.free(stream);
-      nacl.free(output);
-      nacl.commit(onDone);
-      return;
+      if (result !== Z_OK && result !== Z_STREAM_END) {
+        return Promise.reject([result]);
+      }
+
+      // Consume output.
+      outputAb = copyToArrayBuffer(outputAb, outputOffset, compressedAb);
+      outputOffset += compressedAb.byteLength;
+
+      if (result === Z_STREAM_END) {
+        return Promise.resolve([outputAb]);
+      }
+
+      if (availIn === 0) {
+        // input underflow. Provide more input.
+        inputOffset += preAvailIn;
+        return deflateMore().then(onDeflate);
+      } else if (availOut === 0) {
+        // output overflow. Finish current input.
+        return deflateContinue().then(onDeflate);
+      } else {
+        // Not possible...?
+        console.log('onDeflate called with availOut = ' + availOut +
+                    ' and availIn = ' + availIn + '?');
+        return Promise.reject([null]);
+      }
     }
 
-    if (availIn === 0) {
-      // input underflow. Provide more input.
-      inputOffset += preAvailIn;
-      deflateMore();
-    } else if (availOut === 0) {
-      // output overflow. Finish current input.
-      deflateContinue();
-    } else {
-      // Not possible...?
-      console.log('onDeflate called with availOut = ' + availOut +
-                  ' and availIn = ' + availIn + '?');
-      return;
-    }
-  }
-
-  function onDone() {
-    callback(outputAb);
-  }
+    return deflateMore().then(onDeflate);
+  }).then(function(args) {
+    var outputAb = args[0];
+    return outputAb;
+  }).catch(function(args) {
+    var result = args[0];
+    nacl.free(stream);
+    nacl.free(output);
+    return commitPromise().then(function() {
+      return Promise.reject(result);
+    });
+  });
 }
 
 
-function makeArrayBuffer(length, add, mul) {
+function makeTestArrayBuffer(length, add, mul) {
   var newAb = new ArrayBuffer(length);
   var view = new Uint8Array(newAb);
   var value = 0;
@@ -220,13 +224,13 @@ function makeArrayBuffer(length, add, mul) {
 }
 
 
-var ab = makeArrayBuffer(16384, 1337, 0xc0dedead);
-compress(ab, 6, 2048, function(outputAb) {
+var ab = makeTestArrayBuffer(16384, 1337, 0xc0dedead);
+compress(ab, 9, 2048).then(function(outputAb) {
   var before = ab.byteLength;
   var after = outputAb.byteLength;
   console.log('done! orig = ' + before +
               ' comp = ' + after +
               ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
-}, function(err) {
+}).catch(function(err) {
   console.log('done... error ' + err);
 });
