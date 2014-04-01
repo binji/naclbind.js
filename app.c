@@ -74,8 +74,7 @@ static void Messaging_HandleMessage(PP_Instance instance, struct PP_Var var) {
   CreateArrayVar(&values_var);
   for (int32_t i = 0; i < ret_handle_count; ++i) {
     Handle handle;
-    Type type;
-    if (!GetMessageRetHandle(message, i, &handle, &type)) {
+    if (!GetMessageRetHandle(message, i, &handle)) {
       VERROR("Bad ret handle at index %d", i);
       continue;
     }

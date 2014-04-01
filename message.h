@@ -44,8 +44,7 @@ void DestroyMessage(Message*);
 int32_t GetMessageCommandCount(Message*);
 Command* GetMessageCommand(Message*, int32_t index);
 int32_t GetMessageRetHandleCount(Message*);
-bool GetMessageRetHandle(Message*, int32_t index,
-                         Handle* out_handle, Type* out_type);
+bool GetMessageRetHandle(Message*, int32_t index, Handle* out_handle);
 
 void DestroyCommand(Command*);
 int32_t GetCommandArgCount(Command*);

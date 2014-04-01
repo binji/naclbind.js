@@ -142,29 +142,11 @@ int32_t GetMessageRetHandleCount(Message* message) {
   return GetArrayVarLength(&message->ret_handles);
 }
 
-bool GetMessageRetHandle(Message* message, int32_t index,
-                         Handle* out_handle, Type* out_type) {
+bool GetMessageRetHandle(Message* message, int32_t index, Handle* out_handle) {
   assert(index < GetMessageRetHandleCount(message));
 
-  struct PP_Var ret_handle = GetArrayVar(&message->ret_handles, index);
-  if (ret_handle.type != PP_VARTYPE_ARRAY) {
-    return FALSE;
-  }
-
-  struct PP_Var handle_var = GetArrayVar(&ret_handle, 0);
-  if (!GetVarInt32(&handle_var, out_handle)) {
-    return FALSE;
-  }
-
-  struct PP_Var type_var = GetArrayVar(&ret_handle, 1);
-  int32_t type;
-  if (!GetVarInt32(&type_var, &type)) {
-    return FALSE;
-  }
-
-  *out_type = (Type)type;
-
-  return TRUE;
+  struct PP_Var handle_var = GetArrayVar(&message->ret_handles, index);
+  return GetVarInt32(&handle_var, out_handle);
 }
 
 void DestroyCommand(Command* command) {

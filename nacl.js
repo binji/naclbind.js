@@ -608,7 +608,7 @@ var nacl={};
 
     var serializeHandle = function(handle) {
       assert(handle instanceof Handle, 'commit: handle is not a Handle.');
-      return [handle.id, handle.type.id];
+      return handle.id;
     };
 
     var handles = Array.prototype.map.call(args, serializeHandle);
