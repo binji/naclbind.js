@@ -215,3 +215,10 @@ compress(ab, 9, 2048).then(function(outputAb) {
 }).catch(function(err) {
   console.log('done... error ' + err);
 });
+
+
+var log = function() { console.log.apply(console, arguments); }
+var ret = function(x) { return function() { return x; } }
+var inc = function(x) { return x + 1; }
+var lt = function(b) { return function(a) { return a < b; } }
+var chain = function(f, g) { return function(x) { return g(f(x)); } }

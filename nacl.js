@@ -638,6 +638,10 @@ var nacl={};
     });
   };
 
+  function promisify(f) {
+    return NaClPromise.resolve().thenApply(f);
+  }
+
   function wrapPromise(p) {
     if (p instanceof NaClPromise) {
       return p;
@@ -682,9 +686,37 @@ var nacl={};
 
   NaClPromise.prototype.finally = function(f) {
     return this.promise.then(function(x) {
-      return NaClPromise.resolve().then(f).then(return1(x));
+      return promisify(f).then(return1(x));
     }, function(x) {
-      return NaClPromise.resolve().then(f).then(reject1(x));
+      return promisify(f).then(reject1(x));
+    });
+  };
+
+  NaClPromise.prototype.if = function(cond, trueBlock, falseBlock) {
+    return this.thenApply(cond).thenApply(function(result) {
+      if (result) {
+        return promisify(trueBlock);
+      } else {
+        if (falseBlock) {
+          return promisify(falseBlock);
+        } else {
+          return undefined;
+        }
+      }
+    });
+  };
+
+  NaClPromise.prototype.while = function(cond, block) {
+    return this.thenApply(function loop(blockResult) {
+      return promisify(cond).thenApply(function(result) {
+        if (result) {
+          return promisify(block).thenApply(function(blockResult) {
+            loop(blockResult);
+          });
+        } else {
+          return blockResult;
+        }
+      });
     });
   };
 
@@ -698,7 +730,11 @@ var nacl={};
     });
   }
 
-  function resolve() {
+  function resolve(value) {
+    return NaClPromise.resolve(value);
+  }
+
+  function resolveMany() {
     return NaClPromise.resolve(arguments);
   }
 
