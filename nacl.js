@@ -638,8 +638,12 @@ var nacl={};
     });
   };
 
-  function promisify(f) {
-    return NaClPromise.resolve().thenApply(f);
+  function ArgumentsWrapper(args) {
+    this.args = args;
+  }
+
+  function wrapArguments(args) {
+    return new ArgumentsWrapper(args);
   }
 
   function wrapPromise(p) {
@@ -667,54 +671,57 @@ var nacl={};
     return new NaClPromise(function(resolve, reject) { reject(x); });
   };
 
-  NaClPromise.prototype.then = function(resolve, reject) {
-    return wrapPromise(this.promise.then(resolve, reject));
-  };
-
   NaClPromise.prototype.catch = function(reject) {
     return wrapPromise(this.promise.catch(reject));
   };
 
-  NaClPromise.prototype.thenApply = function(resolve, reject) {
-    return this.then(function(args) {
-      return resolve.apply(null, args);
-    }, reject);
+  NaClPromise.prototype.then = function(resolve, reject) {
+    return wrapPromise(this.promise.then(function(value) {
+      if (value instanceof ArgumentsWrapper) {
+        return resolve.apply(null, value.args);
+      } else {
+        return resolve.apply(null, args);
+      }
+    }, reject));
   };
 
   function return1(x) { return function() { return x; } }
   function reject1(x) { return function() { return NaClPromise.reject(x); } }
 
   NaClPromise.prototype.finally = function(f) {
-    return this.promise.then(function(x) {
-      return promisify(f).then(return1(x));
+    return this.then(function(x) {
+      return resolve().then(f).then(return1(x));
     }, function(x) {
-      return promisify(f).then(reject1(x));
+      return resolve().then(f).then(reject1(x));
     });
   };
 
   NaClPromise.prototype.if = function(cond, trueBlock, falseBlock) {
-    return this.thenApply(cond).thenApply(function(result) {
-      if (result) {
-        return promisify(trueBlock);
-      } else {
-        if (falseBlock) {
-          return promisify(falseBlock);
+    return this.then(function(prev) {
+      return resolve(prev).then(cond).then(function(condResult) {
+        if (condResult) {
+          return resolve(prev).then(trueBlock);
         } else {
-          return undefined;
+          if (falseBlock) {
+            return resolve(prev).then(falseBlock);
+          } else {
+            return undefined;
+          }
         }
-      }
+      });
     });
   };
 
   NaClPromise.prototype.while = function(cond, block) {
-    return this.thenApply(function loop(blockResult) {
-      return promisify(cond).thenApply(function(result) {
-        if (result) {
-          return promisify(block).thenApply(function(blockResult) {
-            loop(blockResult);
+    return this.then(function loop() {
+      var args = arguments;
+      return resolveMany(args).then(cond).then(function(condResult) {
+        if (condResult) {
+          return resolveMany(args).then(block).then(function() {
+            return loop.apply(null, arguments);
           });
         } else {
-          return blockResult;
+          return resolveMany(args);
         }
       });
     });
@@ -724,7 +731,7 @@ var nacl={};
     var args = Array.prototype.slice.call(arguments);
     return new NaClPromise(function(resolve) {
       args.push(function() {
-        resolve(arguments);
+        resolve(wrapArguments(arguments));
       });
       nacl.commit.apply(null, args);
     });
@@ -735,7 +742,7 @@ var nacl={};
   }
 
   function resolveMany() {
-    return NaClPromise.resolve(arguments);
+    return NaClPromise.resolve(wrapArguments(arguments));
   }
 
   function reject(value) {
@@ -936,5 +943,6 @@ var nacl={};
   self.logTypes = logTypes;
   self.reject = reject;
   self.resolve = resolve;
+  self.resolveMany = resolveMany;
 
 }).call(nacl);
