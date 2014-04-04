@@ -638,130 +638,15 @@ var nacl={};
     });
   };
 
-  function ArgumentsWrapper(args) {
-    this.args = args;
-  }
-
-  function wrapArguments(args) {
-    return new ArgumentsWrapper(args);
-  }
-
-  function wrapPromise(p) {
-    if (p instanceof NaClPromise) {
-      return p;
-    }
-    return new NaClPromise(p);
-  }
-
-  function unwrapPromise(p) {
-    if (p instanceof NaClPromise) {
-      return p.promise;
-    }
-
-    return p;
-  }
-
-  function NaClPromise(f) {
-    if (f instanceof Promise) {
-      this.promise = f;
-    } else {
-      this.promise = new Promise(f);
-    }
-  }
-  NaClPromise.prototype = Object.create(Promise.prototype);
-  NaClPromise.prototype.constructor = NaClPromise;
-
-  NaClPromise.resolve = function(x) {
-    return new NaClPromise(function(resolve) { resolve(x); });
-  };
-
-  NaClPromise.reject = function(x) {
-    return new NaClPromise(function(resolve, reject) { reject(x); });
-  };
-
-  NaClPromise.prototype.catch = function(reject) {
-    return wrapPromise(this.promise.catch(function(value) {
-      return unwrapPromise(reject(value));
-    }));
-  };
-
-  NaClPromise.prototype.then = function(resolve, reject) {
-    return wrapPromise(this.promise.then(function(value) {
-      if (value instanceof ArgumentsWrapper) {
-        return unwrapPromise(resolve.apply(null, value.args));
-      } else {
-        return unwrapPromise(resolve(value));
-      }
-    }, function(value) {
-      return unwrapPromise(reject(value));
-    }));
-  };
-
-  NaClPromise.prototype.finally = function(f) {
-    return this.then(function() {
-      var args = arguments;
-      return resolve().then(f).then(function() {
-        return resolveMany.apply(null, args);
-      });
-    }, function() {
-      return resolve().then(f).then(function() { return reject(x); });
-    });
-  };
-
-  NaClPromise.prototype.if = function(cond, trueBlock, falseBlock) {
-    return this.then(function() {
-      var resolvedArgs = resolveMany.apply(null, arguments);
-      return resolvedArgs.then(cond).then(function(condResult) {
-        if (condResult) {
-          return resolvedArgs.then(trueBlock);
-        } else {
-          if (falseBlock) {
-            return resolvedArgs.then(falseBlock);
-          } else {
-            return undefined;
-          }
-        }
-      });
-    });
-  };
-
-  NaClPromise.prototype.while = function(cond, block) {
-    return this.then(function loop() {
-      var resolvedArgs = resolveMany.apply(null, arguments);
-      return resolvedArgs.then(cond).then(function(condResult) {
-        if (condResult) {
-          return resolvedArgs.then(block).then(function() {
-            return loop.apply(null, arguments);
-          });
-        } else {
-          return resolvedArgs;
-        }
-      });
-    });
-  };
-
   function commitPromise() {
     var args = Array.prototype.slice.call(arguments);
-    return new NaClPromise(function(resolve) {
+    return new promise.PromisePlus(function(resolve, reject, resolveMany) {
       args.push(function() {
-        resolve(wrapArguments(arguments));
+        resolveMany.apply(null, arguments);
       });
       nacl.commit.apply(null, args);
     });
   }
-
-  function resolve(value) {
-    return NaClPromise.resolve(value);
-  }
-
-  function resolveMany() {
-    return NaClPromise.resolve(wrapArguments(arguments));
-  }
-
-  function reject(value) {
-    return NaClPromise.reject(value);
-  }
-
 
   // NaCl stuff...
   var nextCallbackId = 1;
@@ -954,8 +839,5 @@ var nacl={};
   self.makePointerType = makePointerType;
   self.makeStructType = makeStructType;
   self.logTypes = logTypes;
-  self.reject = reject;
-  self.resolve = resolve;
-  self.resolveMany = resolveMany;
 
 }).call(nacl);

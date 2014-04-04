@@ -115,7 +115,7 @@ function compress(inputAb, level, bufferSize) {
   var outputAb = null;
   var outputOffset = 0;
 
-  return nacl.resolve().then(function() {
+  return promise.resolve().then(function() {
     stream = z_stream.malloc().cast(z_stream_p);
     nacl.memset(stream, 0, z_stream.sizeof());
 
@@ -124,12 +124,12 @@ function compress(inputAb, level, bufferSize) {
     return nacl.commitPromise(result);
   }).then(function(result) {
     if (result !== Z_OK) {
-      return nacl.reject(result);
+      return promise.reject(result);
     }
-    return nacl.resolveMany(Z_OK, inputAb.byteLength, bufferSize, 0, null);
+    return promise.resolveMany(Z_OK, inputAb.byteLength, bufferSize, 0, null);
   }).while(function cond(result, availIn, availOut) {
     if (result !== Z_OK && result !== Z_STREAM_END) {
-      return nacl.reject(result);
+      return promise.reject(result);
     }
 
     return result !== Z_STREAM_END;
@@ -176,7 +176,7 @@ function compress(inputAb, level, bufferSize) {
       outputOffset += compressedAb.byteLength;
     }
 
-    return nacl.resolve(outputAb);
+    return promise.resolve(outputAb);
   }).finally(function() {
     nacl.free(stream);
     nacl.free(output);
@@ -209,14 +209,14 @@ compress(ab, 9, 2048).then(function(outputAb) {
 });
 
 
-var id = function() { return nacl.resolveMany.apply(null, arguments); }
+var id = function() { return promise.resolveMany.apply(null, arguments); }
 var log = function() {
   console.log.apply(console, arguments);
-  return nacl.resolveMany.apply(null, arguments);
+  return promise.resolveMany.apply(null, arguments);
 }
 var ret = function(x) { return function() { return x; } };
 var inc = function(x) { return x + 1; };
 var lt = function(b) { return function(a) { return a < b; } };
 var chain = function(f, g) {
-  return function(x) { return nacl.resolve(x).then(f).then(g); }
+  return function(x) { return promise.resolve(x).then(f).then(g); }
 };
