@@ -653,6 +653,14 @@ var nacl={};
     return new NaClPromise(p);
   }
 
+  function unwrapPromise(p) {
+    if (p instanceof NaClPromise) {
+      return p.promise;
+    }
+
+    return p;
+  }
+
   function NaClPromise(f) {
     if (f instanceof Promise) {
       this.promise = f;
@@ -672,38 +680,43 @@ var nacl={};
   };
 
   NaClPromise.prototype.catch = function(reject) {
-    return wrapPromise(this.promise.catch(reject));
+    return wrapPromise(this.promise.catch(function(value) {
+      return unwrapPromise(reject(value));
+    }));
   };
 
   NaClPromise.prototype.then = function(resolve, reject) {
     return wrapPromise(this.promise.then(function(value) {
       if (value instanceof ArgumentsWrapper) {
-        return resolve.apply(null, value.args);
+        return unwrapPromise(resolve.apply(null, value.args));
       } else {
-        return resolve.apply(null, args);
+        return unwrapPromise(resolve(value));
       }
-    }, reject));
+    }, function(value) {
+      return unwrapPromise(reject(value));
+    }));
   };
 
-  function return1(x) { return function() { return x; } }
-  function reject1(x) { return function() { return NaClPromise.reject(x); } }
-
   NaClPromise.prototype.finally = function(f) {
-    return this.then(function(x) {
-      return resolve().then(f).then(return1(x));
-    }, function(x) {
-      return resolve().then(f).then(reject1(x));
+    return this.then(function() {
+      var args = arguments;
+      return resolve().then(f).then(function() {
+        return resolveMany.apply(null, args);
+      });
+    }, function() {
+      return resolve().then(f).then(function() { return reject(x); });
     });
   };
 
   NaClPromise.prototype.if = function(cond, trueBlock, falseBlock) {
-    return this.then(function(prev) {
-      return resolve(prev).then(cond).then(function(condResult) {
+    return this.then(function() {
+      var resolvedArgs = resolveMany.apply(null, arguments);
+      return resolvedArgs.then(cond).then(function(condResult) {
         if (condResult) {
-          return resolve(prev).then(trueBlock);
+          return resolvedArgs.then(trueBlock);
         } else {
           if (falseBlock) {
-            return resolve(prev).then(falseBlock);
+            return resolvedArgs.then(falseBlock);
           } else {
             return undefined;
           }
@@ -714,14 +727,14 @@ var nacl={};
 
   NaClPromise.prototype.while = function(cond, block) {
     return this.then(function loop() {
-      var args = arguments;
-      return resolveMany(args).then(cond).then(function(condResult) {
+      var resolvedArgs = resolveMany.apply(null, arguments);
+      return resolvedArgs.then(cond).then(function(condResult) {
         if (condResult) {
-          return resolveMany(args).then(block).then(function() {
+          return resolvedArgs.then(block).then(function() {
             return loop.apply(null, arguments);
           });
         } else {
-          return resolveMany(args);
+          return resolvedArgs;
         }
       });
     });

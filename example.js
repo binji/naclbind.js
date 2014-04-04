@@ -134,45 +134,49 @@ function compress(inputAb, level, bufferSize) {
 
     return result !== Z_STREAM_END;
   }, function block(result, availIn, availOut, preAvailIn, compressedAb) {
-    return nacl.resolve().then(function() {
-      // Consume output, if any.
-      if (compressedAb) {
-        outputAb = copyToArrayBuffer(outputAb, outputOffset, compressedAb);
-        outputOffset += compressedAb.byteLength;
-      }
+    // Consume output, if any.
+    if (compressedAb) {
+      outputAb = copyToArrayBuffer(outputAb, outputOffset, compressedAb);
+      outputOffset += compressedAb.byteLength;
+    }
 
-      var inputUnderflow = availIn === 0;
-      var outputOverflow = availOut === 0;
-      var initial = !inputUnderflow && !outputOverflow;
+    var inputUnderflow = availIn === 0;
+    var outputOverflow = availOut === 0;
+    var initial = !inputUnderflow && !outputOverflow;
 
-      if (inputUnderflow || initial) {
-        // More room in the output buffer. Provide more input.
-        inputOffset += preAvailIn;
-        var inputOffsetEnd = inputOffset + bufferSize;
-        var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset,
-                                            inputOffsetEnd);
-        var inputSlice = nacl.arrayBufferMap(inputSliceAb);
-        z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
-        z_stream.fields.avail_in.set(stream, inputSliceAb.byteLength);
-        z_stream.fields.next_out.set(stream, output.cast(nacl.uint8_p));
-        z_stream.fields.avail_out.set(stream, bufferSize);
-      }
+    if (inputUnderflow || initial) {
+      // More room in the output buffer. Provide more input.
+      inputOffset += preAvailIn;
+      var inputOffsetEnd = inputOffset + bufferSize;
+      var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset,
+                                          inputOffsetEnd);
+      var inputSlice = nacl.arrayBufferMap(inputSliceAb);
+      z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
+      z_stream.fields.avail_in.set(stream, inputSliceAb.byteLength);
+      z_stream.fields.next_out.set(stream, output.cast(nacl.uint8_p));
+      z_stream.fields.avail_out.set(stream, bufferSize);
+    }
 
-      var inputLeft = inputAb.byteLength - inputOffset;
-      var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
-      var preAvailIn = z_stream.fields.avail_in.get(stream);
-      var result = deflate(stream, flush);
-      var availIn = z_stream.fields.avail_in.get(stream);
-      var availOut = z_stream.fields.avail_out.get(stream);
-      var outUsed = nacl.sub(bufferSize, availOut);
-      var compressedAb = nacl.arrayBufferCreate(outUsed);
-      var outputAbPtr = nacl.arrayBufferMap(compressedAb);
-      nacl.memcpy(outputAbPtr, output, outUsed);
-      return nacl.commitPromise(result, preAvailIn, availIn, availOut,
-                                compressedAb);
-    });
-  }).then(function(result) {
-    nacl.resolve(outputAb);
+    var inputLeft = inputAb.byteLength - inputOffset;
+    var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
+    var preAvailIn = z_stream.fields.avail_in.get(stream);
+    var result = deflate(stream, flush);
+    var availIn = z_stream.fields.avail_in.get(stream);
+    var availOut = z_stream.fields.avail_out.get(stream);
+    var outUsed = nacl.sub(bufferSize, availOut);
+    var compressedAb = nacl.arrayBufferCreate(outUsed);
+    var outputAbPtr = nacl.arrayBufferMap(compressedAb);
+    nacl.memcpy(outputAbPtr, output, outUsed);
+    return nacl.commitPromise(result, availIn, availOut, preAvailIn,
+                              compressedAb);
+  }).then(function(result, availIn, availOut, preAvailIn, compressedAb) {
+    // Consume the final bit of output, if any.
+    if (compressedAb) {
+      outputAb = copyToArrayBuffer(outputAb, outputOffset, compressedAb);
+      outputOffset += compressedAb.byteLength;
+    }
+
+    return nacl.resolve(outputAb);
   }).finally(function() {
     nacl.free(stream);
     nacl.free(output);
@@ -205,6 +209,7 @@ compress(ab, 9, 2048).then(function(outputAb) {
 });
 
 
+var id = function() { return nacl.resolveMany.apply(null, arguments); }
 var log = function() {
   console.log.apply(console, arguments);
   return nacl.resolveMany.apply(null, arguments);
@@ -212,7 +217,6 @@ var log = function() {
 var ret = function(x) { return function() { return x; } };
 var inc = function(x) { return x + 1; };
 var lt = function(b) { return function(a) { return a < b; } };
-//var chain = function(f, g) { return function(x) { return g(f(x)); } }
 var chain = function(f, g) {
   return function(x) { return nacl.resolve(x).then(f).then(g); }
 };
