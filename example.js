@@ -65,33 +65,66 @@ function copyToArrayBuffer(dst, dstOffset, src) {
   return dst;
 }
 
-//    z_const Bytef *next_in;     /* next input byte */
-//    uInt     avail_in;  /* number of bytes available at next_in */
-//    uLong    total_in;  /* total number of input bytes read so far */
-//
-//    Bytef    *next_out; /* next output byte should be put there */
-//    uInt     avail_out; /* remaining free space at next_out */
-//    uLong    total_out; /* total number of bytes output so far */
-//
-//    z_const char *msg;  /* last error message, NULL if no error */
-//    struct internal_state FAR *state; /* not visible by applications */
-//
-//    alloc_func zalloc;  /* used to allocate the internal state */
-//    free_func  zfree;   /* used to free the internal state */
-//    voidpf     opaque;  /* private data object passed to zalloc and zfree */
-//
-//    int     data_type;  /* best guess about the data type: binary or text */
-//    uLong   adler;      /* adler32 value of the uncompressed data */
-//    uLong   reserved;   /* reserved for future use */
+var void_ = nacl.makeVoidType(1);
+var int8 = nacl.makePrimitiveType(2, 'int8', 1, true, true);
+var uint8 = nacl.makePrimitiveType(3, 'uint8', 1, false, true);
+var int16 = nacl.makePrimitiveType(4, 'int16', 2, true, true);
+var uint16 = nacl.makePrimitiveType(5, 'uint16', 2, false, true);
+var int32 = nacl.makePrimitiveType(6, 'int32', 4, true, true);
+var uint32 = nacl.makePrimitiveType(7, 'uint32', 4, false, true);
+var int64 = nacl.makePrimitiveType(8, 'int64', 8, true, true);
+var uint64 = nacl.makePrimitiveType(9, 'uint64', 8, false, true);
+var float32 = nacl.makePrimitiveType(10, 'float32', 4, false, false);
+var float64 = nacl.makePrimitiveType(11, 'float64', 8, false, false);
+var size_t = nacl.makeAliasType(12, 'size_t', uint32);
 
-var z_stream = nacl.makeStructType(nacl.userTypeId + 0, 56, 'z_stream');
+var void_p = nacl.makePointerType(13, void_);
+var uint8_p = nacl.makePointerType(14, uint8);
+var uint8_pp = nacl.makePointerType(15, uint8_p);
+var uint32_p = nacl.makePointerType(16, uint32);
+
+var var_ = nacl.makePepperType(17, 'Var', undefined);
+var arrayBuffer = nacl.makePepperType(18, 'ArrayBuffer', ArrayBuffer);
+var array = nacl.makePepperType(19, 'Array', Array);
+var dictionary = nacl.makePepperType(20, 'Dictionary', Object);
+var addRefReleaseType = nacl.makeFunctionType(21, void_, var_);
+var freeType = nacl.makeFunctionType(22, void_, void_p);
+var mallocType = nacl.makeFunctionType(23, void_p, size_t);
+var memsetType = nacl.makeFunctionType(24, void_, void_p, int32, size_t);
+var memcpyType = nacl.makeFunctionType(25, void_, void_p, void_p, size_t);
+var addVoidpInt32Type = nacl.makeFunctionType(26, void_p, void_p, int32);
+var setUint8pType = nacl.makeFunctionType(27, void_, uint8_pp, uint8_p);
+var setUint32Type = nacl.makeFunctionType(28, void_, uint32_p, uint32);
+var getUint8pType = nacl.makeFunctionType(29, uint8_p, uint8_pp);
+var getUint32Type = nacl.makeFunctionType(30, uint32, uint32_p);
+var subInt32Type = nacl.makeFunctionType(31, int32, int32, int32);
+var subUint32Type = nacl.makeFunctionType(32, uint32, uint32, uint32);
+
+var arrayBufferCreateType = nacl.makeFunctionType(33, arrayBuffer, uint32);
+var arrayBufferMapType = nacl.makeFunctionType(34, void_p, arrayBuffer);
+var arrayBufferUnmapType = nacl.makeFunctionType(35, void_, arrayBuffer);
+
+// Built-in functions.
+var add = nacl.makeFunction('add', addVoidpInt32Type);
+var addRef = nacl.makeFunction('addRef', addRefReleaseType);
+var arrayBufferCreate = nacl.makeFunction('arrayBufferCreate', arrayBufferCreateType);
+var arrayBufferMap = nacl.makeFunction('arrayBufferMap', arrayBufferMapType);
+var free = nacl.makeFunction('free', freeType);
+var get = nacl.makeFunction('get', [getUint8pType, getUint32Type]);
+var malloc = nacl.makeFunction('malloc', mallocType);
+var memcpy = nacl.makeFunction('memcpy', memcpyType);
+var memset = nacl.makeFunction('memset', memsetType);
+var release = nacl.makeFunction('release', addRefReleaseType);
+var set = nacl.makeFunction('set', [setUint8pType, setUint32Type]);
+var sub = nacl.makeFunction('sub', [subInt32Type, subUint32Type]);
+var z_stream = nacl.makeStructType(36, 56, 'z_stream');
 // TODO(binji): fields should be specified in the constructor.
-z_stream.addField('next_in', nacl.uint8_p, 0);
-z_stream.addField('avail_in', nacl.uint32, 4);
-z_stream.addField('total_in', nacl.uint32, 8);
-z_stream.addField('next_out', nacl.uint8_p, 12);
-z_stream.addField('avail_out', nacl.uint32, 16);
-z_stream.addField('total_out', nacl.uint32, 20);
+z_stream.addField('next_in', uint8_p, 0);
+z_stream.addField('avail_in', uint32, 4);
+z_stream.addField('total_in', uint32, 8);
+z_stream.addField('next_out', uint8_p, 12);
+z_stream.addField('avail_out', uint32, 16);
+z_stream.addField('total_out', uint32, 20);
 
 var Z_NO_FLUSH = 0
 var Z_PARTIAL_FLUSH = 1
@@ -111,8 +144,8 @@ var Z_MEM_ERROR = -4
 var Z_BUF_ERROR = -5
 var Z_VERSION_ERROR = -6
 
-var z_stream_p = nacl.makePointerType(nacl.userTypeId + 1, z_stream);
-var deflateType = nacl.makeFunctionType(nacl.userTypeId + 2, nacl.int32, z_stream_p, nacl.int32);
+var z_stream_p = nacl.makePointerType(37, z_stream);
+var deflateType = nacl.makeFunctionType(38, int32, z_stream_p, int32);
 var deflateInit = nacl.makeFunction('deflateInit', deflateType);
 var deflate = nacl.makeFunction('deflate', deflateType);
 
@@ -127,9 +160,9 @@ function compress(inputAb, level, bufferSize) {
 
   return promise.resolve().then(function() {
     stream = z_stream.malloc().cast(z_stream_p);
-    nacl.memset(stream, 0, z_stream.sizeof());
+    memset(stream, 0, z_stream.sizeof());
 
-    output = nacl.malloc(bufferSize);
+    output = malloc(bufferSize);
     var result = deflateInit(stream, level);
     return nacl.commitPromise(result);
   }).then(function(result) {
@@ -160,10 +193,10 @@ function compress(inputAb, level, bufferSize) {
       var inputOffsetEnd = inputOffset + bufferSize;
       var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset,
                                           inputOffsetEnd);
-      var inputSlice = nacl.arrayBufferMap(inputSliceAb);
-      z_stream.fields.next_in.set(stream, inputSlice.cast(nacl.uint8_p));
+      var inputSlice = arrayBufferMap(inputSliceAb);
+      z_stream.fields.next_in.set(stream, inputSlice.cast(uint8_p));
       z_stream.fields.avail_in.set(stream, inputSliceAb.byteLength);
-      z_stream.fields.next_out.set(stream, output.cast(nacl.uint8_p));
+      z_stream.fields.next_out.set(stream, output.cast(uint8_p));
       z_stream.fields.avail_out.set(stream, bufferSize);
     }
 
@@ -173,10 +206,10 @@ function compress(inputAb, level, bufferSize) {
     var result = deflate(stream, flush);
     var availIn = z_stream.fields.avail_in.get(stream);
     var availOut = z_stream.fields.avail_out.get(stream);
-    var outUsed = nacl.sub(bufferSize, availOut);
-    var compressedAb = nacl.arrayBufferCreate(outUsed);
-    var outputAbPtr = nacl.arrayBufferMap(compressedAb);
-    nacl.memcpy(outputAbPtr, output, outUsed);
+    var outUsed = sub(bufferSize, availOut);
+    var compressedAb = arrayBufferCreate(outUsed);
+    var outputAbPtr = arrayBufferMap(compressedAb);
+    memcpy(outputAbPtr, output, outUsed);
     return nacl.commitPromise(result, availIn, availOut, preAvailIn,
                               compressedAb);
   }).then(function(result, availIn, availOut, preAvailIn, compressedAb) {
@@ -188,8 +221,8 @@ function compress(inputAb, level, bufferSize) {
 
     return promise.resolve(outputAb);
   }).finally(function() {
-    nacl.free(stream);
-    nacl.free(output);
+    free(stream);
+    free(output);
     return nacl.commitPromise();
   });
 }

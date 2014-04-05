@@ -14,7 +14,7 @@
 
 "use strict";
 
-var nacl={};
+var nacl = {};
 (function() {
   var self = this;
 
@@ -280,6 +280,14 @@ var nacl={};
     Type.call(this);
     this.retType = retType;
     this.argTypes = Array.prototype.slice.call(arguments, 1);
+
+    // Validate the argument types.
+    this.argTypes.forEach(function(argType, i) {
+      if (!(argType instanceof Type)) {
+        throw new Error('Argument #' + i +
+                        ' of function is not an instance of Type.');
+      }
+    });
   }
 
   FunctionType.prototype = new Type();
@@ -749,105 +757,17 @@ var nacl={};
   var makeVoidType = makeMakeTypeFunction(VoidType);
   var makeFunctionType = makeMakeTypeFunction(FunctionType);
 
-  // Built-in types. These should be auto-generated so they match NaCl, but for
-  // now just generate them.
-  // TODO intern new types?
-  var void_ = makeVoidType(1);
-  var int8 = makePrimitiveType(2, 'int8', 1, true, true);
-  var uint8 = makePrimitiveType(3, 'uint8', 1, false, true);
-  var int16 = makePrimitiveType(4, 'int16', 2, true, true);
-  var uint16 = makePrimitiveType(5, 'uint16', 2, false, true);
-  var int32 = makePrimitiveType(6, 'int32', 4, true, true);
-  var uint32 = makePrimitiveType(7, 'uint32', 4, false, true);
-  var int64 = makePrimitiveType(8, 'int64', 8, true, true);
-  var uint64 = makePrimitiveType(9, 'uint64', 8, false, true);
-  var float32 = makePrimitiveType(10, 'float32', 4, false, false);
-  var float64 = makePrimitiveType(11, 'float64', 8, false, false);
-  var size_t = makeAliasType(12, 'size_t', uint32);
-
-  var void_p = makePointerType(13, void_);
-  var uint8_p = makePointerType(14, uint8);
-  var uint8_pp = makePointerType(15, uint8_p);
-  var uint32_p = makePointerType(16, uint32);
-
-  var var_ = makePepperType(17, 'Var', undefined);
-  var arrayBuffer = makePepperType(18, 'ArrayBuffer', ArrayBuffer);
-  var array = makePepperType(19, 'Array', Array);
-  var dictionary = makePepperType(20, 'Dictionary', Object);
-  var addRefReleaseType = makeFunctionType(21, void_, var_);
-  var freeType = makeFunctionType(22, void_, void_p);
-  var mallocType = makeFunctionType(23, void_p, size_t);
-  var memsetType = makeFunctionType(24, void_, void_p, int32, size_t);
-  var memcpyType = makeFunctionType(25, void_, void_p, void_p, size_t);
-  var addVoidpInt32Type = makeFunctionType(26, void_p, void_p, int32);
-  var setUint8pType = makeFunctionType(27, void_, uint8_pp, uint8_p);
-  var setUint32Type = makeFunctionType(28, void_, uint32_p, uint32);
-  var getUint8pType = makeFunctionType(29, uint8_p, uint8_pp);
-  var getUint32Type = makeFunctionType(30, uint32, uint32_p);
-  var subInt32Type = makeFunctionType(31, int32, int32, int32);
-  var subUint32Type = makeFunctionType(32, uint32, uint32, uint32);
-
-  var arrayBufferCreateType = makeFunctionType(33, arrayBuffer, uint32);
-  var arrayBufferMapType = makeFunctionType(34, void_p, arrayBuffer);
-  var arrayBufferUnmapType = makeFunctionType(35, void_, arrayBuffer);
-
-  // Built-in functions.
-  var add = makeFunction('add', addVoidpInt32Type);
-  var addRef = makeFunction('addRef', addRefReleaseType);
-  var arrayBufferCreate = makeFunction('arrayBufferCreate', arrayBufferCreateType);
-  var arrayBufferMap = makeFunction('arrayBufferMap', arrayBufferMapType);
-  var free = makeFunction('free', freeType);
-  var get = makeFunction('get', [getUint8pType, getUint32Type]);
-  var malloc = makeFunction('malloc', mallocType);
-  var memcpy = makeFunction('memcpy', memcpyType);
-  var memset = makeFunction('memset', memsetType);
-  var release = makeFunction('release', addRefReleaseType);
-  var set = makeFunction('set', [setUint8pType, setUint32Type]);
-  var sub = makeFunction('sub', [subInt32Type, subUint32Type]);
-
-  self.userTypeId = 36;
-
-
-  // exported Types
-  self.array = array;
-  self.arrayBuffer = arrayBuffer;
-  self.dictionary = dictionary;
-  self.float32 = float32;
-  self.float64 = float64;
-  self.int16 = int16;
-  self.int32 = int32;
-  self.int64 = int64;
-  self.int8 = int8;
-  self.size_t = size_t;
-  self.uint16 = uint16;
-  self.uint32_p = uint32_p;
-  self.uint32 = uint32;
-  self.uint64 = uint64;
-  self.uint8_p = uint8_p;
-  self.uint8_pp = uint8_pp;
-  self.uint8 = uint8;
-  self.void_p = void_p;
-  self.void = void_;
-
-  // exported CFunctions
-  self.add = add;
-  self.addRef = addRef;
-  self.arrayBufferCreate = arrayBufferCreate;
-  self.arrayBufferMap = arrayBufferMap;
-  self.free = free;
-  self.malloc = malloc;
-  self.memcpy = memcpy;
-  self.memset = memset;
-  self.release = release;
-  self.sub = sub;
-
   // exported functions
   self.commit = commit;
   self.commitPromise = commitPromise;
+  self.logTypes = logTypes;
+  self.makeAliasType = makeAliasType;
   self.makeFunction = makeFunction;
   self.makeFunctionType = makeFunctionType;
+  self.makePepperType = makePepperType;
   self.makePointerType = makePointerType;
+  self.makePrimitiveType = makePrimitiveType;
   self.makeStructType = makeStructType;
-  self.logTypes = logTypes;
+  self.makeVoidType = makeVoidType;
 
 }).call(nacl);
