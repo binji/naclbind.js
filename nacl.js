@@ -185,14 +185,14 @@ var nacl = {};
     this.offset = offset;
   }
 
-  StructField.prototype.set = function(struct_p, value) {
-    var dst = add(struct_p, this.offset);
-    return set(dst.cast(this.type.getPointerType()), value);
+  StructField.prototype.set = function(context, struct_p, value) {
+    var dst = context.func.add(struct_p, this.offset);
+    return context.func.set(dst.cast(this.type.getPointerType()), value);
   };
 
-  StructField.prototype.get = function(struct_p) {
-    var ptr = add(struct_p, this.offset);
-    return get(ptr.cast(this.type.getPointerType()));
+  StructField.prototype.get = function(context, struct_p) {
+    var ptr = context.func.add(struct_p, this.offset);
+    return context.func.get(ptr.cast(this.type.getPointerType()));
   };
 
   StructField.prototype.equals = function(other) {
@@ -271,8 +271,8 @@ var nacl = {};
     this.fields[name] = new StructField(name, type, offset);
   };
 
-  StructType.prototype.malloc = function() {
-    return malloc(this.sizeof());
+  StructType.prototype.malloc = function(context) {
+    return context.func.malloc(this.sizeof());
   };
 
   //// FunctionType ////////////////////////////////////////////////////////////
@@ -378,11 +378,11 @@ var nacl = {};
            this.type.equals(other.type);
   };
 
-  // Handle
+  //// Handle //////////////////////////////////////////////////////////////////
   var nextHandleId = 1;
   var handleIdHash = {};
 
-  function Handle(type, id) {
+  function Handle(context, type, id) {
     this.type = type;
     if (id !== undefined) {
       this.id = id;
@@ -390,6 +390,9 @@ var nacl = {};
       this.id = nextHandleId++;
       handleIdHash[this.id] = this;
     }
+
+    this.context = context;
+    context.registerHandle(this);
   }
 
   Handle.prototype.toString = function() {
@@ -398,26 +401,11 @@ var nacl = {};
 
   Handle.prototype.cast = function(newType) {
     // TODO(binji): check validity of cast
-    return new Handle(newType, this.id);
+    return new Handle(this.context, newType, this.id);
   };
-
-  function deleteHandle(id) {
-    delete handleIdHash[id];
-  }
 
   function getHandle(id) {
     return handleIdHash[id];
-  }
-
-  function collectAllHandlesExcept(used) {
-    // Build a new hash with the used elements.
-    var newHash = {};
-    used.forEach(function(id) {
-      var handle = handleIdHash[id];
-      newHash[id] = handle;
-    });
-
-    handleIdHash = newHash;
   }
 
   // Functions
@@ -574,24 +562,49 @@ var nacl = {};
     return true;
   };
 
+  var functions = {};
+
   function makeFunction(name, types) {
+    assert(!(name in functions), '');
     var cfunc = new CFunction(name, types);
-    return function() {
-      return call(cfunc, arguments);
-    };
+    functions[name] = cfunc;
   }
 
 
-  // TODO don't use global...?
-  var messages = [];
+  function Context() {
+    this.handles = [];
+    this.messages = [];
+    this.func = {};
+    this.initializeFuncs_();
+  }
 
-  function call(func, args) {
+  Context.prototype.initializeFuncs_ = function() {
+    var that = this;
+
+    function makeFunctionCaller(context, cfunc) {
+      return function() {
+        return context.call(cfunc, arguments);
+      };
+    }
+
+    for (var name in functions) {
+      var cfunc = functions[name];
+      this.func[name] = makeFunctionCaller(that, cfunc);
+    }
+  };
+
+  Context.prototype.registerHandle = function(handle) {
+    assert(handle instanceof Handle, 'registerHandle: handle is not a Handle.');
+    this.handles.push(handle);
+  };
+
+  Context.prototype.call = function(func, args) {
     assert(func instanceof CFunction, 'call: Expected func to be CFunction');
-    // Find the correct overload.
+
     var funcType = func.findOverload(args);
     assert(funcType !== null);
 
-    var handle = new Handle(funcType.retType);
+    var handle = new Handle(this, funcType.retType);
     var message = {
       cmd: func.name,
       type: funcType.id,
@@ -611,12 +624,12 @@ var nacl = {};
       message.argIsHandle.push(arg instanceof Handle);
     }
 
-    messages.push(message);
+    this.messages.push(message);
 
     return handle;
   };
 
-  function commit() {
+  Context.prototype.commit = function() {
     assert(arguments.length > 0, 'commit: Expected callback.');
 
     var callback = arguments[arguments.length - 1];
@@ -629,21 +642,17 @@ var nacl = {};
       return handle.id;
     };
 
-    var handles = Array.prototype.map.call(args, serializeHandle);
+    var handles = args.map(serializeHandle);
     var msg = {
-      msgs: messages,
+      msgs: this.messages,
       handles: handles,
     };
 
     // Remove committed messages.
-    messages = [];
+    this.messages = [];
 
     postMessage(msg, function(result) {
-      // Remove unused handles.
-      // TODO Collect non-pointer handles.
-      //collectAllHandlesExcept(handleIds);
-
-      var idToHandle = function(value, ix) {
+      function idToHandle(value, ix) {
         if (typeof(value) === 'number' && !args[ix].type.isPrimitive()) {
           return getHandle(value);
         }
@@ -656,17 +665,19 @@ var nacl = {};
     });
   };
 
-  function commitPromise() {
+  Context.prototype.commitPromise = function() {
+    var that = this;
     var args = Array.prototype.slice.call(arguments);
     return new promise.PromisePlus(function(resolve, reject, resolveMany) {
       args.push(function() {
         resolveMany.apply(null, arguments);
       });
-      nacl.commit.apply(null, args);
+      that.commit.apply(that, args);
     });
-  }
+  };
 
   // NaCl stuff...
+  //////////////////////////////////////////////////////////////////////////////
   var nextCallbackId = 1;
   var idCallbackMap = [];
   var moduleEl;
@@ -757,11 +768,14 @@ var nacl = {};
   var makeVoidType = makeMakeTypeFunction(VoidType);
   var makeFunctionType = makeMakeTypeFunction(FunctionType);
 
+  var makeContext = function() {
+    return new Context();
+  };
+
   // exported functions
-  self.commit = commit;
-  self.commitPromise = commitPromise;
   self.logTypes = logTypes;
   self.makeAliasType = makeAliasType;
+  self.makeContext = makeContext;
   self.makeFunction = makeFunction;
   self.makeFunctionType = makeFunctionType;
   self.makePepperType = makePepperType;
