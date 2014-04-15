@@ -15,6 +15,7 @@
 #include "handle.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -79,7 +80,7 @@ bool RegisterHandle(Handle handle, Type type, HandleValue value) {
         } else if (handle < mid_handle) {
           hi_ix = mid_ix;
         } else {
-          VERROR("handle %d is already registered.\n", handle);
+          VERROR("handle %d is already registered.", handle);
           return FALSE;
         }
       }
@@ -206,20 +207,162 @@ bool GetHandle(Handle handle, HandleObject* out_handle_object) {
   return FALSE;
 }
 
+#define TYPE_INT8_MIN (-0x80)
+#define TYPE_INT8_MAX (0x7f)
+#define TYPE_INT16_MIN (-0x8000)
+#define TYPE_INT16_MAX (0x7fff)
+#define TYPE_INT32_MIN (-0x80000000L)
+#define TYPE_INT32_MAX (0x7fffffffL)
+#define TYPE_INT64_MIN (-0x8000000000000000LL)
+#define TYPE_INT64_MAX (0x7fffffffffffffffLL)
+#define TYPE_UINT8_MIN (0)
+#define TYPE_UINT8_MAX (0xff)
+#define TYPE_UINT16_MIN (0)
+#define TYPE_UINT16_MAX (0xffff)
+#define TYPE_UINT32_MIN (0)
+#define TYPE_UINT32_MAX (0xffffffffL)
+#define TYPE_UINT64_MIN (0)
+#define TYPE_UINT64_MAX (0xffffffffffffffffLL)
+#define TYPE_FLOAT_MIN_24 (-0xffffffL)
+#define TYPE_FLOAT_MAX_24 (0xffffffL)
+#define TYPE_DOUBLE_MIN_53 (-0x1fffffffffffffLL)
+#define TYPE_DOUBLE_MAX_53 (0x1fffffffffffffLL)
+
+#define TYPE_INT8_FMT "%d"
+#define TYPE_INT16_FMT "%d"
+#define TYPE_INT32_FMT "%d"
+#define TYPE_INT64_FMT "%lld"
+#define TYPE_UINT8_FMT "%u"
+#define TYPE_UINT16_FMT "%u"
+#define TYPE_UINT32_FMT "%u"
+#define TYPE_UINT64_FMT "%llu"
+#define TYPE_FLOAT_FMT "%g"
+#define TYPE_DOUBLE_FMT "%g"
+
+#define TYPE_INT8_FIELD int8
+#define TYPE_INT16_FIELD int16
+#define TYPE_INT32_FIELD int32
+#define TYPE_INT64_FIELD int64
+#define TYPE_UINT8_FIELD uint8
+#define TYPE_UINT16_FIELD uint16
+#define TYPE_UINT32_FIELD uint32
+#define TYPE_UINT64_FIELD uint64
+#define TYPE_FLOAT_FIELD float32
+#define TYPE_DOUBLE_FIELD float64
+
+#define HOBJ_FIELD(type) (hobj.value.type##_FIELD)
+
+#define TYPE_CASE(to_type, from_type) \
+  case from_type: \
+    *out_value = HOBJ_FIELD(from_type); \
+    return TRUE  // no semicolon
+
+#define DEFAULT_TYPE_CASE(to_type) \
+  default: \
+    VERROR("handle %d is of type %s. Expected %s.", handle, \
+           TypeToString(hobj.type), TypeToString(to_type)); \
+    return FALSE  // no semicolon
+
+#define TYPE_CASE_TRUNC_GENERIC(to_type, from_type, check) \
+  case from_type: \
+    check(to_type, from_type); \
+    *out_value = HOBJ_FIELD(from_type); \
+    return TRUE  // no semicolon
+
+#define TYPE_CASE_TRUNC(to_type, from_type) \
+  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK)
+
+#define TYPE_CASE_TRUNC_MIN(to_type, from_type) \
+  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_MIN)
+
+#define TYPE_CASE_TRUNC_MAX(to_type, from_type) \
+  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_MAX)
+
+#define TYPE_CASE_TRUNC_FLOAT_TO_INT(to_type, from_type) \
+  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_FLOAT_TO_INT)
+
+#define TYPE_CASE_TRUNC_DOUBLE_TO_INT(to_type, from_type) \
+  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_DOUBLE_TO_INT)
+
+#define TYPE_CASE_TRUNC_INT_TO_FLOAT(to_type, from_type) \
+  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_INT_TO_FLOAT)
+
+#define TYPE_CASE_TRUNC_INT_TO_DOUBLE(to_type, from_type) \
+  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_INT_TO_DOUBLE)
+
+#define TRUNC_CHECK(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < to_type##_MIN || \
+      HOBJ_FIELD(from_type) > to_type##_MAX) { \
+    TRUNC_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define TRUNC_CHECK_MAX(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) > to_type##_MAX) { \
+    TRUNC_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define TRUNC_CHECK_MIN(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < to_type##_MIN) { \
+    TRUNC_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define TRUNC_CHECK_FLOAT_TO_INT(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < to_type##_MIN || \
+      HOBJ_FIELD(from_type) > to_type##_MAX || \
+      HOBJ_FIELD(from_type) != rintf(HOBJ_FIELD(from_type))) { \
+    TRUNC_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define TRUNC_CHECK_DOUBLE_TO_INT(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < to_type##_MIN || \
+      HOBJ_FIELD(from_type) > to_type##_MAX || \
+      HOBJ_FIELD(from_type) != rint(HOBJ_FIELD(from_type))) { \
+    TRUNC_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define TRUNC_CHECK_INT_TO_FLOAT(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < TYPE_FLOAT_MIN_24 || \
+      HOBJ_FIELD(from_type) > TYPE_FLOAT_MAX_24) { \
+    TRUNC_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define TRUNC_CHECK_INT_TO_DOUBLE(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < TYPE_DOUBLE_MIN_53 || \
+      HOBJ_FIELD(from_type) > TYPE_DOUBLE_MAX_53) { \
+    TRUNC_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define TRUNC_ERROR(to_type, from_type) \
+  VERROR("handle %d(%s) with value " from_type##_FMT \
+         " cannot be represented as %s.", handle, TypeToString(hobj.type), \
+         HOBJ_FIELD(from_type), TypeToString(to_type))
+
 bool GetHandleInt8(Handle handle, int8_t* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_INT8) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_INT8));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE(TYPE_INT8, TYPE_INT8);
+    TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT16);
+    TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT32);
+    TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT64);
+    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT8);
+    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT16);
+    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT32);
+    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT8, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT8, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_INT8);
   }
-
-  *out_value = hobj.value.int8;
-  return TRUE;
 }
 
 bool GetHandleUint8(Handle handle, uint8_t* out_value) {
@@ -228,14 +371,19 @@ bool GetHandleUint8(Handle handle, uint8_t* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_UINT8) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_UINT8));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT8, TYPE_INT8);
+    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT16);
+    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT32);
+    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT64);
+    TYPE_CASE(TYPE_UINT8, TYPE_UINT8);
+    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT16);
+    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT32);
+    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT8, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT8, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_UINT8);
   }
-
-  *out_value = hobj.value.uint8;
-  return TRUE;
 }
 
 bool GetHandleInt16(Handle handle, int16_t* out_value) {
@@ -244,14 +392,19 @@ bool GetHandleInt16(Handle handle, int16_t* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_INT16) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_INT16));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE(TYPE_INT16, TYPE_INT8);
+    TYPE_CASE(TYPE_INT16, TYPE_INT16);
+    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_INT32);
+    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_INT64);
+    TYPE_CASE(TYPE_INT16, TYPE_UINT8);
+    TYPE_CASE_TRUNC_MAX(TYPE_INT16, TYPE_UINT16);
+    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_UINT32);
+    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_UINT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT16, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT16, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_INT16);
   }
-
-  *out_value = hobj.value.int16;
-  return TRUE;
 }
 
 bool GetHandleUint16(Handle handle, uint16_t* out_value) {
@@ -260,14 +413,19 @@ bool GetHandleUint16(Handle handle, uint16_t* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_UINT16) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_UINT16));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT16, TYPE_INT8);
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT16, TYPE_INT16);
+    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_INT32);
+    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_INT64);
+    TYPE_CASE(TYPE_UINT16, TYPE_UINT8);
+    TYPE_CASE(TYPE_UINT16, TYPE_UINT16);
+    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_UINT32);
+    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_UINT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT16, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT16, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_UINT16);
   }
-
-  *out_value = hobj.value.uint16;
-  return TRUE;
 }
 
 bool GetHandleInt32(Handle handle, int32_t* out_value) {
@@ -276,14 +434,19 @@ bool GetHandleInt32(Handle handle, int32_t* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_INT32) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_INT32));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE(TYPE_INT32, TYPE_INT8);
+    TYPE_CASE(TYPE_INT32, TYPE_INT16);
+    TYPE_CASE(TYPE_INT32, TYPE_INT32);
+    TYPE_CASE_TRUNC(TYPE_INT32, TYPE_INT64);
+    TYPE_CASE(TYPE_INT32, TYPE_UINT8);
+    TYPE_CASE(TYPE_INT32, TYPE_UINT16);
+    TYPE_CASE_TRUNC_MAX(TYPE_INT32, TYPE_UINT32);
+    TYPE_CASE_TRUNC(TYPE_INT32, TYPE_UINT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT32, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT32, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_INT32);
   }
-
-  *out_value = hobj.value.int32;
-  return TRUE;
 }
 
 bool GetHandleUint32(Handle handle, uint32_t* out_value) {
@@ -292,14 +455,19 @@ bool GetHandleUint32(Handle handle, uint32_t* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_UINT32) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_UINT32));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT8);
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT16);
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT32);
+    TYPE_CASE_TRUNC(TYPE_UINT32, TYPE_INT64);
+    TYPE_CASE(TYPE_UINT32, TYPE_UINT8);
+    TYPE_CASE(TYPE_UINT32, TYPE_UINT16);
+    TYPE_CASE(TYPE_UINT32, TYPE_UINT32);
+    TYPE_CASE_TRUNC(TYPE_UINT32, TYPE_UINT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT32, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT32, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_UINT32);
   }
-
-  *out_value = hobj.value.uint32;
-  return TRUE;
 }
 
 bool GetHandleInt64(Handle handle, int64_t* out_value) {
@@ -308,14 +476,19 @@ bool GetHandleInt64(Handle handle, int64_t* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_INT64) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_INT64));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE(TYPE_INT64, TYPE_INT8);
+    TYPE_CASE(TYPE_INT64, TYPE_INT16);
+    TYPE_CASE(TYPE_INT64, TYPE_INT32);
+    TYPE_CASE(TYPE_INT64, TYPE_INT64);
+    TYPE_CASE(TYPE_INT64, TYPE_UINT8);
+    TYPE_CASE(TYPE_INT64, TYPE_UINT16);
+    TYPE_CASE(TYPE_INT64, TYPE_UINT32);
+    TYPE_CASE_TRUNC_MAX(TYPE_INT64, TYPE_UINT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT64, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT64, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_INT64);
   }
-
-  *out_value = hobj.value.int64;
-  return TRUE;
 }
 
 bool GetHandleUint64(Handle handle, uint64_t* out_value) {
@@ -324,14 +497,19 @@ bool GetHandleUint64(Handle handle, uint64_t* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_UINT64) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_UINT64));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT8);
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT16);
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT32);
+    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT64);
+    TYPE_CASE(TYPE_UINT64, TYPE_UINT8);
+    TYPE_CASE(TYPE_UINT64, TYPE_UINT16);
+    TYPE_CASE(TYPE_UINT64, TYPE_UINT32);
+    TYPE_CASE(TYPE_UINT64, TYPE_UINT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT64, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT64, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_UINT64);
   }
-
-  *out_value = hobj.value.uint64;
-  return TRUE;
 }
 
 bool GetHandleFloat(Handle handle, float* out_value) {
@@ -340,14 +518,19 @@ bool GetHandleFloat(Handle handle, float* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_FLOAT) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_FLOAT));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE(TYPE_FLOAT, TYPE_INT8);
+    TYPE_CASE(TYPE_FLOAT, TYPE_INT16);
+    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_INT32);
+    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_INT64);
+    TYPE_CASE(TYPE_FLOAT, TYPE_UINT8);
+    TYPE_CASE(TYPE_FLOAT, TYPE_UINT16);
+    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_UINT32);
+    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_UINT64);
+    TYPE_CASE(TYPE_FLOAT, TYPE_FLOAT);
+    TYPE_CASE(TYPE_FLOAT, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_FLOAT);
   }
-
-  *out_value = hobj.value.float32;
-  return TRUE;
 }
 
 bool GetHandleDouble(Handle handle, double* out_value) {
@@ -356,14 +539,19 @@ bool GetHandleDouble(Handle handle, double* out_value) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_DOUBLE) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_DOUBLE));
-    return FALSE;
+  switch (hobj.type) {
+    TYPE_CASE(TYPE_DOUBLE, TYPE_INT8);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_INT16);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_INT32);
+    TYPE_CASE_TRUNC_INT_TO_DOUBLE(TYPE_DOUBLE, TYPE_INT64);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT8);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT16);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT32);
+    TYPE_CASE_TRUNC_INT_TO_DOUBLE(TYPE_DOUBLE, TYPE_UINT64);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_FLOAT);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_DOUBLE);
   }
-
-  *out_value = hobj.value.float64;
-  return TRUE;
 }
 
 bool GetHandleVoidp(Handle handle, void** out_value) {
@@ -373,7 +561,7 @@ bool GetHandleVoidp(Handle handle, void** out_value) {
   }
 
   if (hobj.type != TYPE_VOID_P) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
+    VERROR("handle %d is of type %s. Expected %s.", handle,
           TypeToString(hobj.type), TypeToString(TYPE_VOID_P));
     return FALSE;
   }
@@ -391,7 +579,7 @@ bool GetHandleVar(Handle handle, struct PP_Var* out_value) {
   if (hobj.type != TYPE_ARRAY_BUFFER &&
       hobj.type != TYPE_ARRAY &&
       hobj.type != TYPE_DICTIONARY) {
-    VERROR("handle %d is of type %s. Expected %s.\n", handle,
+    VERROR("handle %d is of type %s. Expected %s.", handle,
           TypeToString(hobj.type), TypeToString(hobj.type));
     return FALSE;
   }

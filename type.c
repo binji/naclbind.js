@@ -17,6 +17,7 @@
 #include "type.h"
 
 const char* kTypeString[] = {
+  "(null)",
   "void",
   "int8_t",
   "uint8_t",
@@ -55,6 +56,8 @@ const char* kTypeString[] = {
   "z_stream",
   "z_stream*",
   "int (*)(z_stream*, int)",
+  "int (*)(Bytef*, uLongf*, Bytef*, uLong)",
+  "uLong (*)(uLong)",
 };
 
 const char* TypeToString(Type id) {

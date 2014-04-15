@@ -148,8 +148,44 @@ var z_stream_p = nacl.makePointerType(37, z_stream);
 var deflateType = nacl.makeFunctionType(38, int32, z_stream_p, int32);
 nacl.makeFunction('deflateInit', deflateType);
 nacl.makeFunction('deflate', deflateType);
+var compressType = nacl.makeFunctionType(39, int32, uint8_p, uint32_p, uint8_p, uint32);
+nacl.makeFunction('compress', compressType);
+var compressBoundType = nacl.makeFunctionType(40, uint32, uint32);
+nacl.makeFunction('compressBound', compressBoundType);
 
 // nacl.logTypes();
+
+function compressEasy(inputAb) {
+  var c = nacl.makeContext();
+  var dest;
+  var destLenPtr;
+  return promise.resolve().then(function() {
+    var sourceLen = inputAb.byteLength;
+    var destLenBound = c.func.compressBound(sourceLen);
+    dest = c.func.malloc(destLenBound).cast(uint8_p);
+    var source = c.func.arrayBufferMap(inputAb).cast(uint8_p);
+    destLenPtr = c.func.malloc(uint32.sizeof()).cast(uint32_p);
+    c.func.set(destLenPtr, destLenBound);
+    var result = c.func.compress(dest, destLenPtr, source, sourceLen);
+    return c.commitPromise(result);
+  }).then(function(result) {
+    if (result !== Z_OK) {
+      return promise.reject(result);
+    }
+
+    var destLen = c.func.get(destLenPtr);
+    var destAb = c.func.arrayBufferCreate(destLen);
+    var destAbPtr = c.func.arrayBufferMap(destAb);
+    c.func.memcpy(destAbPtr, dest, destLen);
+    return c.commitPromise(destAb);
+  }).then(function(destAb) {
+    return promise.resolve(destAb);
+  }).finally(function() {
+    c.func.free(dest);
+    c.func.free(destLenPtr);
+    return c.commitPromise();
+  });
+}
 
 function compress(inputAb, level, bufferSize) {
   var stream;
@@ -239,16 +275,25 @@ function makeTestArrayBuffer(length, add, mul) {
   return newAb;
 }
 
-
 var ab = makeTestArrayBuffer(16384, 1337, 0xc0dedead);
 compress(ab, 9, 2048).then(function(outputAb) {
   var before = ab.byteLength;
   var after = outputAb.byteLength;
-  console.log('done! orig = ' + before +
+  console.log('compress done! orig = ' + before +
               ' comp = ' + after +
               ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
 }).catch(function(err) {
-  console.log('done... error ' + err);
+  console.log('compress done... error ' + err);
+});
+
+compressEasy(ab).then(function(outputAb) {
+  var before = ab.byteLength;
+  var after = outputAb.byteLength;
+  console.log('compressEasy done! orig = ' + before +
+              ' comp = ' + after +
+              ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
+}).catch(function(err) {
+  console.log('compressEasy done... error ' + err);
 });
 
 
