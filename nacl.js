@@ -18,59 +18,51 @@ var nacl = {};
 (function() {
   var self = this;
 
-  var moduleName = 'zlib-nacl';
-  var nmf;
-  var mimetype;
-  if (false) {
-    nmf = 'pnacl/Debug/zlib.nmf';
-    mimetype = 'application/x-nacl';
-  } else {
-    nmf = 'pnacl/Release/zlib.nmf';
-    mimetype = 'application/x-pnacl';
-  }
-
   function assert(cond, msg) {
     if (!cond) {
       throw new Error('Assertion failed' + (msg ? (': ' + msg) : '.'));
     }
   }
 
-  var typeIdHash = {};
+  //// TypeList ////////////////////////////////////////////////////////////////
+  function TypeList() {
+    this.typeIdHash = {};
+  }
 
-  function makeType(id, typeConstructor, args) {
+  TypeList.prototype.makeType = function(id, typeConstructor, args) {
     assert(id !== 0, 'makeType: id !== 0');
-    assert(!(id in typeIdHash), 'makeType: id ' + id + ' already exists');
+    assert(!(id in this.typeIdHash), 'makeType: id ' + id + ' already exists');
     var newConstructor = typeConstructor.bind.apply(
         typeConstructor, [null].concat(args));
     var newType = new newConstructor();
-    if (getTypeId(newType) !== 0) {
+    if (this.getTypeId(newType) !== 0) {
       throw new Error('Type ' + newType + ' already made with id ' + id);
     }
     newType.id = id;
-    typeIdHash[id] = newType;
+    this.typeIdHash[id] = newType;
     return newType;
-  }
+  };
 
-  function makeMakeTypeFunction(typeConstructor) {
+  TypeList.prototype.makeMakeTypeFunction = function(typeConstructor) {
     return function(id) {
       return makeType(id, typeConstructor,
                       Array.prototype.slice.call(arguments, 1));
     }
-  }
+  };
 
-  function getTypeId(type) {
-    for (var id in typeIdHash) {
-      if (typeIdHash[id].equals(type)) {
+  TypeList.prototype.getTypeId = function(type) {
+    for (var id in this.typeIdHash) {
+      if (this.typeIdHash[id].equals(type)) {
         return id;
       }
     }
     return 0;
-  }
+  };
 
-  var logTypes = function() {
-    for (var id in typeIdHash) {
-      if (typeIdHash.hasOwnProperty(id)) {
-        console.log('id: ' + id + ' type: ' + typeIdHash[id]);
+  Module.prototype.log = function() {
+    for (var id in this.typeIdHash) {
+      if (this.typeIdHash.hasOwnProperty(id)) {
+        console.log('id: ' + id + ' type: ' + this.typeIdHash[id]);
       }
     }
   };
@@ -354,7 +346,7 @@ var nacl = {};
   PepperType.prototype = new Type();
 
   PepperType.prototype.sizeof = function() {
-    return 20;  // pp::Var
+    return 20;  // PP_Var
   };
 
   PepperType.prototype.toString = function() {
@@ -579,9 +571,11 @@ var nacl = {};
   };
 
 
-  function Context() {
+  function Context(module) {
+    this.module = module;
     this.handles = [];
-    this.messages = [];
+    // TODO(binji): nice way to clean up all these handles.
+    // It would also be nice to clean up malloc'd memory, release PP_Vars, etc.
   }
 
   Context.prototype.registerHandle = function(handle) {
@@ -590,23 +584,118 @@ var nacl = {};
   };
 
 
-  var functions = {};
+  // Module ////////////////////////////////////////////////////////////////////
+  function Module(name, nmf, mimeType) {
+    this.name = name;
+    this.nmf = nmf;
+    this.mimeType = mimeType;
 
-  function makeFunction(name, types) {
-    assert(!(name in functions), 'Function with this name already exists.');
-    var cfunc = new CFunction(name, types);
+    this.element = null;
+    this.loaded = false;
+    this.nextCallbackId = 1;
+    this.idCallbackMap = [];
+    this.queuedMessages = [];
 
-    var func = function(context) {
-      return call(context, cfunc, Array.prototype.slice.call(arguments, 1));
-    };
-
-    functions[name] = func;
-    return func;
+    this.commands = [];
+    this.functions = [];
   }
 
+  Module.prototype.create = function() {
+    var that = this;
+    document.addEventListener('DOMContentLoaded', function() {
+      that.element = document.createElement('embed');
+      that.element.setAttribute('width', '0');
+      that.element.setAttribute('height', '0');
+      that.element.setAttribute('src', that.nmf);
+      that.element.setAttribute('type', that.mimetype);
 
-  function call(context, func, args) {
-    assert(func instanceof CFunction, 'call: Expected func to be CFunction');
+      that.element.addEventListener('load', that.onLoad_.bind(that), false);
+      that.element.addEventListener('message', that.onMessage_.bind(that), false);
+      that.element.addEventListener('error', that.onError_.bind(that), false);
+      that.element.addEventListener('crash', that.onCrash_.bind(that), false);
+      document.body.appendChild(that.element);
+    });
+  };
+
+  Module.prototype.postMessage = function(msg, callback) {
+    var id = this.nextCallbackId++;
+    this.idCallbackMap[id] = callback;
+
+    msg.id = id;
+    if (this.loaded) {
+      this.element.postMessage(msg);
+    } else {
+      this.queuedMessages.push(msg);
+    }
+    return id;
+  };
+
+  Module.prototype.makeContext = function() {
+    return new Context(this);
+  };
+
+  Module.prototype.onLoad_ = function(event) {
+    console.log('module loaded.');
+    this.loaded = true;
+    this.postQueuedMessages_();
+  };
+
+  Module.prototype.onMessage_ = function(event) {
+    var msg = event.data;
+    if (typeof(msg) !== 'object') {
+      var msg = this.name + ': unexpected value from module: ' +
+          JSON.stringify(msg);
+      throw new Error(msg);
+    }
+
+    if (msg.msg) {
+      console.log(msg.msg);
+      return;
+    }
+
+    var id = msg.id;
+    if (id !== 0) {
+      var callback = this.idCallbackMap[id];
+      callback(msg);
+      delete this.idCallbackMap[id];
+    }
+  };
+
+  Module.prototype.onError_ = function(event) {
+    var msg = this.name + ': error loading NaCl module: ' + this.element.lastError;
+    throw new Error(msg);
+  };
+
+  Module.prototype.onCrash_ = function(event) {
+    var msg = this.name + ': NaCl module crashed: ' + this.element.exitStatus;
+    throw new Error(msg);
+  };
+
+  Module.prototype.postQueuedMessages_ = function() {
+    var that = this;
+    this.queuedMessages.forEach(function(msg) {
+      that.element.postMessage(msg);
+    });
+
+    this.queuedMessages = null;
+  };
+
+  Module.prototype.makeFunction = function(name, types) {
+    assert(!(name in this.functions), 'Function with this name already exists.');
+
+    var that = this;
+    var cfunc = new CFunction(name, types);
+    var args = Array.prototype.slice.call(arguments, 1);
+    var func = function(context) {
+      return that.callFunction(context, cfunc, args);
+    };
+
+    this.functions[name] = func;
+    return func;
+  };
+
+  Module.prototype.callFunction = function(context, func, args) {
+    assert(func instanceof CFunction, 'callFunction: Expected func to be CFunction');
 
     var funcType = func.findOverload(args);
     assert(funcType !== null);
@@ -631,12 +720,13 @@ var nacl = {};
       message.argIsHandle.push(arg instanceof Handle);
     }
 
-    context.messages.push(message);
+    this.commands.push(message);
 
     return handle;
   };
 
-  function commit(context) {
+
+  Module.prototype.commit = function(context) {
     assert(arguments.length > 1, 'commit: Expected callback.');
 
     var callback = arguments[arguments.length - 1];
@@ -652,14 +742,14 @@ var nacl = {};
 
     var handles = args.map(serializeHandle);
     var msg = {
-      msgs: context.messages,
+      msgs: this.commands,  // TODO(binji): rename "msgs"
       handles: handles,
     };
 
-    // Remove committed messages.
-    context.messages = [];
+    // Remove committed commands.
+    this.commands = [];
 
-    postMessage(msg, function(result) {
+    this.postMessage(msg, function(result) {
       function idToHandle(value, ix) {
         if (typeof(value) === 'number' && !args[ix].type.isPrimitive()) {
           return getHandle(value);
@@ -673,99 +763,19 @@ var nacl = {};
     });
   };
 
-  function commitPromise(context) {
+  Module.prototype.commitPromise = function(context) {
+    var that = this;
     var args = Array.prototype.slice.call(arguments);
     return new promise.PromisePlus(function(resolve, reject, resolveMany) {
       args.push(function() {
         resolveMany.apply(null, arguments);
       });
-      commit.apply(null, args);
+      that.commit.apply(null, args);
     });
   };
 
-  // NaCl stuff...
-  //////////////////////////////////////////////////////////////////////////////
-  var nextCallbackId = 1;
-  var idCallbackMap = [];
-  var moduleEl;
-  var moduleLoaded = false;
-  var queuedMessages = [];
 
-  function postMessage(msg, callback) {
-    var id = nextCallbackId++;
-    idCallbackMap[id] = callback;
-
-    msg.id = id;
-    if (moduleLoaded) {
-      moduleEl.postMessage(msg);
-    } else {
-      queuedMessages.push(msg);
-    }
-    return id;
-  }
-
-  function postQueuedMessages() {
-    queuedMessages.forEach(function(msg) {
-      moduleEl.postMessage(msg);
-    });
-
-    queuedMessages = [];
-  }
-
-  function onModuleLoad(event) {
-    console.log('module loaded.');
-    moduleLoaded = true;
-    postQueuedMessages();
-  }
-
-  function onModuleMessage(event) {
-    var msg = event.data;
-    if (typeof(msg) !== 'object') {
-      var msg = moduleName + ': unexpected value from module: ' +
-          JSON.stringify(msg);
-      throw new Error(msg);
-    }
-
-    if (msg.msg) {
-      console.log(msg.msg);
-      return;
-    }
-
-    var id = msg.id;
-    if (id !== 0) {
-      var callback = idCallbackMap[id];
-      callback(msg);
-      delete idCallbackMap[id];
-    }
-  }
-
-  function onModuleError(event) {
-    var msg = moduleName + ': error loading NaCl module: ' + moduleEl.lastError;
-    throw new Error(msg);
-  }
-
-  function onModuleCrash(event) {
-    var msg = moduleName + ': NaCl module crashed: ' + moduleEl.exitStatus;
-    throw new Error(msg);
-  }
-
-  // Create NaCl module.
-  document.addEventListener('DOMContentLoaded', function() {
-    var listenerEl = document.createElement('div');
-    moduleEl = document.createElement('embed');
-    moduleEl.setAttribute('width', '0');
-    moduleEl.setAttribute('height', '0');
-    moduleEl.setAttribute('src', nmf);
-    moduleEl.setAttribute('type', mimetype);
-
-    listenerEl.addEventListener('load', onModuleLoad, true);
-    listenerEl.addEventListener('message', onModuleMessage, true);
-    listenerEl.addEventListener('error', onModuleError, true);
-    listenerEl.addEventListener('crash', onModuleCrash, true);
-
-    listenerEl.appendChild(moduleEl);
-    document.body.appendChild(listenerEl);
-  });
+  // Built-Ins /////////////////////////////////////////////////////////////////
 
   var makeAliasType = makeMakeTypeFunction(AliasType);
   var makePepperType = makeMakeTypeFunction(PepperType);
@@ -775,14 +785,9 @@ var nacl = {};
   var makeVoidType = makeMakeTypeFunction(VoidType);
   var makeFunctionType = makeMakeTypeFunction(FunctionType);
 
-  var makeContext = function() {
-    return new Context();
-  };
-
   // exported functions
   self.logTypes = logTypes;
   self.makeAliasType = makeAliasType;
-  self.makeContext = makeContext;
   self.makeFunction = makeFunction;
   self.makeFunctionType = makeFunctionType;
   self.makePepperType = makePepperType;
@@ -790,7 +795,6 @@ var nacl = {};
   self.makePrimitiveType = makePrimitiveType;
   self.makeStructType = makeStructType;
   self.makeVoidType = makeVoidType;
-  self.call = call;  // TODO(binji): is this necessary, or can everyone use makeFunction...?
   self.commit = commit;
   self.commitPromise = commitPromise;
 

@@ -226,6 +226,18 @@ function makeTestArrayBuffer(length, add, mul) {
   return newAb;
 }
 
+
+var nmf, mimetype;
+if (false) {
+  nmf = 'pnacl/Debug/zlib.nmf';
+  mimetype = 'application/x-nacl';
+} else {
+  nmf = 'pnacl/Release/zlib.nmf';
+  mimetype = 'application/x-pnacl';
+}
+
+nacl.init('zlib-nacl', nmf, mimetype);
+
 var ab = makeTestArrayBuffer(16384, 1337, 0xc0dedead);
 compressHard(ab, 9, 2048).then(function(outputAb) {
   var before = ab.byteLength;
