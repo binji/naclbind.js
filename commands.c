@@ -207,7 +207,7 @@ static bool GetArgVar(Command* command, int32_t index,
 
 
 void Handle_add(Command* command) {
-  TYPE_CHECK(TYPE_FUNC_ADD);
+  TYPE_CHECK(TYPE_FUNC_BINOP_VOID_P_INT32);
   void* arg0;
   int32_t arg1;
   if (!GetArgVoidp(command, 0, &arg0)) return;
@@ -323,15 +323,15 @@ void Handle_free(Command* command) {
 
 void Handle_get(Command* command) {
   switch (command->type) {
-    case TYPE_FUNC_GET_UINT8_P: {
+    case TYPE_FUNC_GET_VOID_P: {
       void* arg0_voidp;
       if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-      uint8_t** arg0 = (uint8_t**)arg0_voidp;
-      uint8_t* result = *arg0;
+      void** arg0 = (void**)arg0_voidp;
+      void* result = *arg0;
       HandleValue hval;
       hval.voidp = result;
-      RegisterHandle(command->ret_handle, TYPE_UINT8_P, hval);
-      printf("*(uint8_t**)%p => %p\n", arg0, result);
+      RegisterHandle(command->ret_handle, TYPE_VOID_P, hval);
+      printf("*(void**)%p => %p\n", arg0, result);
       break;
     }
     case TYPE_FUNC_GET_UINT32: {
@@ -394,15 +394,15 @@ void Handle_release(Command* command) {
 
 void Handle_set(Command* command) {
   switch (command->type) {
-    case TYPE_FUNC_SET_UINT8_P: {
+    case TYPE_FUNC_SET_VOID_P: {
       void* arg0_voidp;
       if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-      uint8_t** arg0 = (uint8_t**)arg0_voidp;
+      void** arg0 = (void**)arg0_voidp;
       void* arg1_voidp;
       if (!GetArgVoidp(command, 1, &arg1_voidp)) return;
-      uint8_t* arg1 = (uint8_t*)arg1_voidp;
+      void* arg1 = (void*)arg1_voidp;
       *arg0 = arg1;
-      printf("*(uint8_t**)%p = %p\n", arg0, arg1);
+      printf("*(void**)%p = %p\n", arg0, arg1);
       break;
     }
     case TYPE_FUNC_SET_UINT32: {
@@ -423,7 +423,7 @@ void Handle_set(Command* command) {
 
 void Handle_sub(Command* command) {
   switch (command->type) {
-    case TYPE_FUNC_SUB_INT32: {
+    case TYPE_FUNC_BINOP_INT32: {
       int32_t arg0;
       int32_t arg1;
       if (!GetArgInt32(command, 0, &arg0)) return;
@@ -434,7 +434,7 @@ void Handle_sub(Command* command) {
              command->ret_handle);
       break;
     }
-    case TYPE_FUNC_SUB_UINT32: {
+    case TYPE_FUNC_BINOP_UINT32: {
       uint32_t arg0;
       uint32_t arg1;
       if (!GetArgUint32(command, 0, &arg0)) return;

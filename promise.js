@@ -67,32 +67,46 @@ var promise={};
   };
 
   PromisePlus.prototype.then = function(resolve, reject) {
-    return wrapPromise(this.promise.then(function(value) {
+    function resolveFn(value) {
       if (value instanceof ArgumentsWrapper) {
         return unwrapPromise(resolve.apply(null, value.args));
       } else {
         return unwrapPromise(resolve(value));
       }
-    }, function(value) {
+    }
+
+    function rejectFn(value) {
       return unwrapPromise(reject(value));
-    }));
+    }
+
+    return wrapPromise(this.promise.then(
+        resolve ? resolveFn : undefined,
+        reject ? rejectFn : undefined));
   };
 
   PromisePlus.prototype.catch = function(reject) {
-    return wrapPromise(this.promise.catch(function(value) {
+    function rejectFn(value) {
       return unwrapPromise(reject(value));
-    }));
+    };
+
+    return wrapPromise(this.promise.catch(reject ? rejectFn : undefined));
   };
 
   PromisePlus.prototype.finally = function(f) {
-    return this.then(function() {
+    function resolveFn() {
       var args = arguments;
       return resolve().then(f).then(function() {
         return resolveMany.apply(null, args);
       });
-    }, function() {
-      return resolve().then(f).then(function() { return reject(x); });
-    });
+    }
+
+    function rejectFn(value) {
+      return resolve().then(f).then(function() {
+        return reject(value);
+      });
+    }
+
+    return this.then(resolveFn, rejectFn);
   };
 
   PromisePlus.prototype.if = function(cond, trueBlock, falseBlock) {

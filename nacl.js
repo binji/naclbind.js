@@ -101,7 +101,12 @@ var nacl = {};
     var pointerType = new PointerType(this);
     var id = getTypeId(pointerType);
     if (id === 0) {
-      throw new Error('Pointer type "' + pointerType + '" not defined.');
+      // Don't blow up yet... it is not an error to create a type that doesn't
+      // have an id. We can't send it to the NaCl module, but we can use it for
+      // type-checking.
+      this.createStack = new Error().stack;
+      return pointerType;
+      //throw new Error('Pointer type "' + pointerType + '" not defined.');
     }
 
     // Get the correct one.
@@ -187,12 +192,22 @@ var nacl = {};
 
   StructField.prototype.set = function(context, struct_p, value) {
     var dst = context.func.add(struct_p, this.offset);
-    return context.func.set(dst.cast(this.type.getPointerType()), value);
+    var pointerType = this.type.getPointerType();
+    if (this.type.isPointer()) {
+      return context.func.set(dst.cast(self.void_pp), value.cast(self.void_p));
+    } else {
+      return context.func.set(dst.cast(pointerType), value);
+    }
   };
 
   StructField.prototype.get = function(context, struct_p) {
     var ptr = context.func.add(struct_p, this.offset);
-    return context.func.get(ptr.cast(this.type.getPointerType()));
+    var pointerType = this.type.getPointerType();
+    if (this.type.isPointer()) {
+      return context.func.get(ptr.cast(self.void_pp)).cast(pointerType);
+    } else {
+      return context.func.get(ptr.cast(pointerType));
+    }
   };
 
   StructField.prototype.equals = function(other) {
@@ -447,19 +462,19 @@ var nacl = {};
 
   CFunction.getIntType = function(value) {
     if (value >= -128 && value <= 127) {
-      return int8;
+      return self.int8;
     } else if (value >= -32768 && value <= 32767) {
-      return int16;
+      return self.int16;
     } else if (value >= -2147483648 && value <= 2147483647) {
-      return int32;
+      return self.int32;
     // TODO(binji): JavaScript numbers only have 53-bits of precision, so
     // this is not correct. We need a 64-bit int type.
     } else if (value >= -9223372036854775808 &&
                value <=  9223372036854775807) {
-      return int64;
+      return self.int64;
     } else {
       assert(value > 0, 'getIntType: Expected uint64. ' + value + ' <= 0.');
-      return uint64;
+      return self.uint64;
     }
   };
 
@@ -470,7 +485,7 @@ var nacl = {};
            'canCoercePointer: expected pointer, not ' + toType);
     // For now, we can only coerce pointers to void*. At some point, C++
     // inheritance could be supported as well.
-    if (toType !== void_p) {
+    if (toType !== self.void_p) {
       //console.log('Can only coerce to void*, not ' + toType + '.');
       return false;
     }
@@ -505,8 +520,8 @@ var nacl = {};
       // One int, one float.
       if (fromType.isInt()) {
         // From int to float.
-        if ((toType === float32 && fromType.sizeof() >= 4) ||
-            (toType === float64 && fromType.sizeof() == 8)) {
+        if ((toType === self.float32 && fromType.sizeof() >= 4) ||
+            (toType === self.float64 && fromType.sizeof() == 8)) {
           // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
           return false;
         }
@@ -537,11 +552,12 @@ var nacl = {};
           argType = CFunction.getIntType(arg);
         } else {
           // Float.
-          argType = float64;
+          argType = self.float64;
         }
       } else if (arg instanceof ArrayBuffer) {
-        argType = arrayBuffer;
+        argType = self.arrayBuffer;
       } else {
+        // TODO(binji): handle other pepper types.
         // What kind of type is this?
         console.log('Unexpected type of arg "' + arg + '": ' + typeof(arg));
         return false;
@@ -783,5 +799,108 @@ var nacl = {};
   self.makePrimitiveType = makePrimitiveType;
   self.makeStructType = makeStructType;
   self.makeVoidType = makeVoidType;
+
+  // builtin types
+  self.void_ = self.makeVoidType(1);
+  self.int8 = self.makePrimitiveType(2, 'int8', 1, true, true);
+  self.uint8 = self.makePrimitiveType(3, 'uint8', 1, false, true);
+  self.int16 = self.makePrimitiveType(4, 'int16', 2, true, true);
+  self.uint16 = self.makePrimitiveType(5, 'uint16', 2, false, true);
+  self.int32 = self.makePrimitiveType(6, 'int32', 4, true, true);
+  self.uint32 = self.makePrimitiveType(7, 'uint32', 4, false, true);
+  self.int64 = self.makePrimitiveType(8, 'int64', 8, true, true);
+  self.uint64 = self.makePrimitiveType(9, 'uint64', 8, false, true);
+  self.float32 = self.makePrimitiveType(10, 'float32', 4, false, false);
+  self.float64 = self.makePrimitiveType(11, 'float64', 8, false, false);
+
+  self.void_p = self.makePointerType(12, self.void_);
+  self.int8_p = self.makePointerType(13, self.int8);
+  self.uint8_p = self.makePointerType(14, self.uint8);
+  self.int16_p = self.makePointerType(15, self.int16);
+  self.uint16_p = self.makePointerType(16, self.uint16);
+  self.int32_p = self.makePointerType(17, self.int32);
+  self.uint32_p = self.makePointerType(18, self.uint32);
+  self.int64_p = self.makePointerType(19, self.int64);
+  self.uint64_p = self.makePointerType(20, self.uint64);
+  self.float32_p = self.makePointerType(21, self.float32);
+  self.float64_p = self.makePointerType(22, self.float64);
+  self.void_pp = self.makePointerType(23, self.void_p);
+
+  self.var_ = self.makePepperType(24, 'Var', undefined);
+  self.arrayBuffer = self.makePepperType(25, 'ArrayBuffer', ArrayBuffer);
+  self.array = self.makePepperType(26, 'Array', Array);
+  self.dictionary = self.makePepperType(27, 'Dictionary', Object);
+
+  var getTypes = [
+    self.makeFunctionType(28, self.void_p, self.void_pp),
+    self.makeFunctionType(29, self.int8, self.int8_p),
+    self.makeFunctionType(30, self.uint8, self.uint8_p),
+    self.makeFunctionType(31, self.int16, self.int16_p),
+    self.makeFunctionType(32, self.uint16, self.uint16_p),
+    self.makeFunctionType(33, self.int32, self.int32_p),
+    self.makeFunctionType(34, self.uint32, self.uint32_p),
+    self.makeFunctionType(35, self.int64, self.int64_p),
+    self.makeFunctionType(36, self.uint64, self.uint64_p),
+    self.makeFunctionType(37, self.float32, self.float32_p),
+    self.makeFunctionType(38, self.float64, self.float64_p),
+  ];
+
+  var setTypes = [
+    self.makeFunctionType(39, self.void_, self.void_pp, self.void_p),
+    self.makeFunctionType(40, self.void_, self.int8_p, self.int8),
+    self.makeFunctionType(41, self.void_, self.uint8_p, self.uint8),
+    self.makeFunctionType(42, self.void_, self.int16_p, self.int16),
+    self.makeFunctionType(43, self.void_, self.uint16_p, self.uint16),
+    self.makeFunctionType(44, self.void_, self.int32_p, self.int32),
+    self.makeFunctionType(45, self.void_, self.uint32_p, self.uint32),
+    self.makeFunctionType(46, self.void_, self.int64_p, self.int64),
+    self.makeFunctionType(47, self.void_, self.uint64_p, self.uint64),
+    self.makeFunctionType(48, self.void_, self.float32_p, self.float32),
+    self.makeFunctionType(49, self.void_, self.float64_p, self.float64),
+  ];
+
+  var freeType = self.makeFunctionType(50, self.void_, self.void_p);
+  var mallocType = self.makeFunctionType(51, self.void_p, self.uint32);
+  var memsetType = self.makeFunctionType(52, self.void_, self.void_p, self.int32, self.uint32);
+  var memcpyType = self.makeFunctionType(53, self.void_, self.void_p, self.void_p, self.uint32);
+
+  var addRefReleaseType = self.makeFunctionType(54, self.void_, self.var_);
+  var arrayBufferCreateType = self.makeFunctionType(55, self.arrayBuffer, self.uint32);
+  var arrayBufferMapType = self.makeFunctionType(56, self.void_p, self.arrayBuffer);
+  var arrayBufferUnmapType = self.makeFunctionType(57, self.void_, self.arrayBuffer);
+
+  var binopVoidpIntType = self.makeFunctionType(58, self.void_p, self.void_p, self.int32);
+  var binopInt32Type = self.makeFunctionType(59, self.int32, self.int32, self.int32);
+  var binopUint32Type = self.makeFunctionType(60, self.uint32, self.uint32, self.uint32);
+  var binopInt64Type = self.makeFunctionType(61, self.int64, self.int64, self.int64);
+  var binopUint64Type = self.makeFunctionType(62, self.uint64, self.uint64, self.uint64);
+  var binopFloatType = self.makeFunctionType(63, self.float32, self.float32, self.float32);
+  var binopDoubleType = self.makeFunctionType(64, self.float64, self.float64, self.float64);
+
+  var addSubTypes = [
+    binopVoidpIntType, binopInt32Type, binopUint32Type, binopInt64Type,
+    binopUint64Type, binopFloatType, binopDoubleType,
+  ];
+
+  // builtin functions
+  self.makeFunction('get', getTypes);
+  self.makeFunction('set', setTypes);
+  self.makeFunction('add', addSubTypes);
+  self.makeFunction('sub', addSubTypes);
+
+  // stdlib
+  self.makeFunction('free', freeType);
+  self.makeFunction('malloc', mallocType);
+  self.makeFunction('memcpy', memcpyType);
+  self.makeFunction('memset', memsetType);
+
+  // PPB_Var
+  self.makeFunction('addRef', addRefReleaseType);
+  self.makeFunction('release', addRefReleaseType);
+
+  // PPB_VarArrayBuffer
+  self.makeFunction('arrayBufferCreate', arrayBufferCreateType);
+  self.makeFunction('arrayBufferMap', arrayBufferMapType);
+  self.makeFunction('arrayBufferUnmap', arrayBufferUnmapType);
 
 }).call(nacl);
