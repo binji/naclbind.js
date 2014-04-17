@@ -191,22 +191,22 @@ var nacl = {};
   }
 
   StructField.prototype.set = function(context, struct_p, value) {
-    var dst = context.func.add(struct_p, this.offset);
+    var dst = self.add(context, struct_p, this.offset);
     var pointerType = this.type.getPointerType();
     if (this.type.isPointer()) {
-      return context.func.set(dst.cast(self.void_pp), value.cast(self.void_p));
+      return self.set(context, dst.cast(self.void_pp), value.cast(self.void_p));
     } else {
-      return context.func.set(dst.cast(pointerType), value);
+      return self.set(context, dst.cast(pointerType), value);
     }
   };
 
   StructField.prototype.get = function(context, struct_p) {
-    var ptr = context.func.add(struct_p, this.offset);
+    var ptr = self.add(context, struct_p, this.offset);
     var pointerType = this.type.getPointerType();
     if (this.type.isPointer()) {
-      return context.func.get(ptr.cast(self.void_pp)).cast(pointerType);
+      return self.get(context, ptr.cast(self.void_pp)).cast(pointerType);
     } else {
-      return context.func.get(ptr.cast(pointerType));
+      return self.get(context, ptr.cast(pointerType));
     }
   };
 
@@ -287,7 +287,7 @@ var nacl = {};
   };
 
   StructType.prototype.malloc = function(context) {
-    return context.func.malloc(this.sizeof());
+    return self.malloc(context, this.sizeof());
   };
 
   //// FunctionType ////////////////////////////////////////////////////////////
@@ -578,49 +578,40 @@ var nacl = {};
     return true;
   };
 
-  var functions = {};
-
-  function makeFunction(name, types) {
-    assert(!(name in functions), '');
-    var cfunc = new CFunction(name, types);
-    functions[name] = cfunc;
-  }
-
 
   function Context() {
     this.handles = [];
     this.messages = [];
-    this.func = {};
-    this.initializeFuncs_();
   }
-
-  Context.prototype.initializeFuncs_ = function() {
-    var that = this;
-
-    function makeFunctionCaller(context, cfunc) {
-      return function() {
-        return context.call(cfunc, arguments);
-      };
-    }
-
-    for (var name in functions) {
-      var cfunc = functions[name];
-      this.func[name] = makeFunctionCaller(that, cfunc);
-    }
-  };
 
   Context.prototype.registerHandle = function(handle) {
     assert(handle instanceof Handle, 'registerHandle: handle is not a Handle.');
     this.handles.push(handle);
   };
 
-  Context.prototype.call = function(func, args) {
+
+  var functions = {};
+
+  function makeFunction(name, types) {
+    assert(!(name in functions), 'Function with this name already exists.');
+    var cfunc = new CFunction(name, types);
+
+    var func = function(context) {
+      return call(context, cfunc, Array.prototype.slice.call(arguments, 1));
+    };
+
+    functions[name] = func;
+    return func;
+  }
+
+
+  function call(context, func, args) {
     assert(func instanceof CFunction, 'call: Expected func to be CFunction');
 
     var funcType = func.findOverload(args);
     assert(funcType !== null);
 
-    var handle = new Handle(this, funcType.retType);
+    var handle = new Handle(context, funcType.retType);
     var message = {
       cmd: func.name,
       type: funcType.id,
@@ -640,18 +631,19 @@ var nacl = {};
       message.argIsHandle.push(arg instanceof Handle);
     }
 
-    this.messages.push(message);
+    context.messages.push(message);
 
     return handle;
   };
 
-  Context.prototype.commit = function() {
-    assert(arguments.length > 0, 'commit: Expected callback.');
+  function commit(context) {
+    assert(arguments.length > 1, 'commit: Expected callback.');
 
     var callback = arguments[arguments.length - 1];
     assert(callback instanceof Function, 'commit: callback is not Function.');
 
-    var args = Array.prototype.slice.call(arguments, 0, -1);
+    // Slice off context (first element), and callback (last element).
+    var args = Array.prototype.slice.call(arguments, 1, -1);
 
     var serializeHandle = function(handle) {
       assert(handle instanceof Handle, 'commit: handle is not a Handle.');
@@ -660,12 +652,12 @@ var nacl = {};
 
     var handles = args.map(serializeHandle);
     var msg = {
-      msgs: this.messages,
+      msgs: context.messages,
       handles: handles,
     };
 
     // Remove committed messages.
-    this.messages = [];
+    context.messages = [];
 
     postMessage(msg, function(result) {
       function idToHandle(value, ix) {
@@ -681,14 +673,13 @@ var nacl = {};
     });
   };
 
-  Context.prototype.commitPromise = function() {
-    var that = this;
+  function commitPromise(context) {
     var args = Array.prototype.slice.call(arguments);
     return new promise.PromisePlus(function(resolve, reject, resolveMany) {
       args.push(function() {
         resolveMany.apply(null, arguments);
       });
-      that.commit.apply(that, args);
+      commit.apply(null, args);
     });
   };
 
@@ -799,6 +790,9 @@ var nacl = {};
   self.makePrimitiveType = makePrimitiveType;
   self.makeStructType = makeStructType;
   self.makeVoidType = makeVoidType;
+  self.call = call;  // TODO(binji): is this necessary, or can everyone use makeFunction...?
+  self.commit = commit;
+  self.commitPromise = commitPromise;
 
   // builtin types
   self.void_ = self.makeVoidType(1);
@@ -883,24 +877,24 @@ var nacl = {};
   ];
 
   // builtin functions
-  self.makeFunction('get', getTypes);
-  self.makeFunction('set', setTypes);
-  self.makeFunction('add', addSubTypes);
-  self.makeFunction('sub', addSubTypes);
+  self.get = self.makeFunction('get', getTypes);
+  self.set = self.makeFunction('set', setTypes);
+  self.add = self.makeFunction('add', addSubTypes);
+  self.sub = self.makeFunction('sub', addSubTypes);
 
   // stdlib
-  self.makeFunction('free', freeType);
-  self.makeFunction('malloc', mallocType);
-  self.makeFunction('memcpy', memcpyType);
-  self.makeFunction('memset', memsetType);
+  self.free = self.makeFunction('free', freeType);
+  self.malloc = self.makeFunction('malloc', mallocType);
+  self.memcpy = self.makeFunction('memcpy', memcpyType);
+  self.memset = self.makeFunction('memset', memsetType);
 
   // PPB_Var
-  self.makeFunction('addRef', addRefReleaseType);
-  self.makeFunction('release', addRefReleaseType);
+  self.addRef = makeFunction('addRef', addRefReleaseType);
+  self.release = makeFunction('release', addRefReleaseType);
 
   // PPB_VarArrayBuffer
-  self.makeFunction('arrayBufferCreate', arrayBufferCreateType);
-  self.makeFunction('arrayBufferMap', arrayBufferMapType);
-  self.makeFunction('arrayBufferUnmap', arrayBufferUnmapType);
+  self.arrayBufferCreate = makeFunction('arrayBufferCreate', arrayBufferCreateType);
+  self.arrayBufferMap = makeFunction('arrayBufferMap', arrayBufferMapType);
+  self.arrayBufferUnmap = makeFunction('arrayBufferUnmap', arrayBufferUnmapType);
 
 }).call(nacl);

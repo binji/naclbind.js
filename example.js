@@ -99,10 +99,10 @@ z_stream.addField('next_out', nacl.uint8_p, 12);
 z_stream.addField('avail_out', nacl.uint32, 16);
 z_stream.addField('total_out', nacl.uint32, 20);
 
-nacl.makeFunction('deflateInit', deflateType);
-nacl.makeFunction('deflate', deflateType);
-nacl.makeFunction('compress', compressType);
-nacl.makeFunction('compressBound', compressBoundType);
+var deflateInit = nacl.makeFunction('deflateInit', deflateType);
+var deflate = nacl.makeFunction('deflate', deflateType);
+var compress = nacl.makeFunction('compress', compressType);
+var compressBound = nacl.makeFunction('compressBound', compressBoundType);
 
 // nacl.logTypes();
 
@@ -112,33 +112,33 @@ function compressEasy(inputAb) {
   var destLenPtr;
   return promise.resolve().then(function() {
     var sourceLen = inputAb.byteLength;
-    var destLenBound = c.func.compressBound(sourceLen);
-    dest = c.func.malloc(destLenBound).cast(nacl.uint8_p);
-    var source = c.func.arrayBufferMap(inputAb).cast(nacl.uint8_p);
-    destLenPtr = c.func.malloc(nacl.uint32.sizeof()).cast(nacl.uint32_p);
-    c.func.set(destLenPtr, destLenBound);
-    var result = c.func.compress(dest, destLenPtr, source, sourceLen);
-    return c.commitPromise(result);
+    var destLenBound = compressBound(c, sourceLen);
+    dest = nacl.malloc(c, destLenBound).cast(nacl.uint8_p);
+    var source = nacl.arrayBufferMap(c, inputAb).cast(nacl.uint8_p);
+    destLenPtr = nacl.malloc(c, nacl.uint32.sizeof()).cast(nacl.uint32_p);
+    nacl.set(c, destLenPtr, destLenBound);
+    var result = compress(c, dest, destLenPtr, source, sourceLen);
+    return nacl.commitPromise(c, result);
   }).then(function(result) {
     if (result !== Z_OK) {
       return promise.reject(result);
     }
 
-    var destLen = c.func.get(destLenPtr);
-    var destAb = c.func.arrayBufferCreate(destLen);
-    var destAbPtr = c.func.arrayBufferMap(destAb);
-    c.func.memcpy(destAbPtr, dest, destLen);
-    return c.commitPromise(destAb);
+    var destLen = nacl.get(c, destLenPtr);
+    var destAb = nacl.arrayBufferCreate(c, destLen);
+    var destAbPtr = nacl.arrayBufferMap(c, destAb);
+    nacl.memcpy(c, destAbPtr, dest, destLen);
+    return nacl.commitPromise(c, destAb);
   }).then(function(destAb) {
     return promise.resolve(destAb);
   }).finally(function() {
-    c.func.free(dest);
-    c.func.free(destLenPtr);
-    return c.commitPromise();
+    nacl.free(c, dest);
+    nacl.free(c, destLenPtr);
+    return nacl.commitPromise(c);
   });
 }
 
-function compress(inputAb, level, bufferSize) {
+function compressHard(inputAb, level, bufferSize) {
   var stream;
   var output;
   var inputOffset = 0;
@@ -149,11 +149,11 @@ function compress(inputAb, level, bufferSize) {
 
   return promise.resolve().then(function() {
     stream = z_stream.malloc(c).cast(z_stream_p);
-    c.func.memset(stream, 0, z_stream.sizeof());
+    nacl.memset(c, stream, 0, z_stream.sizeof());
 
-    output = c.func.malloc(bufferSize);
-    var result = c.func.deflateInit(stream, level);
-    return c.commitPromise(result);
+    output = nacl.malloc(c, bufferSize);
+    var result = deflateInit(c, stream, level);
+    return nacl.commitPromise(c, result);
   }).then(function(result) {
     if (result !== Z_OK) {
       return promise.reject(result);
@@ -181,7 +181,7 @@ function compress(inputAb, level, bufferSize) {
       inputOffset += preAvailIn;
       var inputOffsetEnd = inputOffset + bufferSize;
       var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, inputOffsetEnd);
-      var inputSlice = c.func.arrayBufferMap(inputSliceAb);
+      var inputSlice = nacl.arrayBufferMap(c, inputSliceAb);
       z_stream.fields.next_in.set(c, stream, inputSlice.cast(nacl.uint8_p));
       z_stream.fields.avail_in.set(c, stream, inputSliceAb.byteLength);
       z_stream.fields.next_out.set(c, stream, output.cast(nacl.uint8_p));
@@ -191,14 +191,14 @@ function compress(inputAb, level, bufferSize) {
     var inputLeft = inputAb.byteLength - inputOffset;
     var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
     var preAvailIn = z_stream.fields.avail_in.get(c, stream);
-    var result = c.func.deflate(stream, flush);
+    var result = deflate(c, stream, flush);
     var availIn = z_stream.fields.avail_in.get(c, stream);
     var availOut = z_stream.fields.avail_out.get(c, stream);
-    var outUsed = c.func.sub(bufferSize, availOut);
-    var compressedAb = c.func.arrayBufferCreate(outUsed);
-    var outputAbPtr = c.func.arrayBufferMap(compressedAb);
-    c.func.memcpy(outputAbPtr, output, outUsed);
-    return c.commitPromise(result, availIn, availOut, preAvailIn, compressedAb);
+    var outUsed = nacl.sub(c, bufferSize, availOut);
+    var compressedAb = nacl.arrayBufferCreate(c, outUsed);
+    var outputAbPtr = nacl.arrayBufferMap(c, compressedAb);
+    nacl.memcpy(c, outputAbPtr, output, outUsed);
+    return nacl.commitPromise(c, result, availIn, availOut, preAvailIn, compressedAb);
   }).then(function(result, availIn, availOut, preAvailIn, compressedAb) {
     // Consume the final bit of output, if any.
     if (compressedAb) {
@@ -208,9 +208,9 @@ function compress(inputAb, level, bufferSize) {
 
     return promise.resolve(outputAb);
   }).finally(function() {
-    c.func.free(stream);
-    c.func.free(output);
-    return c.commitPromise();
+    nacl.free(c, stream);
+    nacl.free(c, output);
+    return nacl.commitPromise(c);
   });
 }
 
@@ -227,7 +227,7 @@ function makeTestArrayBuffer(length, add, mul) {
 }
 
 var ab = makeTestArrayBuffer(16384, 1337, 0xc0dedead);
-compress(ab, 9, 2048).then(function(outputAb) {
+compressHard(ab, 9, 2048).then(function(outputAb) {
   var before = ab.byteLength;
   var after = outputAb.byteLength;
   console.log('compress done! orig = ' + before +
