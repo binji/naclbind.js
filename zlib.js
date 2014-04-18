@@ -14,9 +14,7 @@
 
 "use strict";
 
-var zlib = {};
-(function() {
-  var self = this;
+define(['promise', 'nacl'], function(promise, nacl) {
 
   function sliceArrayBuffer(ab, begin, end) {
     var oldLength = ab.byteLength;
@@ -69,23 +67,23 @@ var zlib = {};
     return dst;
   }
 
-  self.Z_NO_FLUSH = 0
-  self.Z_PARTIAL_FLUSH = 1
-  self.Z_SYNC_FLUSH = 2
-  self.Z_FULL_FLUSH = 3
-  self.Z_FINISH = 4
-  self.Z_BLOCK = 5
-  self.Z_TREES = 6
+  var Z_NO_FLUSH = 0;
+  var Z_PARTIAL_FLUSH = 1;
+  var Z_SYNC_FLUSH = 2;
+  var Z_FULL_FLUSH = 3;
+  var Z_FINISH = 4;
+  var Z_BLOCK = 5;
+  var Z_TREES = 6;
 
-  self.Z_OK = 0
-  self.Z_STREAM_END = 1
-  self.Z_NEED_DICT = 2
-  self.Z_ERRNO = -1
-  self.Z_STREAM_ERROR = -2
-  self.Z_DATA_ERROR = -3
-  self.Z_MEM_ERROR = -4
-  self.Z_BUF_ERROR = -5
-  self.Z_VERSION_ERROR = -6
+  var Z_OK = 0;
+  var Z_STREAM_END = 1;
+  var Z_NEED_DICT = 2;
+  var Z_ERRNO = -1;
+  var Z_STREAM_ERROR = -2;
+  var Z_DATA_ERROR = -3;
+  var Z_MEM_ERROR = -4;
+  var Z_BUF_ERROR = -5;
+  var Z_VERSION_ERROR = -6;
 
   var m = nacl.makeModule(
       'zlib-nacl', 'pnacl/Release/zlib.nmf', 'application/x-pnacl');
@@ -109,9 +107,7 @@ var zlib = {};
   var compress = m.makeFunction('compress', compressType);
   var compressBound = m.makeFunction('compressBound', compressBoundType);
 
-  // nacl.logTypes();
-
-  self.compressEasy = function(inputAb) {
+  function compressEasy(inputAb) {
     var c = m.makeContext();
     var dest;
     var destLenPtr;
@@ -125,7 +121,7 @@ var zlib = {};
       var result = compress(c, dest, destLenPtr, source, sourceLen);
       return m.commitPromise(c, result);
     }).then(function(result) {
-      if (result !== self.Z_OK) {
+      if (result !== Z_OK) {
         return promise.reject(result);
       }
 
@@ -141,9 +137,9 @@ var zlib = {};
       m.free(c, destLenPtr);
       return m.commitPromise(c);
     });
-  };
+  }
 
-  self.compressHard = function(inputAb, level, bufferSize) {
+  function compressHard(inputAb, level, bufferSize) {
     var stream;
     var output;
     var inputOffset = 0;
@@ -160,16 +156,16 @@ var zlib = {};
       var result = deflateInit(c, stream, level);
       return m.commitPromise(c, result);
     }).then(function(result) {
-      if (result !== self.Z_OK) {
+      if (result !== Z_OK) {
         return promise.reject(result);
       }
-      return promise.resolveMany(self.Z_OK, inputAb.byteLength, bufferSize, 0, null);
+      return promise.resolveMany(Z_OK, inputAb.byteLength, bufferSize, 0, null);
     }).while(function cond(result, availIn, availOut) {
-      if (result !== self.Z_OK && result !== self.Z_STREAM_END) {
+      if (result !== Z_OK && result !== Z_STREAM_END) {
         return promise.reject(result);
       }
 
-      return result !== self.Z_STREAM_END;
+      return result !== Z_STREAM_END;
     }, function block(result, availIn, availOut, preAvailIn, compressedAb) {
       // Consume output, if any.
       if (compressedAb) {
@@ -194,7 +190,7 @@ var zlib = {};
       }
 
       var inputLeft = inputAb.byteLength - inputOffset;
-      var flush = inputLeft < bufferSize ? self.Z_FINISH : self.Z_NO_FLUSH;
+      var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
       var preAvailIn = m.getField(c, z_stream.fields.avail_in, stream);
       var result = deflate(c, stream, flush);
       var availIn = m.getField(c, z_stream.fields.avail_in, stream);
@@ -217,5 +213,30 @@ var zlib = {};
       m.free(c, output);
       return m.commitPromise(c);
     });
+  }
+
+  // Exports
+  return {
+    Z_NO_FLUSH: Z_NO_FLUSH,
+    Z_PARTIAL_FLUSH: Z_PARTIAL_FLUSH,
+    Z_SYNC_FLUSH: Z_SYNC_FLUSH,
+    Z_FULL_FLUSH: Z_FULL_FLUSH,
+    Z_FINISH: Z_FINISH,
+    Z_BLOCK: Z_BLOCK,
+    Z_TREES: Z_TREES,
+
+    Z_OK: Z_OK,
+    Z_STREAM_END: Z_STREAM_END,
+    Z_NEED_DICT: Z_NEED_DICT,
+    Z_ERRNO: Z_ERRNO,
+    Z_STREAM_ERROR: Z_STREAM_ERROR,
+    Z_DATA_ERROR: Z_DATA_ERROR,
+    Z_MEM_ERROR: Z_MEM_ERROR,
+    Z_BUF_ERROR: Z_BUF_ERROR,
+    Z_VERSION_ERROR: Z_VERSION_ERROR,
+
+    compressEasy: compressEasy,
+    compressHard: compressHard,
   };
-}).call(zlib);
+
+});

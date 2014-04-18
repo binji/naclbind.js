@@ -14,34 +14,38 @@
 
 "use strict";
 
-function makeTestArrayBuffer(length, add, mul) {
-  var newAb = new ArrayBuffer(length);
-  var view = new Uint8Array(newAb);
-  var value = 0;
-  for (var i = 0; i < length; ++i) {
-    value = ((value + add) * mul) | 0;
-    view[i] = value & 255;
+require(['zlib'], function(zlib) {
+
+  function makeTestArrayBuffer(length, add, mul) {
+    var newAb = new ArrayBuffer(length);
+    var view = new Uint8Array(newAb);
+    var value = 0;
+    for (var i = 0; i < length; ++i) {
+      value = ((value + add) * mul) | 0;
+      view[i] = value & 255;
+    }
+    return newAb;
   }
-  return newAb;
-}
 
-var ab = makeTestArrayBuffer(16384, 1337, 0xc0dedead);
-zlib.compressHard(ab, 9, 16384).then(function(outputAb) {
-  var before = ab.byteLength;
-  var after = outputAb.byteLength;
-  console.log('compress done! orig = ' + before +
-              ' comp = ' + after +
-              ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
-}).catch(function(err) {
-  console.log('compress done...\n' + err.stack);
-});
+  var ab = makeTestArrayBuffer(16384, 1337, 0xc0dedead);
+  zlib.compressHard(ab, 9, 16384).then(function(outputAb) {
+    var before = ab.byteLength;
+    var after = outputAb.byteLength;
+    console.log('compress done! orig = ' + before +
+                ' comp = ' + after +
+                ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
+  }).catch(function(err) {
+    console.log('compress done...\n' + err.stack);
+  });
 
-zlib.compressEasy(ab).then(function(outputAb) {
-  var before = ab.byteLength;
-  var after = outputAb.byteLength;
-  console.log('compressEasy done! orig = ' + before +
-              ' comp = ' + after +
-              ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
-}).catch(function(err) {
-  console.log('compressEasy done...\n' + err.stack);
+  zlib.compressEasy(ab).then(function(outputAb) {
+    var before = ab.byteLength;
+    var after = outputAb.byteLength;
+    console.log('compressEasy done! orig = ' + before +
+                ' comp = ' + after +
+                ' ratio = ' + ((after / before) * 100).toFixed(1) + '%');
+  }).catch(function(err) {
+    console.log('compressEasy done...\n' + err.stack);
+  });
+
 });

@@ -14,10 +14,7 @@
 
 "use strict";
 
-var promise={};
-(function() {
-  var self = this;
-
+define([], function() {
   function ArgumentsWrapper(args) {
     this.args = args;
   }
@@ -153,14 +150,18 @@ var promise={};
     return PromisePlus.resolve(wrapArguments(arguments));
   }
 
-  // exported constructors
-  self.PromisePlus = PromisePlus;
+  // Exports
+  return {
+    // exported constructors
+    PromisePlus: PromisePlus,
 
-  // exported functions
-  self.reject = reject;
-  self.resolve = resolve;
-  self.resolveMany = resolveMany;
-}).call(promise);
+    // exported functions
+    reject: reject,
+    resolve: resolve,
+    resolveMany: resolveMany,
+  };
+
+});
 
 /*
 // Some stuff that is useful for testing this promise library.

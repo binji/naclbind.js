@@ -14,9 +14,7 @@
 
 "use strict";
 
-var nacl = {};
-(function() {
-  var self = this;
+define(['promise'], function(promise) {
 
   function assert(cond, msg) {
     if (!cond) {
@@ -24,9 +22,9 @@ var nacl = {};
     }
   }
 
-  self.makeModule = function(name, nmf, mimeType) {
+  function makeModule(name, nmf, mimeType) {
     return new Module(name, nmf, mimeType);
-  };
+  }
 
   // Module ////////////////////////////////////////////////////////////////////
   function Module(name, nmf, mimeType) {
@@ -51,20 +49,17 @@ var nacl = {};
   }
 
   Module.prototype.createEmbed_ = function() {
-    var that = this;
-    document.addEventListener('DOMContentLoaded', function() {
-      that.element = document.createElement('embed');
-      that.element.setAttribute('width', '0');
-      that.element.setAttribute('height', '0');
-      that.element.setAttribute('src', that.nmf);
-      that.element.setAttribute('type', that.mimeType);
+    this.element = document.createElement('embed');
+    this.element.setAttribute('width', '0');
+    this.element.setAttribute('height', '0');
+    this.element.setAttribute('src', this.nmf);
+    this.element.setAttribute('type', this.mimeType);
 
-      that.element.addEventListener('load', that.onLoad_.bind(that), false);
-      that.element.addEventListener('message', that.onMessage_.bind(that), false);
-      that.element.addEventListener('error', that.onError_.bind(that), false);
-      that.element.addEventListener('crash', that.onCrash_.bind(that), false);
-      document.body.appendChild(that.element);
-    });
+    this.element.addEventListener('load', this.onLoad_.bind(this), false);
+    this.element.addEventListener('message', this.onMessage_.bind(this), false);
+    this.element.addEventListener('error', this.onError_.bind(this), false);
+    this.element.addEventListener('crash', this.onCrash_.bind(this), false);
+    document.body.appendChild(this.element);
   };
 
   Module.prototype.postMessage = function(msg, callback) {
@@ -962,4 +957,10 @@ var nacl = {};
     });
   }
 
-}).call(nacl);
+
+  //// Exports /////////////////////////////////////////////////////////////////
+  return {
+    makeModule: makeModule,
+  };
+
+});
