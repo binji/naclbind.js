@@ -161,3 +161,30 @@ var promise={};
   self.resolve = resolve;
   self.resolveMany = resolveMany;
 }).call(promise);
+
+/*
+// Some stuff that is useful for testing this promise library.
+// e.g.
+//
+//     > promise.resolve(0).if(lt(10), ret(1), ret(2)).then(log);
+//     1
+//
+//     > promise.resolve(0).while(lt(5), chain(inc, log));
+//     1
+//     2
+//     3
+//     4
+//     5
+
+var id = function() { return promise.resolveMany.apply(null, arguments); }
+var log = function() {
+  console.log.apply(console, arguments);
+  return promise.resolveMany.apply(null, arguments);
+}
+var ret = function(x) { return function() { return x; } };
+var inc = function(x) { return x + 1; };
+var lt = function(b) { return function(a) { return a < b; } };
+var chain = function(f, g) {
+  return function(x) { return promise.resolve(x).then(f).then(g); }
+};
+*/
