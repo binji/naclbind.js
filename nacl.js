@@ -31,20 +31,21 @@ define(['promise'], function(promise) {
     this.name = name;
     this.nmf = nmf;
     this.mimeType = mimeType;
-
     this.element = null;
-    this.loaded = false;
-    this.nextCallbackId = 1;
-    this.idCallbackMap = [];
-    this.queuedMessages = [];
 
-    this.commands = [];
+    this.loaded_ = false;
+    this.nextCallbackId_ = 1;
+    this.idCallbackMap_ = [];
+    this.queuedMessages_ = [];
+    this.commands_ = [];
+    this.typeBuilder_ = new TypeBuilder();
+    this.functionBuilder_ = new FunctionBuilder();
+    this.handles_ = new HandleList();
 
-    this.types = new TypeList();
-    this.handles = new HandleList();
-    this.functions = new FunctionList();
+    this.types = this.typeBuilder_.getNameHash();
+    this.functions = this.functionBuilder_.getNameHash();
+
     this.initDefaults_();
-
     this.createEmbed_();
   }
 
@@ -63,14 +64,14 @@ define(['promise'], function(promise) {
   };
 
   Module.prototype.postMessage = function(msg, callback) {
-    var id = this.nextCallbackId++;
-    this.idCallbackMap[id] = callback;
+    var id = this.nextCallbackId_++;
+    this.idCallbackMap_[id] = callback;
 
     msg.id = id;
-    if (this.loaded) {
+    if (this.loaded_) {
       this.element.postMessage(msg);
     } else {
-      this.queuedMessages.push(msg);
+      this.queuedMessages_.push(msg);
     }
     return id;
   };
@@ -81,7 +82,7 @@ define(['promise'], function(promise) {
 
   Module.prototype.onLoad_ = function(event) {
     console.log('module loaded.');
-    this.loaded = true;
+    this.loaded_ = true;
     this.postQueuedMessages_();
   };
 
@@ -100,9 +101,9 @@ define(['promise'], function(promise) {
 
     var id = msg.id;
     if (id !== 0) {
-      var callback = this.idCallbackMap[id];
+      var callback = this.idCallbackMap_[id];
       callback(msg);
-      delete this.idCallbackMap[id];
+      delete this.idCallbackMap_[id];
     }
   };
 
@@ -118,20 +119,20 @@ define(['promise'], function(promise) {
 
   Module.prototype.postQueuedMessages_ = function() {
     var that = this;
-    this.queuedMessages.forEach(function(msg) {
+    this.queuedMessages_.forEach(function(msg) {
       that.element.postMessage(msg);
     });
 
-    this.queuedMessages = null;
+    this.queuedMessages_ = null;
   };
 
   Module.prototype.callFunction = function(context, func, args) {
     assert(func instanceof CFunction, 'expected func to be CFunction');
 
-    var funcType = this.findOverload(func.name, args, func.types);
+    var funcType = this.findOverload_(func.name, args, func.overloads);
     assert(funcType !== null);
 
-    var handle = this.handles.makeHandle(context, funcType.retType);
+    var handle = this.handles_.makeHandle(context, funcType.retType);
     var message = {
       cmd: func.name,
       type: funcType.id,
@@ -151,20 +152,19 @@ define(['promise'], function(promise) {
       message.argIsHandle.push(arg instanceof Handle);
     }
 
-    this.commands.push(message);
+    this.commands_.push(message);
 
     return handle;
   };
 
 
-  Module.prototype.commit = function(context) {
-    assert(arguments.length > 1, 'expected callback.');
+  Module.prototype.commit = function() {
+    assert(arguments.length >= 1, 'expected callback.');
 
     var callback = arguments[arguments.length - 1];
     assert(callback instanceof Function, 'callback is not Function.');
 
-    // Slice off context (first element), and callback (last element).
-    var args = Array.prototype.slice.call(arguments, 1, -1);
+    var args = Array.prototype.slice.call(arguments, 0, -1);
 
     var serializeHandle = function(handle) {
       assert(handle instanceof Handle, 'handle is not a Handle.');
@@ -173,17 +173,17 @@ define(['promise'], function(promise) {
 
     var handles = args.map(serializeHandle);
     var msg = {
-      msgs: this.commands,  // TODO(binji): rename "msgs"
+      msgs: this.commands_,  // TODO(binji): rename "msgs"
       handles: handles,
     };
 
     // Remove committed commands.
-    this.commands = [];
+    this.commands_ = [];
 
     this.postMessage(msg, function(result) {
       function idToHandle(value, ix) {
         if (typeof(value) === 'number' && !args[ix].type.isPrimitive()) {
-          return this.handles.getHandle(value);
+          return this.handles_.getHandle(value);
         }
         return value;
       };
@@ -194,7 +194,7 @@ define(['promise'], function(promise) {
     });
   };
 
-  Module.prototype.commitPromise = function(context) {
+  Module.prototype.commitPromise = function() {
     var that = this;
     var args = Array.prototype.slice.call(arguments);
     return new promise.PromisePlus(function(resolve, reject, resolveMany) {
@@ -206,82 +206,83 @@ define(['promise'], function(promise) {
   };
 
   Module.prototype.initDefaults_ = function() {
-    // TODO(binji): move these into their own object?
-    this.void_ = this.types.makeVoidType(1);
-    this.int8 = this.types.makePrimitiveType(2, 'int8', 1, true, true);
-    this.uint8 = this.types.makePrimitiveType(3, 'uint8', 1, false, true);
-    this.int16 = this.types.makePrimitiveType(4, 'int16', 2, true, true);
-    this.uint16 = this.types.makePrimitiveType(5, 'uint16', 2, false, true);
-    this.int32 = this.types.makePrimitiveType(6, 'int32', 4, true, true);
-    this.uint32 = this.types.makePrimitiveType(7, 'uint32', 4, false, true);
-    this.int64 = this.types.makePrimitiveType(8, 'int64', 8, true, true);
-    this.uint64 = this.types.makePrimitiveType(9, 'uint64', 8, false, true);
-    this.float32 = this.types.makePrimitiveType(10, 'float32', 4, false, false);
-    this.float64 = this.types.makePrimitiveType(11, 'float64', 8, false, false);
+    var t = this.types;
 
-    this.void_p = this.makePointerType(12, this.void_);
-    this.int8_p = this.types.makePointerType(13, this.int8);
-    this.uint8_p = this.makePointerType(14, this.uint8);
-    this.int16_p = this.makePointerType(15, this.int16);
-    this.uint16_p = this.makePointerType(16, this.uint16);
-    this.int32_p = this.makePointerType(17, this.int32);
-    this.uint32_p = this.makePointerType(18, this.uint32);
-    this.int64_p = this.makePointerType(19, this.int64);
-    this.uint64_p = this.makePointerType(20, this.uint64);
-    this.float32_p = this.makePointerType(21, this.float32);
-    this.float64_p = this.makePointerType(22, this.float64);
-    this.void_pp = this.makePointerType(23, this.void_p);
+    this.typeBuilder_.makeVoidType(1);
+    this.typeBuilder_.makePrimitiveType(2, 'int8', 1, true, true);
+    this.typeBuilder_.makePrimitiveType(3, 'uint8', 1, false, true);
+    this.typeBuilder_.makePrimitiveType(4, 'int16', 2, true, true);
+    this.typeBuilder_.makePrimitiveType(5, 'uint16', 2, false, true);
+    this.typeBuilder_.makePrimitiveType(6, 'int32', 4, true, true);
+    this.typeBuilder_.makePrimitiveType(7, 'uint32', 4, false, true);
+    this.typeBuilder_.makePrimitiveType(8, 'int64', 8, true, true);
+    this.typeBuilder_.makePrimitiveType(9, 'uint64', 8, false, true);
+    this.typeBuilder_.makePrimitiveType(10, 'float32', 4, false, false);
+    this.typeBuilder_.makePrimitiveType(11, 'float64', 8, false, false);
 
-    this.var_ = this.types.makePepperType(24, 'Var', undefined);
-    this.arrayBuffer = this.types.makePepperType(25, 'ArrayBuffer', ArrayBuffer);
-    this.array = this.types.makePepperType(26, 'Array', Array);
-    this.dictionary = this.types.makePepperType(27, 'Dictionary', Object);
+    this.makePointerType(12, t.void);
+    this.typeBuilder_.makePointerType(13, t.int8);
+    this.makePointerType(14, t.uint8);
+    this.makePointerType(15, t.int16);
+    this.makePointerType(16, t.uint16);
+    this.makePointerType(17, t.int32);
+    this.makePointerType(18, t.uint32);
+    this.makePointerType(19, t.int64);
+    this.makePointerType(20, t.uint64);
+    this.makePointerType(21, t.float32);
+    this.makePointerType(22, t.float64);
+    this.makePointerType(23, t.void$);
+
+    this.typeBuilder_.makePepperType(24, 'Var', undefined);
+    this.typeBuilder_.makePepperType(25, 'ArrayBuffer', ArrayBuffer);
+    this.typeBuilder_.makePepperType(26, 'Array', Array);
+    this.typeBuilder_.makePepperType(27, 'Dictionary', Object);
 
     var getTypes = [
-      this.makeFunctionType(28, this.void_p, this.void_pp),
-      this.makeFunctionType(29, this.int8, this.int8_p),
-      this.makeFunctionType(30, this.uint8, this.uint8_p),
-      this.makeFunctionType(31, this.int16, this.int16_p),
-      this.makeFunctionType(32, this.uint16, this.uint16_p),
-      this.makeFunctionType(33, this.int32, this.int32_p),
-      this.makeFunctionType(34, this.uint32, this.uint32_p),
-      this.makeFunctionType(35, this.int64, this.int64_p),
-      this.makeFunctionType(36, this.uint64, this.uint64_p),
-      this.makeFunctionType(37, this.float32, this.float32_p),
-      this.makeFunctionType(38, this.float64, this.float64_p),
+      this.makeFunctionType(28, t.void$, t.void$$),
+      this.makeFunctionType(29, t.int8, t.int8$),
+      this.makeFunctionType(30, t.uint8, t.uint8$),
+      this.makeFunctionType(31, t.int16, t.int16$),
+      this.makeFunctionType(32, t.uint16, t.uint16$),
+      this.makeFunctionType(33, t.int32, t.int32$),
+      this.makeFunctionType(34, t.uint32, t.uint32$),
+      this.makeFunctionType(35, t.int64, t.int64$),
+      this.makeFunctionType(36, t.uint64, t.uint64$),
+      this.makeFunctionType(37, t.float32, t.float32$),
+      this.makeFunctionType(38, t.float64, t.float64$),
     ];
 
     var setTypes = [
-      this.makeFunctionType(39, this.void_, this.void_pp, this.void_p),
-      this.makeFunctionType(40, this.void_, this.int8_p, this.int8),
-      this.makeFunctionType(41, this.void_, this.uint8_p, this.uint8),
-      this.makeFunctionType(42, this.void_, this.int16_p, this.int16),
-      this.makeFunctionType(43, this.void_, this.uint16_p, this.uint16),
-      this.makeFunctionType(44, this.void_, this.int32_p, this.int32),
-      this.makeFunctionType(45, this.void_, this.uint32_p, this.uint32),
-      this.makeFunctionType(46, this.void_, this.int64_p, this.int64),
-      this.makeFunctionType(47, this.void_, this.uint64_p, this.uint64),
-      this.makeFunctionType(48, this.void_, this.float32_p, this.float32),
-      this.makeFunctionType(49, this.void_, this.float64_p, this.float64),
+      this.makeFunctionType(39, t.void, t.void$$, t.void$),
+      this.makeFunctionType(40, t.void, t.int8$, t.int8),
+      this.makeFunctionType(41, t.void, t.uint8$, t.uint8),
+      this.makeFunctionType(42, t.void, t.int16$, t.int16),
+      this.makeFunctionType(43, t.void, t.uint16$, t.uint16),
+      this.makeFunctionType(44, t.void, t.int32$, t.int32),
+      this.makeFunctionType(45, t.void, t.uint32$, t.uint32),
+      this.makeFunctionType(46, t.void, t.int64$, t.int64),
+      this.makeFunctionType(47, t.void, t.uint64$, t.uint64),
+      this.makeFunctionType(48, t.void, t.float32$, t.float32),
+      this.makeFunctionType(49, t.void, t.float64$, t.float64),
     ];
 
-    var freeType = this.makeFunctionType(50, this.void_, this.void_p);
-    var mallocType = this.makeFunctionType(51, this.void_p, this.uint32);
-    var memsetType = this.makeFunctionType(52, this.void_, this.void_p, this.int32, this.uint32);
-    var memcpyType = this.makeFunctionType(53, this.void_, this.void_p, this.void_p, this.uint32);
+    var freeType = this.makeFunctionType(50, t.void, t.void$);
+    var mallocType = this.makeFunctionType(51, t.void$, t.uint32);
+    var memsetType = this.makeFunctionType(52, t.void, t.void$, t.int32, t.uint32);
+    var memcpyType = this.makeFunctionType(53, t.void, t.void$, t.void$, t.uint32);
 
-    var addRefReleaseType = this.makeFunctionType(54, this.void_, this.var_);
-    var arrayBufferCreateType = this.makeFunctionType(55, this.arrayBuffer, this.uint32);
-    var arrayBufferMapType = this.makeFunctionType(56, this.void_p, this.arrayBuffer);
-    var arrayBufferUnmapType = this.makeFunctionType(57, this.void_, this.arrayBuffer);
+    var addRefReleaseType = this.makeFunctionType(54, t.void, t.Var);
+    var arrayBufferCreateType = this.makeFunctionType(55, t.ArrayBuffer, t.uint32);
+    var arrayBufferMapType = this.makeFunctionType(56, t.void$, t.ArrayBuffer);
+    var arrayBufferUnmapType = this.makeFunctionType(57, t.void, t.ArrayBuffer);
 
-    var binopVoidpIntType = this.makeFunctionType(58, this.void_p, this.void_p, this.int32);
-    var binopInt32Type = this.makeFunctionType(59, this.int32, this.int32, this.int32);
-    var binopUint32Type = this.makeFunctionType(60, this.uint32, this.uint32, this.uint32);
-    var binopInt64Type = this.makeFunctionType(61, this.int64, this.int64, this.int64);
-    var binopUint64Type = this.makeFunctionType(62, this.uint64, this.uint64, this.uint64);
-    var binopFloatType = this.makeFunctionType(63, this.float32, this.float32, this.float32);
-    var binopDoubleType = this.makeFunctionType(64, this.float64, this.float64, this.float64);
+    var binopVoidpIntType = this.makeFunctionType(58, t.void$, t.void$, t.int32);
+    var binopInt32Type = this.makeFunctionType(59, t.int32, t.int32, t.int32);
+    var binopUint32Type = this.makeFunctionType(60, t.uint32, t.uint32, t.uint32);
+    var binopInt64Type = this.makeFunctionType(61, t.int64, t.int64, t.int64);
+    var binopUint64Type = this.makeFunctionType(62, t.uint64, t.uint64, t.uint64);
+    var binopFloatType = this.makeFunctionType(63, t.float32, t.float32, t.float32);
+    var binopDoubleType = this.makeFunctionType(64, t.float64, t.float64, t.float64);
 
     var addSubTypes = [
       binopVoidpIntType, binopInt32Type, binopUint32Type, binopInt64Type,
@@ -289,70 +290,70 @@ define(['promise'], function(promise) {
     ];
 
     // builtin functions
-    this.get = this.makeFunction('get', getTypes);
-    this.set = this.makeFunction('set', setTypes);
-    this.add = this.makeFunction('add', addSubTypes);
-    this.sub = this.makeFunction('sub', addSubTypes);
+    this.makeFunction('get', getTypes);
+    this.makeFunction('set', setTypes);
+    this.makeFunction('add', addSubTypes);
+    this.makeFunction('sub', addSubTypes);
 
     // stdlib
-    this.free = this.makeFunction('free', freeType);
-    this.malloc = this.makeFunction('malloc', mallocType);
-    this.memcpy = this.makeFunction('memcpy', memcpyType);
-    this.memset = this.makeFunction('memset', memsetType);
+    this.makeFunction('free', freeType);
+    this.makeFunction('malloc', mallocType);
+    this.makeFunction('memcpy', memcpyType);
+    this.makeFunction('memset', memsetType);
 
     // PPB_Var
-    this.addRef = this.makeFunction('addRef', addRefReleaseType);
-    this.release = this.makeFunction('release', addRefReleaseType);
+    this.makeFunction('addRef', addRefReleaseType);
+    this.makeFunction('release', addRefReleaseType);
 
     // PPB_VarArrayBuffer
-    this.arrayBufferCreate = this.makeFunction('arrayBufferCreate', arrayBufferCreateType);
-    this.arrayBufferMap = this.makeFunction('arrayBufferMap', arrayBufferMapType);
-    this.arrayBufferUnmap = this.makeFunction('arrayBufferUnmap', arrayBufferUnmapType);
+    this.makeFunction('arrayBufferCreate', arrayBufferCreateType);
+    this.makeFunction('arrayBufferMap', arrayBufferMapType);
+    this.makeFunction('arrayBufferUnmap', arrayBufferUnmapType);
   };
 
   Module.prototype.makePointerType = function(id, baseType) {
-    return this.types.makePointerType(id, baseType);
+    return this.typeBuilder_.makePointerType(id, baseType);
   };
 
   Module.prototype.makeStructType = function(id, size, name, fields) {
-    return this.types.makeStructType(id, size, name, fields);
+    return this.typeBuilder_.makeStructType(id, size, name, fields);
   };
 
   Module.prototype.makeFunctionType = function(id, retType) {
-    return this.types.makeFunctionType.apply(this.types, arguments);
+    return this.typeBuilder_.makeFunctionType.apply(this.typeBuilder_, arguments);
   };
 
-  Module.prototype.makeFunction = function(name, types) {
-    return this.functions.makeFunction(name, types);
+  Module.prototype.makeFunction = function(name, overloads) {
+    return this.functionBuilder_.makeFunction(name, overloads);
   };
 
   // TODO(binji): Where should these go? On the context...?
   Module.prototype.setField = function(context, structField, struct_p, value) {
-    var dst = this.add(context, struct_p, structField.offset);
-    var pointerType = this.types.getPointerType(structField.type);
+    var dst = this.functions.add(context, struct_p, structField.offset);
+    var pointerType = this.typeBuilder_.getPointerType(structField.type);
     if (structField.type.isPointer()) {
-      return this.set(context, dst.cast(this.void_pp), value.cast(this.void_p));
+      return this.functions.set(context, dst.cast(this.types.void$$), value.cast(this.types.void$));
     } else {
-      return this.set(context, dst.cast(pointerType), value);
+      return this.functions.set(context, dst.cast(pointerType), value);
     }
   };
 
   Module.prototype.getField = function(context, structField, struct_p) {
-    var ptr = this.add(context, struct_p, structField.offset);
-    var pointerType = this.types.getPointerType(structField.type);
+    var ptr = this.functions.add(context, struct_p, structField.offset);
+    var pointerType = this.typeBuilder_.getPointerType(structField.type);
     if (structField.type.isPointer()) {
-      return this.get(context, ptr.cast(this.void_pp)).cast(pointerType);
+      return this.functions.get(context, ptr.cast(this.types.void$$)).cast(pointerType);
     } else {
-      return this.get(context, ptr.cast(pointerType));
+      return this.functions.get(context, ptr.cast(pointerType));
     }
   };
 
   Module.prototype.mallocType = function(context, type) {
-    var pointerType = this.types.getPointerType(type);
-    return this.malloc(context, type.sizeof()).cast(pointerType);
+    var pointerType = this.typeBuilder_.getPointerType(type);
+    return this.functions.malloc(context, type.sizeof()).cast(pointerType);
   };
 
-  Module.prototype.findOverload = function(funcName, args, funcTypeList) {
+  Module.prototype.findOverload_ = function(funcName, args, funcTypeList) {
     for (var i = 0; i < funcTypeList.length; ++i) {
       if (this.overloadMatches_(funcTypeList[i], args)) {
         return funcTypeList[i];
@@ -390,10 +391,10 @@ define(['promise'], function(promise) {
           argType = this.getIntType_(arg);
         } else {
           // Float.
-          argType = this.float64;
+          argType = this.types.float64;
         }
       } else if (arg instanceof ArrayBuffer) {
-        argType = this.arrayBuffer;
+        argType = this.types.ArrayBuffer;
       } else {
         // TODO(binji): handle other pepper types.
         // What kind of type is this?
@@ -418,19 +419,19 @@ define(['promise'], function(promise) {
 
   Module.prototype.getIntType_ = function(value) {
     if (value >= -128 && value <= 127) {
-      return this.int8;
+      return this.types.int8;
     } else if (value >= -32768 && value <= 32767) {
-      return this.int16;
+      return this.types.int16;
     } else if (value >= -2147483648 && value <= 2147483647) {
-      return this.int32;
+      return this.types.int32;
     // TODO(binji): JavaScript numbers only have 53-bits of precision, so
     // this is not correct. We need a 64-bit int type.
     } else if (value >= -9223372036854775808 &&
                value <=  9223372036854775807) {
-      return this.int64;
+      return this.types.int64;
     } else {
       assert(value > 0, 'expected uint64. ' + value + ' <= 0.');
-      return this.uint64;
+      return this.types.uint64;
     }
   };
 
@@ -439,7 +440,7 @@ define(['promise'], function(promise) {
     assert(toType.isPointer(), 'expected pointer, not ' + toType);
     // For now, we can only coerce pointers to void*. At some point, C++
     // inheritance could be supported as well.
-    if (toType !== this.void_p) {
+    if (toType !== this.types.void$) {
       //console.log('Can only coerce to void*, not ' + toType + '.');
       return false;
     }
@@ -472,8 +473,8 @@ define(['promise'], function(promise) {
       // One int, one float.
       if (fromType.isInt()) {
         // From int to float.
-        if ((toType === this.float32 && fromType.sizeof() >= 4) ||
-            (toType === this.float64 && fromType.sizeof() == 8)) {
+        if ((toType === this.types.float32 && fromType.sizeof() >= 4) ||
+            (toType === this.types.float64 && fromType.sizeof() == 8)) {
           // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
           return false;
         }
@@ -488,62 +489,68 @@ define(['promise'], function(promise) {
   };
 
 
-  //// TypeList ////////////////////////////////////////////////////////////////
-  function TypeList() {
-    this.typeIdHash = {};
+  //// TypeBuilder /////////////////////////////////////////////////////////////
+  function TypeBuilder() {
+    this.idHash = {};
+    this.nameHash = {};
   }
 
-  TypeList.prototype.registerType_ = function(id, newType) {
+  TypeBuilder.prototype.registerType_ = function(id, newType) {
     assert(id !== 0, 'id !== 0');
-    assert(!(id in this.typeIdHash), 'id ' + id + ' already exists');
+    assert(!(id in this.idHash), 'id ' + id + ' already exists');
     assert(this.getTypeId(newType) === 0,
            'type ' + newType + ' already made with id ' + id);
 
     newType.id = id;
-    this.typeIdHash[id] = newType;
+    this.idHash[id] = newType;
+    this.nameHash[newType.getName()] = newType;
     return newType;
   };
 
-  TypeList.prototype.makeAliasType = function(id, name, type) {
+  TypeBuilder.prototype.getNameHash = function() {
+    return this.nameHash;
+  };
+
+  TypeBuilder.prototype.makeAliasType = function(id, name, type) {
     return this.registerType_(id, new AliasType(name, type));
   };
 
-  TypeList.prototype.makePepperType = function(id, name, type) {
+  TypeBuilder.prototype.makePepperType = function(id, name, type) {
     return this.registerType_(id, new PepperType(name, type));
   };
 
-  TypeList.prototype.makePointerType = function(id, baseType) {
+  TypeBuilder.prototype.makePointerType = function(id, baseType) {
     return this.registerType_(id, new PointerType(baseType));
   };
 
-  TypeList.prototype.makePrimitiveType = function(id, name, size, isSigned, isInt) {
+  TypeBuilder.prototype.makePrimitiveType = function(id, name, size, isSigned, isInt) {
     return this.registerType_(id, new PrimitiveType(name, size, isSigned, isInt));
   };
 
-  TypeList.prototype.makeStructType = function(id, name, size, fields) {
+  TypeBuilder.prototype.makeStructType = function(id, name, size, fields) {
     return this.registerType_(id, new StructType(name, size, fields));
   };
 
-  TypeList.prototype.makeVoidType = function(id) {
+  TypeBuilder.prototype.makeVoidType = function(id) {
     return this.registerType_(id, new VoidType(id));
   };
 
-  TypeList.prototype.makeFunctionType = function(id, retType) {
+  TypeBuilder.prototype.makeFunctionType = function(id, retType) {
     var args = Array.prototype.slice.call(arguments, 1);
     var constructor = Function.bind.apply(FunctionType, [null].concat(args));
     return this.registerType_(id, new constructor());
   };
 
-  TypeList.prototype.getTypeId = function(type) {
-    for (var id in this.typeIdHash) {
-      if (this.typeIdHash[id].equals(type)) {
+  TypeBuilder.prototype.getTypeId = function(type) {
+    for (var id in this.idHash) {
+      if (this.idHash[id].equals(type)) {
         return id;
       }
     }
     return 0;
   };
 
-  TypeList.prototype.getPointerType = function(baseType) {
+  TypeBuilder.prototype.getPointerType = function(baseType) {
     var newPointerType = new PointerType(baseType);
     var id = this.getTypeId(newPointerType);
     if (id === 0) {
@@ -556,13 +563,13 @@ define(['promise'], function(promise) {
     }
 
     // Get the correct one.
-    return this.typeIdHash[id];
+    return this.idHash[id];
   };
 
-  TypeList.prototype.log = function() {
-    for (var id in this.typeIdHash) {
-      if (this.typeIdHash.hasOwnProperty(id)) {
-        console.log('id: ' + id + ' type: ' + this.typeIdHash[id]);
+  TypeBuilder.prototype.log = function() {
+    for (var id in this.idHash) {
+      if (this.idHash.hasOwnProperty(id)) {
+        console.log('id: ' + id + ' type: ' + this.idHash[id]);
       }
     }
   };
@@ -646,15 +653,18 @@ define(['promise'], function(promise) {
     return this instanceof PointerType;
   };
 
-  Type.prototype.isInt = function() { return false; }
-  Type.prototype.isSigned = function() { return false; }
+  Type.prototype.isInt = function() { return false; };
+  Type.prototype.isSigned = function() { return false; };
+
+  Type.prototype.getName = function() { return null; };
 
   //// VoidType ////////////////////////////////////////////////////////////////
   function VoidType() { Type.call(this); }
   VoidType.prototype = new Type();
   VoidType.prototype.constructor = VoidType;
-  VoidType.prototype.sizeof = function() { return 0; }
-  VoidType.prototype.toString = function() { return 'void'; }
+  VoidType.prototype.sizeof = function() { return 0; };
+  VoidType.prototype.toString = function() { return 'void'; };
+  VoidType.prototype.getName = function() { return 'void'; };
 
   VoidType.prototype.equals = function(other) {
     if (this === other) {
@@ -678,6 +688,7 @@ define(['promise'], function(promise) {
   PrimitiveType.prototype.constructor = PrimitiveType;
   PrimitiveType.prototype.sizeof = function() { return this.size; };
   PrimitiveType.prototype.toString = function() { return this.name; };
+  PrimitiveType.prototype.getName = function() { return this.name; };
   PrimitiveType.prototype.isInt = function() { return this.isInt_; };
   PrimitiveType.prototype.isSigned = function() { return this.isSigned_; };
 
@@ -709,6 +720,11 @@ define(['promise'], function(promise) {
 
   PointerType.prototype.toString = function() {
     return this.baseType.toString() + '*';
+  };
+
+  PointerType.prototype.getName = function() {
+    // So it can be used as a JavaScript identifier.
+    return this.baseType.getName() + '$';
   };
 
   PointerType.prototype.equals = function(other) {
@@ -752,13 +768,9 @@ define(['promise'], function(promise) {
   StructType.prototype = new Type();
   StructType.prototype.constructor = StructType;
 
-  StructType.prototype.sizeof = function() {
-    return this.size;
-  };
-
-  StructType.prototype.toString = function() {
-    return this.name;
-  };
+  StructType.prototype.sizeof = function() { return this.size; };
+  StructType.prototype.toString = function() { return this.name; };
+  StructType.prototype.getName = function() { return this.name; };
 
   StructType.prototype.equals = function(other) {
     if (this === other) {
@@ -881,13 +893,9 @@ define(['promise'], function(promise) {
 
   PepperType.prototype = new Type();
 
-  PepperType.prototype.sizeof = function() {
-    return 20;  // PP_Var
-  };
-
-  PepperType.prototype.toString = function() {
-    return this.name;
-  };
+  PepperType.prototype.sizeof = function() { return 20;  /* sizeof(PP_Var) */ };
+  PepperType.prototype.toString = function() { return this.name; };
+  PepperType.prototype.getName = function() { return this.name; };
 
   PepperType.prototype.equals = function(other) {
     if (this === other) {
@@ -909,10 +917,11 @@ define(['promise'], function(promise) {
 
   AliasType.prototype = new Type();
   AliasType.prototype.constructor = AliasType;
-  AliasType.prototype.sizeof = function() { return this.type.sizeof(); }
-  AliasType.prototype.toString = function() { return this.name; }
-  AliasType.prototype.isPrimitive = function() { return this.type.isPrimitive(); }
-  AliasType.prototype.isPointer = function() { return this.type.isPointer(); }
+  AliasType.prototype.sizeof = function() { return this.type.sizeof(); };
+  AliasType.prototype.toString = function() { return this.name; };
+  AliasType.prototype.getName = function() { return this.name; };
+  AliasType.prototype.isPrimitive = function() { return this.type.isPrimitive(); };
+  AliasType.prototype.isPointer = function() { return this.type.isPointer(); };
   AliasType.prototype.isInt = function() { return this.type.isInt_; };
   AliasType.prototype.isSigned = function() { return this.type.isSigned_; };
 
@@ -923,36 +932,40 @@ define(['promise'], function(promise) {
   };
 
 
-  //// FunctionList ////////////////////////////////////////////////////////////
-  function FunctionList() {
-    this.functionNameHash = {};
+  //// FunctionBuilder /////////////////////////////////////////////////////////
+  function FunctionBuilder() {
+    this.nameHash = {};
   }
 
-  FunctionList.prototype.makeFunction = function(name, types) {
-    assert(!(name in this.functionNameHash), 'function with this name already exists.');
+  FunctionBuilder.prototype.makeFunction = function(name, overloads) {
+    assert(!(name in this.nameHash), 'function with this name already exists.');
 
-    var cfunc = new CFunction(name, types);
+    var cfunc = new CFunction(name, overloads);
     var func = function(context) {
       var args = Array.prototype.slice.call(arguments, 1);
       return context.callFunction(cfunc, args);
     };
 
-    this.functionNameHash[name] = func;
+    this.nameHash[name] = func;
     return func;
+  };
+
+  FunctionBuilder.prototype.getNameHash = function() {
+    return this.nameHash;
   };
 
 
   //// Functions ///////////////////////////////////////////////////////////////
-  function CFunction(name, types) {
+  function CFunction(name, overloads) {
     this.name = name;
-    if (types instanceof Array) {
-      this.types = types;
+    if (overloads instanceof Array) {
+      this.overloads = overloads;
     } else {
-      this.types = [types];
+      this.overloads = [overloads];
     }
 
     // Quick sanity check.
-    this.types.forEach(function(funcType) {
+    this.overloads.forEach(function(funcType) {
       assert(funcType instanceof FunctionType, 'expected FunctionType');
     });
   }
