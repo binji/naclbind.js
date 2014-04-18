@@ -131,7 +131,7 @@ var nacl = {};
   };
 
   Module.prototype.callFunction = function(context, func, args) {
-    assert(func instanceof CFunction, 'callFunction: Expected func to be CFunction');
+    assert(func instanceof CFunction, 'expected func to be CFunction');
 
     var funcType = this.findOverload(func.name, args, func.types);
     assert(funcType !== null);
@@ -163,16 +163,16 @@ var nacl = {};
 
 
   Module.prototype.commit = function(context) {
-    assert(arguments.length > 1, 'commit: Expected callback.');
+    assert(arguments.length > 1, 'expected callback.');
 
     var callback = arguments[arguments.length - 1];
-    assert(callback instanceof Function, 'commit: callback is not Function.');
+    assert(callback instanceof Function, 'callback is not Function.');
 
     // Slice off context (first element), and callback (last element).
     var args = Array.prototype.slice.call(arguments, 1, -1);
 
     var serializeHandle = function(handle) {
-      assert(handle instanceof Handle, 'commit: handle is not a Handle.');
+      assert(handle instanceof Handle, 'handle is not a Handle.');
       return handle.id;
     };
 
@@ -319,8 +319,8 @@ var nacl = {};
     return this.types.makePointerType(id, baseType);
   };
 
-  Module.prototype.makeStructType = function(id, size, name) {
-    return this.types.makeStructType(id, size, name);
+  Module.prototype.makeStructType = function(id, size, name, fields) {
+    return this.types.makeStructType(id, size, name, fields);
   };
 
   Module.prototype.makeFunctionType = function(id, retType) {
@@ -434,16 +434,14 @@ var nacl = {};
                value <=  9223372036854775807) {
       return this.int64;
     } else {
-      assert(value > 0, 'getIntType_: Expected uint64. ' + value + ' <= 0.');
+      assert(value > 0, 'expected uint64. ' + value + ' <= 0.');
       return this.uint64;
     }
   };
 
   Module.prototype.canCoercePointer_ = function(fromType, toType) {
-    assert(fromType.isPointer(),
-           'canCoercePointer_: expected pointer, not ' + fromType);
-    assert(toType.isPointer(),
-           'canCoercePointer_: expected pointer, not ' + toType);
+    assert(fromType.isPointer(), 'expected pointer, not ' + fromType);
+    assert(toType.isPointer(), 'expected pointer, not ' + toType);
     // For now, we can only coerce pointers to void*. At some point, C++
     // inheritance could be supported as well.
     if (toType !== this.void_p) {
@@ -454,10 +452,8 @@ var nacl = {};
   };
 
   Module.prototype.canCoercePrimitive_ = function(fromType, toType) {
-    assert(fromType.isPrimitive(),
-           'canCoercePrimitive_: expected primitive, not ' + fromType);
-    assert(toType.isPrimitive(),
-           'canCoercePrimitive_: expected primitive, not ' + toType);
+    assert(fromType.isPrimitive(), 'expected primitive, not ' + fromType);
+    assert(toType.isPrimitive(), 'expected primitive, not ' + toType);
 
     if (fromType.isInt() === toType.isInt()) {
       if (fromType.isInt()) {
@@ -503,11 +499,11 @@ var nacl = {};
   }
 
   TypeList.prototype.registerType_ = function(id, newType) {
-    assert(id !== 0, 'registerType_: id !== 0');
-    assert(!(id in this.typeIdHash), 'registerType_: id ' + id + ' already exists');
-    if (this.getTypeId(newType) !== 0) {
-      throw new Error('Type ' + newType + ' already made with id ' + id);
-    }
+    assert(id !== 0, 'id !== 0');
+    assert(!(id in this.typeIdHash), 'id ' + id + ' already exists');
+    assert(this.getTypeId(newType) === 0,
+           'type ' + newType + ' already made with id ' + id);
+
     newType.id = id;
     this.typeIdHash[id] = newType;
     return newType;
@@ -529,8 +525,8 @@ var nacl = {};
     return this.registerType_(id, new PrimitiveType(name, size, isSigned, isInt));
   };
 
-  TypeList.prototype.makeStructType = function(id, size, name) {
-    return this.registerType_(id, new StructType(size, name));
+  TypeList.prototype.makeStructType = function(id, name, size, fields) {
+    return this.registerType_(id, new StructType(name, size, fields));
   };
 
   TypeList.prototype.makeVoidType = function(id) {
@@ -586,7 +582,7 @@ var nacl = {};
   }
 
   Context.prototype.registerHandle = function(handle) {
-    assert(handle instanceof Handle, 'registerHandle: handle is not a Handle.');
+    assert(handle instanceof Handle, 'handle is not a Handle.');
     this.handles.push(handle);
   };
 
@@ -750,11 +746,12 @@ var nacl = {};
 
 
   //// StructType //////////////////////////////////////////////////////////////
-  function StructType(size, name) {
+  function StructType(name, size, fields) {
     Type.call(this);
-    this.size = size;
     this.name = name;
+    this.size = size;
     this.fields = {};
+    this.addFields_(fields);
   }
 
   StructType.prototype = new Type();
@@ -805,12 +802,23 @@ var nacl = {};
     return true;
   };
 
-  StructType.prototype.addField = function(name, type, offset) {
-    assert(offset >= 0, 'addField: offset ' + offset + ' < 0');
-    assert(offset + type.sizeof() <= this.size,
-           'addField: offset ' + offset + ' > size');
+  StructType.prototype.addFields_ = function(fields) {
+    for (var name in fields) {
+      if (!fields.hasOwnProperty(name)) {
+        continue;
+      }
+
+      var field = fields[name];
+      this.addField_(name, field.type, field.offset);
+    }
+  };
+
+  StructType.prototype.addField_ = function(name, type, offset) {
+    assert(type instanceof Type, 'type is not instance of Type.');
+    assert(offset >= 0, 'offset ' + offset + ' < 0');
+    assert(offset + type.sizeof() <= this.size, 'offset ' + offset + ' > size');
     assert(!this.fields.hasOwnProperty(name),
-           'addField: field ' + name + ' already exists');
+           'field ' + name + ' already exists');
     this.fields[name] = new StructField(name, type, offset);
   };
 
@@ -821,12 +829,11 @@ var nacl = {};
     this.retType = retType;
     this.argTypes = Array.prototype.slice.call(arguments, 1);
 
-    // Validate the argument types.
+    // Validate the types.
+    assert(retType instanceof Type, 'return type is not instance of Type');
     this.argTypes.forEach(function(argType, i) {
-      if (!(argType instanceof Type)) {
-        throw new Error('Argument #' + i +
-                        ' of function is not an instance of Type.');
-      }
+      assert(argType instanceof Type,
+             'argument ' + i + ' is not instance of Type');
     });
   }
 
@@ -927,7 +934,7 @@ var nacl = {};
   }
 
   FunctionList.prototype.makeFunction = function(name, types) {
-    assert(!(name in this.functionNameHash), 'Function with this name already exists.');
+    assert(!(name in this.functionNameHash), 'function with this name already exists.');
 
     var cfunc = new CFunction(name, types);
     var func = function(context) {
@@ -951,8 +958,7 @@ var nacl = {};
 
     // Quick sanity check.
     this.types.forEach(function(funcType) {
-      assert(funcType instanceof FunctionType,
-             'CFunction: expected FunctionType');
+      assert(funcType instanceof FunctionType, 'expected FunctionType');
     });
   }
 

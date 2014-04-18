@@ -88,19 +88,19 @@ var Z_VERSION_ERROR = -6
 var m = nacl.makeModule(
     'zlib-nacl', 'pnacl/Release/zlib.nmf', 'application/x-pnacl');
 
-var z_stream = m.makeStructType(65, 56, 'z_stream');
+var z_stream = m.makeStructType(65, 'z_stream', 56, {
+  next_in: {type: m.uint8_p, offset: 0},
+  avail_in: {type: m.uint32, offset: 4},
+  total_in: {type: m.uint32, offset: 8},
+  next_out: {type: m.uint8_p, offset: 12},
+  avail_out: {type: m.uint32, offset: 16},
+  total_out: {type: m.uint32, offset: 20}
+});
+
 var z_stream_p = m.makePointerType(66, z_stream);
 var deflateType = m.makeFunctionType(67, m.int32, z_stream_p, m.int32);
 var compressType = m.makeFunctionType(68, m.int32, m.uint8_p, m.uint32_p, m.uint8_p, m.uint32);
 var compressBoundType = m.makeFunctionType(69, m.uint32, m.uint32);
-
-// TODO(binji): fields should be specified in the constructor.
-z_stream.addField('next_in', m.uint8_p, 0);
-z_stream.addField('avail_in', m.uint32, 4);
-z_stream.addField('total_in', m.uint32, 8);
-z_stream.addField('next_out', m.uint8_p, 12);
-z_stream.addField('avail_out', m.uint32, 16);
-z_stream.addField('total_out', m.uint32, 20);
 
 var deflateInit = m.makeFunction('deflateInit', deflateType);
 var deflate = m.makeFunction('deflate', deflateType);
