@@ -85,56 +85,59 @@ var Z_MEM_ERROR = -4
 var Z_BUF_ERROR = -5
 var Z_VERSION_ERROR = -6
 
-var z_stream = nacl.makeStructType(65, 56, 'z_stream');
-var z_stream_p = nacl.makePointerType(66, z_stream);
-var deflateType = nacl.makeFunctionType(67, nacl.int32, z_stream_p, nacl.int32);
-var compressType = nacl.makeFunctionType(68, nacl.int32, nacl.uint8_p, nacl.uint32_p, nacl.uint8_p, nacl.uint32);
-var compressBoundType = nacl.makeFunctionType(69, nacl.uint32, nacl.uint32);
+var m = nacl.makeModule(
+    'zlib-nacl', 'pnacl/Release/zlib.nmf', 'application/x-pnacl');
+
+var z_stream = m.makeStructType(65, 56, 'z_stream');
+var z_stream_p = m.makePointerType(66, z_stream);
+var deflateType = m.makeFunctionType(67, m.int32, z_stream_p, m.int32);
+var compressType = m.makeFunctionType(68, m.int32, m.uint8_p, m.uint32_p, m.uint8_p, m.uint32);
+var compressBoundType = m.makeFunctionType(69, m.uint32, m.uint32);
 
 // TODO(binji): fields should be specified in the constructor.
-z_stream.addField('next_in', nacl.uint8_p, 0);
-z_stream.addField('avail_in', nacl.uint32, 4);
-z_stream.addField('total_in', nacl.uint32, 8);
-z_stream.addField('next_out', nacl.uint8_p, 12);
-z_stream.addField('avail_out', nacl.uint32, 16);
-z_stream.addField('total_out', nacl.uint32, 20);
+z_stream.addField('next_in', m.uint8_p, 0);
+z_stream.addField('avail_in', m.uint32, 4);
+z_stream.addField('total_in', m.uint32, 8);
+z_stream.addField('next_out', m.uint8_p, 12);
+z_stream.addField('avail_out', m.uint32, 16);
+z_stream.addField('total_out', m.uint32, 20);
 
-var deflateInit = nacl.makeFunction('deflateInit', deflateType);
-var deflate = nacl.makeFunction('deflate', deflateType);
-var compress = nacl.makeFunction('compress', compressType);
-var compressBound = nacl.makeFunction('compressBound', compressBoundType);
+var deflateInit = m.makeFunction('deflateInit', deflateType);
+var deflate = m.makeFunction('deflate', deflateType);
+var compress = m.makeFunction('compress', compressType);
+var compressBound = m.makeFunction('compressBound', compressBoundType);
 
 // nacl.logTypes();
 
 function compressEasy(inputAb) {
-  var c = nacl.makeContext();
+  var c = m.makeContext();
   var dest;
   var destLenPtr;
   return promise.resolve().then(function() {
     var sourceLen = inputAb.byteLength;
     var destLenBound = compressBound(c, sourceLen);
-    dest = nacl.malloc(c, destLenBound).cast(nacl.uint8_p);
-    var source = nacl.arrayBufferMap(c, inputAb).cast(nacl.uint8_p);
-    destLenPtr = nacl.malloc(c, nacl.uint32.sizeof()).cast(nacl.uint32_p);
-    nacl.set(c, destLenPtr, destLenBound);
+    dest = m.malloc(c, destLenBound).cast(m.uint8_p);
+    var source = m.arrayBufferMap(c, inputAb).cast(m.uint8_p);
+    destLenPtr = m.mallocType(c, m.uint32);
+    m.set(c, destLenPtr, destLenBound);
     var result = compress(c, dest, destLenPtr, source, sourceLen);
-    return nacl.commitPromise(c, result);
+    return m.commitPromise(c, result);
   }).then(function(result) {
     if (result !== Z_OK) {
       return promise.reject(result);
     }
 
-    var destLen = nacl.get(c, destLenPtr);
-    var destAb = nacl.arrayBufferCreate(c, destLen);
-    var destAbPtr = nacl.arrayBufferMap(c, destAb);
-    nacl.memcpy(c, destAbPtr, dest, destLen);
-    return nacl.commitPromise(c, destAb);
+    var destLen = m.get(c, destLenPtr);
+    var destAb = m.arrayBufferCreate(c, destLen);
+    var destAbPtr = m.arrayBufferMap(c, destAb);
+    m.memcpy(c, destAbPtr, dest, destLen);
+    return m.commitPromise(c, destAb);
   }).then(function(destAb) {
     return promise.resolve(destAb);
   }).finally(function() {
-    nacl.free(c, dest);
-    nacl.free(c, destLenPtr);
-    return nacl.commitPromise(c);
+    m.free(c, dest);
+    m.free(c, destLenPtr);
+    return m.commitPromise(c);
   });
 }
 
@@ -145,15 +148,15 @@ function compressHard(inputAb, level, bufferSize) {
   var outputAb = null;
   var outputOffset = 0;
 
-  var c = nacl.makeContext();
+  var c = m.makeContext();
 
   return promise.resolve().then(function() {
-    stream = z_stream.malloc(c).cast(z_stream_p);
-    nacl.memset(c, stream, 0, z_stream.sizeof());
+    stream = m.mallocType(c, z_stream);
+    m.memset(c, stream, 0, z_stream.sizeof());
 
-    output = nacl.malloc(c, bufferSize);
+    output = m.malloc(c, bufferSize);
     var result = deflateInit(c, stream, level);
-    return nacl.commitPromise(c, result);
+    return m.commitPromise(c, result);
   }).then(function(result) {
     if (result !== Z_OK) {
       return promise.reject(result);
@@ -181,24 +184,24 @@ function compressHard(inputAb, level, bufferSize) {
       inputOffset += preAvailIn;
       var inputOffsetEnd = inputOffset + bufferSize;
       var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, inputOffsetEnd);
-      var inputSlice = nacl.arrayBufferMap(c, inputSliceAb);
-      z_stream.fields.next_in.set(c, stream, inputSlice.cast(nacl.uint8_p));
-      z_stream.fields.avail_in.set(c, stream, inputSliceAb.byteLength);
-      z_stream.fields.next_out.set(c, stream, output.cast(nacl.uint8_p));
-      z_stream.fields.avail_out.set(c, stream, bufferSize);
+      var inputSlice = m.arrayBufferMap(c, inputSliceAb);
+      m.setField(c, z_stream.fields.next_in, stream, inputSlice.cast(m.uint8_p));
+      m.setField(c, z_stream.fields.avail_in, stream, inputSliceAb.byteLength);
+      m.setField(c, z_stream.fields.next_out, stream, output.cast(m.uint8_p));
+      m.setField(c, z_stream.fields.avail_out, stream, bufferSize);
     }
 
     var inputLeft = inputAb.byteLength - inputOffset;
     var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
-    var preAvailIn = z_stream.fields.avail_in.get(c, stream);
+    var preAvailIn = m.getField(c, z_stream.fields.avail_in, stream);
     var result = deflate(c, stream, flush);
-    var availIn = z_stream.fields.avail_in.get(c, stream);
-    var availOut = z_stream.fields.avail_out.get(c, stream);
-    var outUsed = nacl.sub(c, bufferSize, availOut);
-    var compressedAb = nacl.arrayBufferCreate(c, outUsed);
-    var outputAbPtr = nacl.arrayBufferMap(c, compressedAb);
-    nacl.memcpy(c, outputAbPtr, output, outUsed);
-    return nacl.commitPromise(c, result, availIn, availOut, preAvailIn, compressedAb);
+    var availIn = m.getField(c, z_stream.fields.avail_in, stream);
+    var availOut = m.getField(c, z_stream.fields.avail_out, stream);
+    var outUsed = m.sub(c, bufferSize, availOut);
+    var compressedAb = m.arrayBufferCreate(c, outUsed);
+    var outputAbPtr = m.arrayBufferMap(c, compressedAb);
+    m.memcpy(c, outputAbPtr, output, outUsed);
+    return m.commitPromise(c, result, availIn, availOut, preAvailIn, compressedAb);
   }).then(function(result, availIn, availOut, preAvailIn, compressedAb) {
     // Consume the final bit of output, if any.
     if (compressedAb) {
@@ -208,9 +211,9 @@ function compressHard(inputAb, level, bufferSize) {
 
     return promise.resolve(outputAb);
   }).finally(function() {
-    nacl.free(c, stream);
-    nacl.free(c, output);
-    return nacl.commitPromise(c);
+    m.free(c, stream);
+    m.free(c, output);
+    return m.commitPromise(c);
   });
 }
 
@@ -226,17 +229,6 @@ function makeTestArrayBuffer(length, add, mul) {
   return newAb;
 }
 
-
-var nmf, mimetype;
-if (false) {
-  nmf = 'pnacl/Debug/zlib.nmf';
-  mimetype = 'application/x-nacl';
-} else {
-  nmf = 'pnacl/Release/zlib.nmf';
-  mimetype = 'application/x-pnacl';
-}
-
-nacl.init('zlib-nacl', nmf, mimetype);
 
 var ab = makeTestArrayBuffer(16384, 1337, 0xc0dedead);
 compressHard(ab, 9, 2048).then(function(outputAb) {

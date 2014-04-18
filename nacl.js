@@ -24,17 +24,487 @@ var nacl = {};
     }
   }
 
+  self.makeModule = function(name, nmf, mimeType) {
+    return new Module(name, nmf, mimeType);
+  };
+
+  // Module ////////////////////////////////////////////////////////////////////
+  function Module(name, nmf, mimeType) {
+    this.name = name;
+    this.nmf = nmf;
+    this.mimeType = mimeType;
+
+    this.element = null;
+    this.loaded = false;
+    this.nextCallbackId = 1;
+    this.idCallbackMap = [];
+    this.queuedMessages = [];
+
+    this.commands = [];
+
+    this.types = new TypeList();
+    this.handles = new HandleList();
+    this.functions = new FunctionList();
+    this.initDefaults_();
+
+    this.createEmbed_();
+  }
+
+  Module.prototype.createEmbed_ = function() {
+    var that = this;
+    document.addEventListener('DOMContentLoaded', function() {
+      that.element = document.createElement('embed');
+      that.element.setAttribute('width', '0');
+      that.element.setAttribute('height', '0');
+      that.element.setAttribute('src', that.nmf);
+      that.element.setAttribute('type', that.mimeType);
+
+      that.element.addEventListener('load', that.onLoad_.bind(that), false);
+      that.element.addEventListener('message', that.onMessage_.bind(that), false);
+      that.element.addEventListener('error', that.onError_.bind(that), false);
+      that.element.addEventListener('crash', that.onCrash_.bind(that), false);
+      document.body.appendChild(that.element);
+    });
+  };
+
+  Module.prototype.postMessage = function(msg, callback) {
+    var id = this.nextCallbackId++;
+    this.idCallbackMap[id] = callback;
+
+    msg.id = id;
+    if (this.loaded) {
+      this.element.postMessage(msg);
+    } else {
+      this.queuedMessages.push(msg);
+    }
+    return id;
+  };
+
+  Module.prototype.makeContext = function() {
+    return new Context(this);
+  };
+
+  Module.prototype.onLoad_ = function(event) {
+    console.log('module loaded.');
+    this.loaded = true;
+    this.postQueuedMessages_();
+  };
+
+  Module.prototype.onMessage_ = function(event) {
+    var msg = event.data;
+    if (typeof(msg) !== 'object') {
+      var msg = this.name_ + ': unexpected value from module: ' +
+          JSON.stringify(msg);
+      throw new Error(msg);
+    }
+
+    if (msg.msg) {
+      console.log(msg.msg);
+      return;
+    }
+
+    var id = msg.id;
+    if (id !== 0) {
+      var callback = this.idCallbackMap[id];
+      callback(msg);
+      delete this.idCallbackMap[id];
+    }
+  };
+
+  Module.prototype.onError_ = function(event) {
+    var msg = this.name_ + ': error loading NaCl module: ' + this.element.lastError;
+    throw new Error(msg);
+  };
+
+  Module.prototype.onCrash_ = function(event) {
+    var msg = this.name_ + ': NaCl module crashed: ' + this.element.exitStatus;
+    throw new Error(msg);
+  };
+
+  Module.prototype.postQueuedMessages_ = function() {
+    var that = this;
+    this.queuedMessages.forEach(function(msg) {
+      that.element.postMessage(msg);
+    });
+
+    this.queuedMessages = null;
+  };
+
+  Module.prototype.callFunction = function(context, func, args) {
+    assert(func instanceof CFunction, 'callFunction: Expected func to be CFunction');
+
+    var funcType = this.findOverload(func.name, args, func.types);
+    assert(funcType !== null);
+
+    var handle = this.handles.makeHandle(context, funcType.retType);
+    var message = {
+      cmd: func.name,
+      type: funcType.id,
+      args: [],
+      argIsHandle: [],
+      ret: handle.id
+    };
+    for (var i = 0; i < funcType.argTypes.length; ++i) {
+      var arg = args[i];
+      var value;
+      if (arg instanceof Handle) {
+        value = arg.id;
+      } else {
+        value = arg;
+      }
+      message.args.push(value);
+      message.argIsHandle.push(arg instanceof Handle);
+    }
+
+    this.commands.push(message);
+
+    return handle;
+  };
+
+
+  Module.prototype.commit = function(context) {
+    assert(arguments.length > 1, 'commit: Expected callback.');
+
+    var callback = arguments[arguments.length - 1];
+    assert(callback instanceof Function, 'commit: callback is not Function.');
+
+    // Slice off context (first element), and callback (last element).
+    var args = Array.prototype.slice.call(arguments, 1, -1);
+
+    var serializeHandle = function(handle) {
+      assert(handle instanceof Handle, 'commit: handle is not a Handle.');
+      return handle.id;
+    };
+
+    var handles = args.map(serializeHandle);
+    var msg = {
+      msgs: this.commands,  // TODO(binji): rename "msgs"
+      handles: handles,
+    };
+
+    // Remove committed commands.
+    this.commands = [];
+
+    this.postMessage(msg, function(result) {
+      function idToHandle(value, ix) {
+        if (typeof(value) === 'number' && !args[ix].type.isPrimitive()) {
+          return this.handles.getHandle(value);
+        }
+        return value;
+      };
+
+      // convert back from Ids to Handles; keep the primitive values the same.
+      var handles = Array.prototype.map.call(result.values, idToHandle);
+      callback.apply(null, handles);
+    });
+  };
+
+  Module.prototype.commitPromise = function(context) {
+    var that = this;
+    var args = Array.prototype.slice.call(arguments);
+    return new promise.PromisePlus(function(resolve, reject, resolveMany) {
+      args.push(function() {
+        resolveMany.apply(null, arguments);
+      });
+      that.commit.apply(that, args);
+    });
+  };
+
+  Module.prototype.initDefaults_ = function() {
+    // TODO(binji): move these into their own object?
+    this.void_ = this.types.makeVoidType(1);
+    this.int8 = this.types.makePrimitiveType(2, 'int8', 1, true, true);
+    this.uint8 = this.types.makePrimitiveType(3, 'uint8', 1, false, true);
+    this.int16 = this.types.makePrimitiveType(4, 'int16', 2, true, true);
+    this.uint16 = this.types.makePrimitiveType(5, 'uint16', 2, false, true);
+    this.int32 = this.types.makePrimitiveType(6, 'int32', 4, true, true);
+    this.uint32 = this.types.makePrimitiveType(7, 'uint32', 4, false, true);
+    this.int64 = this.types.makePrimitiveType(8, 'int64', 8, true, true);
+    this.uint64 = this.types.makePrimitiveType(9, 'uint64', 8, false, true);
+    this.float32 = this.types.makePrimitiveType(10, 'float32', 4, false, false);
+    this.float64 = this.types.makePrimitiveType(11, 'float64', 8, false, false);
+
+    this.void_p = this.makePointerType(12, this.void_);
+    this.int8_p = this.types.makePointerType(13, this.int8);
+    this.uint8_p = this.makePointerType(14, this.uint8);
+    this.int16_p = this.makePointerType(15, this.int16);
+    this.uint16_p = this.makePointerType(16, this.uint16);
+    this.int32_p = this.makePointerType(17, this.int32);
+    this.uint32_p = this.makePointerType(18, this.uint32);
+    this.int64_p = this.makePointerType(19, this.int64);
+    this.uint64_p = this.makePointerType(20, this.uint64);
+    this.float32_p = this.makePointerType(21, this.float32);
+    this.float64_p = this.makePointerType(22, this.float64);
+    this.void_pp = this.makePointerType(23, this.void_p);
+
+    this.var_ = this.types.makePepperType(24, 'Var', undefined);
+    this.arrayBuffer = this.types.makePepperType(25, 'ArrayBuffer', ArrayBuffer);
+    this.array = this.types.makePepperType(26, 'Array', Array);
+    this.dictionary = this.types.makePepperType(27, 'Dictionary', Object);
+
+    var getTypes = [
+      this.makeFunctionType(28, this.void_p, this.void_pp),
+      this.makeFunctionType(29, this.int8, this.int8_p),
+      this.makeFunctionType(30, this.uint8, this.uint8_p),
+      this.makeFunctionType(31, this.int16, this.int16_p),
+      this.makeFunctionType(32, this.uint16, this.uint16_p),
+      this.makeFunctionType(33, this.int32, this.int32_p),
+      this.makeFunctionType(34, this.uint32, this.uint32_p),
+      this.makeFunctionType(35, this.int64, this.int64_p),
+      this.makeFunctionType(36, this.uint64, this.uint64_p),
+      this.makeFunctionType(37, this.float32, this.float32_p),
+      this.makeFunctionType(38, this.float64, this.float64_p),
+    ];
+
+    var setTypes = [
+      this.makeFunctionType(39, this.void_, this.void_pp, this.void_p),
+      this.makeFunctionType(40, this.void_, this.int8_p, this.int8),
+      this.makeFunctionType(41, this.void_, this.uint8_p, this.uint8),
+      this.makeFunctionType(42, this.void_, this.int16_p, this.int16),
+      this.makeFunctionType(43, this.void_, this.uint16_p, this.uint16),
+      this.makeFunctionType(44, this.void_, this.int32_p, this.int32),
+      this.makeFunctionType(45, this.void_, this.uint32_p, this.uint32),
+      this.makeFunctionType(46, this.void_, this.int64_p, this.int64),
+      this.makeFunctionType(47, this.void_, this.uint64_p, this.uint64),
+      this.makeFunctionType(48, this.void_, this.float32_p, this.float32),
+      this.makeFunctionType(49, this.void_, this.float64_p, this.float64),
+    ];
+
+    var freeType = this.makeFunctionType(50, this.void_, this.void_p);
+    var mallocType = this.makeFunctionType(51, this.void_p, this.uint32);
+    var memsetType = this.makeFunctionType(52, this.void_, this.void_p, this.int32, this.uint32);
+    var memcpyType = this.makeFunctionType(53, this.void_, this.void_p, this.void_p, this.uint32);
+
+    var addRefReleaseType = this.makeFunctionType(54, this.void_, this.var_);
+    var arrayBufferCreateType = this.makeFunctionType(55, this.arrayBuffer, this.uint32);
+    var arrayBufferMapType = this.makeFunctionType(56, this.void_p, this.arrayBuffer);
+    var arrayBufferUnmapType = this.makeFunctionType(57, this.void_, this.arrayBuffer);
+
+    var binopVoidpIntType = this.makeFunctionType(58, this.void_p, this.void_p, this.int32);
+    var binopInt32Type = this.makeFunctionType(59, this.int32, this.int32, this.int32);
+    var binopUint32Type = this.makeFunctionType(60, this.uint32, this.uint32, this.uint32);
+    var binopInt64Type = this.makeFunctionType(61, this.int64, this.int64, this.int64);
+    var binopUint64Type = this.makeFunctionType(62, this.uint64, this.uint64, this.uint64);
+    var binopFloatType = this.makeFunctionType(63, this.float32, this.float32, this.float32);
+    var binopDoubleType = this.makeFunctionType(64, this.float64, this.float64, this.float64);
+
+    var addSubTypes = [
+      binopVoidpIntType, binopInt32Type, binopUint32Type, binopInt64Type,
+      binopUint64Type, binopFloatType, binopDoubleType,
+    ];
+
+    // builtin functions
+    this.get = this.makeFunction('get', getTypes);
+    this.set = this.makeFunction('set', setTypes);
+    this.add = this.makeFunction('add', addSubTypes);
+    this.sub = this.makeFunction('sub', addSubTypes);
+
+    // stdlib
+    this.free = this.makeFunction('free', freeType);
+    this.malloc = this.makeFunction('malloc', mallocType);
+    this.memcpy = this.makeFunction('memcpy', memcpyType);
+    this.memset = this.makeFunction('memset', memsetType);
+
+    // PPB_Var
+    this.addRef = this.makeFunction('addRef', addRefReleaseType);
+    this.release = this.makeFunction('release', addRefReleaseType);
+
+    // PPB_VarArrayBuffer
+    this.arrayBufferCreate = this.makeFunction('arrayBufferCreate', arrayBufferCreateType);
+    this.arrayBufferMap = this.makeFunction('arrayBufferMap', arrayBufferMapType);
+    this.arrayBufferUnmap = this.makeFunction('arrayBufferUnmap', arrayBufferUnmapType);
+  };
+
+  Module.prototype.makePointerType = function(id, baseType) {
+    return this.types.makePointerType(id, baseType);
+  };
+
+  Module.prototype.makeStructType = function(id, size, name) {
+    return this.types.makeStructType(id, size, name);
+  };
+
+  Module.prototype.makeFunctionType = function(id, retType) {
+    return this.types.makeFunctionType.apply(this.types, arguments);
+  };
+
+  Module.prototype.makeFunction = function(name, types) {
+    return this.functions.makeFunction(name, types);
+  };
+
+  // TODO(binji): Where should these go? On the context...?
+  Module.prototype.setField = function(context, structField, struct_p, value) {
+    var dst = this.add(context, struct_p, structField.offset);
+    var pointerType = this.types.getPointerType(structField.type);
+    if (structField.type.isPointer()) {
+      return this.set(context, dst.cast(this.void_pp), value.cast(this.void_p));
+    } else {
+      return this.set(context, dst.cast(pointerType), value);
+    }
+  };
+
+  Module.prototype.getField = function(context, structField, struct_p) {
+    var ptr = this.add(context, struct_p, structField.offset);
+    var pointerType = this.types.getPointerType(structField.type);
+    if (structField.type.isPointer()) {
+      return this.get(context, ptr.cast(this.void_pp)).cast(pointerType);
+    } else {
+      return this.get(context, ptr.cast(pointerType));
+    }
+  };
+
+  Module.prototype.mallocType = function(context, type) {
+    var pointerType = this.types.getPointerType(type);
+    return this.malloc(context, type.sizeof()).cast(pointerType);
+  };
+
+  Module.prototype.findOverload = function(funcName, args, funcTypeList) {
+    for (var i = 0; i < funcTypeList.length; ++i) {
+      if (this.overloadMatches_(funcTypeList[i], args)) {
+        return funcTypeList[i];
+      }
+    }
+
+    // Display helpful warning.
+    var msg;
+    msg = 'No overload found for call "' + funcName + '(';
+    msg += Array.prototype.join.call(args, ', ');
+    msg += ')".\n';
+    msg += "Possibilities:\n";
+    for (var i = 0; i < funcTypeList.length; ++i) {
+      msg += funcTypeList[i].toString() + "\n";
+    }
+    console.log(msg);
+
+    return null;
+  };
+
+  Module.prototype.overloadMatches_ = function(funcType, args) {
+    if (funcType.argTypes.length !== args.length) {
+      return false;
+    }
+
+    for (var i = 0; i < funcType.argTypes.length; ++i) {
+      var arg = args[i];
+      var funcArgType = funcType.argTypes[i];
+      var argType;
+      if (arg instanceof Handle) {
+        argType = arg.type;
+      } else if (typeof(arg) === 'number') {
+        if (Math.floor(arg) === arg) {
+          // Int.
+          argType = this.getIntType_(arg);
+        } else {
+          // Float.
+          argType = this.float64;
+        }
+      } else if (arg instanceof ArrayBuffer) {
+        argType = this.arrayBuffer;
+      } else {
+        // TODO(binji): handle other pepper types.
+        // What kind of type is this?
+        console.log('Unexpected type of arg "' + arg + '": ' + typeof(arg));
+        return false;
+      }
+
+      if (argType !== funcArgType) {
+        if (argType.isPointer() && funcArgType.isPointer() &&
+            this.canCoercePointer_(argType, funcArgType)) {
+          // OK
+        } else if (argType.isPrimitive() && funcArgType.isPrimitive() &&
+                   this.canCoercePrimitive_(argType, funcArgType)) {
+          // OK
+        } else {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  Module.prototype.getIntType_ = function(value) {
+    if (value >= -128 && value <= 127) {
+      return this.int8;
+    } else if (value >= -32768 && value <= 32767) {
+      return this.int16;
+    } else if (value >= -2147483648 && value <= 2147483647) {
+      return this.int32;
+    // TODO(binji): JavaScript numbers only have 53-bits of precision, so
+    // this is not correct. We need a 64-bit int type.
+    } else if (value >= -9223372036854775808 &&
+               value <=  9223372036854775807) {
+      return this.int64;
+    } else {
+      assert(value > 0, 'getIntType_: Expected uint64. ' + value + ' <= 0.');
+      return this.uint64;
+    }
+  };
+
+  Module.prototype.canCoercePointer_ = function(fromType, toType) {
+    assert(fromType.isPointer(),
+           'canCoercePointer_: expected pointer, not ' + fromType);
+    assert(toType.isPointer(),
+           'canCoercePointer_: expected pointer, not ' + toType);
+    // For now, we can only coerce pointers to void*. At some point, C++
+    // inheritance could be supported as well.
+    if (toType !== this.void_p) {
+      //console.log('Can only coerce to void*, not ' + toType + '.');
+      return false;
+    }
+    return true;
+  };
+
+  Module.prototype.canCoercePrimitive_ = function(fromType, toType) {
+    assert(fromType.isPrimitive(),
+           'canCoercePrimitive_: expected primitive, not ' + fromType);
+    assert(toType.isPrimitive(),
+           'canCoercePrimitive_: expected primitive, not ' + toType);
+
+    if (fromType.isInt() === toType.isInt()) {
+      if (fromType.isInt()) {
+        // Both ints.
+        if (fromType.sizeof() > toType.sizeof()) {
+          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
+          return false;
+        } else if (fromType.sizeof() === toType.sizeof() &&
+                   fromType.isSigned() !== toType.isSigned()) {
+          // console.log('Signed/unsigned mismatch: ' + fromType + ', ' + toType + '.');
+          return false;
+        }
+      } else {
+        // Both floats.
+        if (fromType.sizeof() > toType.sizeof()) {
+          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
+          return false;
+        }
+      }
+    } else {
+      // One int, one float.
+      if (fromType.isInt()) {
+        // From int to float.
+        if ((toType === this.float32 && fromType.sizeof() >= 4) ||
+            (toType === this.float64 && fromType.sizeof() == 8)) {
+          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
+          return false;
+        }
+      } else {
+        // From float to int.
+        // console.log('Implicit cast from float to int: ' + fromType + ' => ' + toType + '.');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+
   //// TypeList ////////////////////////////////////////////////////////////////
   function TypeList() {
     this.typeIdHash = {};
   }
 
-  TypeList.prototype.makeType = function(id, typeConstructor, args) {
-    assert(id !== 0, 'makeType: id !== 0');
-    assert(!(id in this.typeIdHash), 'makeType: id ' + id + ' already exists');
-    var newConstructor = typeConstructor.bind.apply(
-        typeConstructor, [null].concat(args));
-    var newType = new newConstructor();
+  TypeList.prototype.registerType_ = function(id, newType) {
+    assert(id !== 0, 'registerType_: id !== 0');
+    assert(!(id in this.typeIdHash), 'registerType_: id ' + id + ' already exists');
     if (this.getTypeId(newType) !== 0) {
       throw new Error('Type ' + newType + ' already made with id ' + id);
     }
@@ -43,11 +513,34 @@ var nacl = {};
     return newType;
   };
 
-  TypeList.prototype.makeMakeTypeFunction = function(typeConstructor) {
-    return function(id) {
-      return makeType(id, typeConstructor,
-                      Array.prototype.slice.call(arguments, 1));
-    }
+  TypeList.prototype.makeAliasType = function(id, name, type) {
+    return this.registerType_(id, new AliasType(name, type));
+  };
+
+  TypeList.prototype.makePepperType = function(id, name, type) {
+    return this.registerType_(id, new PepperType(name, type));
+  };
+
+  TypeList.prototype.makePointerType = function(id, baseType) {
+    return this.registerType_(id, new PointerType(baseType));
+  };
+
+  TypeList.prototype.makePrimitiveType = function(id, name, size, isSigned, isInt) {
+    return this.registerType_(id, new PrimitiveType(name, size, isSigned, isInt));
+  };
+
+  TypeList.prototype.makeStructType = function(id, size, name) {
+    return this.registerType_(id, new StructType(size, name));
+  };
+
+  TypeList.prototype.makeVoidType = function(id) {
+    return this.registerType_(id, new VoidType(id));
+  };
+
+  TypeList.prototype.makeFunctionType = function(id, retType) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    var constructor = Function.bind.apply(FunctionType, [null].concat(args));
+    return this.registerType_(id, new constructor());
   };
 
   TypeList.prototype.getTypeId = function(type) {
@@ -59,13 +552,93 @@ var nacl = {};
     return 0;
   };
 
-  Module.prototype.log = function() {
+  TypeList.prototype.getPointerType = function(baseType) {
+    var newPointerType = new PointerType(baseType);
+    var id = this.getTypeId(newPointerType);
+    if (id === 0) {
+      // Don't blow up yet... it is not an error to create a type that doesn't
+      // have an id. We can't send it to the NaCl module, but we can use it for
+      // type-checking.
+      this.createStack = new Error().stack;
+      return newPointerType;
+      //throw new Error('Pointer type "' + pointerType + '" not defined.');
+    }
+
+    // Get the correct one.
+    return this.typeIdHash[id];
+  };
+
+  TypeList.prototype.log = function() {
     for (var id in this.typeIdHash) {
       if (this.typeIdHash.hasOwnProperty(id)) {
         console.log('id: ' + id + ' type: ' + this.typeIdHash[id]);
       }
     }
   };
+
+
+  //// Context /////////////////////////////////////////////////////////////////
+  function Context(module) {
+    this.module = module;
+    this.handles = [];
+    // TODO(binji): nice way to clean up all these handles.
+    // It would also be nice to clean up malloc'd memory, release PP_Vars, etc.
+  }
+
+  Context.prototype.registerHandle = function(handle) {
+    assert(handle instanceof Handle, 'registerHandle: handle is not a Handle.');
+    this.handles.push(handle);
+  };
+
+  Context.prototype.callFunction = function(func, args) {
+    return this.module.callFunction(this, func, args);
+  };
+
+
+  //// HandleList //////////////////////////////////////////////////////////////
+  function HandleList() {
+    this.nextId_ = 1;
+    this.handleIdHash_ = {};
+  }
+
+  HandleList.prototype.makeHandle = function(context, type, id) {
+    return new Handle(this, context, type, id);
+  };
+
+  HandleList.prototype.getHandle = function(id) {
+    return this.handleIdHash[id];
+  };
+
+  HandleList.prototype.registerHandle = function(handle) {
+    var id = this.nextId_++;
+    this.handleIdHash_[id] = handle;
+    return id;
+  };
+
+
+  //// Handle //////////////////////////////////////////////////////////////////
+  function Handle(handleList, context, type, id) {
+    this.handleList = handleList;
+    this.type = type;
+    if (id !== undefined) {
+      this.id = id;
+    } else {
+      this.id = handleList.registerHandle(this);
+    }
+
+    this.context = context;
+    context.registerHandle(this);
+  }
+
+  Handle.prototype.toString = function() {
+    return '[Handle ' + this.id + ' ' + this.type.toString() + ']';
+  };
+
+  Handle.prototype.cast = function(newType) {
+    // TODO(binji): check validity of cast
+    return new Handle(this.handleList, this.context, newType, this.id);
+  };
+
 
   //// Type ////////////////////////////////////////////////////////////////////
   function Type() { this.id = 0; }
@@ -85,27 +658,6 @@ var nacl = {};
   Type.prototype.isInt = function() { return false; }
   Type.prototype.isSigned = function() { return false; }
 
-  Type.prototype.getPointerType = function() {
-    if (this.pointerType) {
-      return this.pointerType;
-    }
-
-    var pointerType = new PointerType(this);
-    var id = getTypeId(pointerType);
-    if (id === 0) {
-      // Don't blow up yet... it is not an error to create a type that doesn't
-      // have an id. We can't send it to the NaCl module, but we can use it for
-      // type-checking.
-      this.createStack = new Error().stack;
-      return pointerType;
-      //throw new Error('Pointer type "' + pointerType + '" not defined.');
-    }
-
-    // Get the correct one.
-    this.pointerType = pointerType = typeIdHash[id];
-    return pointerType;
-  };
-
   //// VoidType ////////////////////////////////////////////////////////////////
   function VoidType() { Type.call(this); }
   VoidType.prototype = new Type();
@@ -120,6 +672,7 @@ var nacl = {};
 
     return this.constructor === other.constructor;
   };
+
 
   //// PrimitiveType ///////////////////////////////////////////////////////////
   function PrimitiveType(name, size, isSigned, isInt) {
@@ -149,6 +702,7 @@ var nacl = {};
            this.isSigned_ === other.isSigned_;
   };
 
+
   //// PointerType /////////////////////////////////////////////////////////////
   function PointerType(baseType) {
     Type.call(this);
@@ -175,32 +729,13 @@ var nacl = {};
            this.baseType.equals(other.baseType);
   };
 
+
   //// StructField /////////////////////////////////////////////////////////////
   function StructField(name, type, offset) {
     this.name = name;
     this.type = type;
     this.offset = offset;
   }
-
-  StructField.prototype.set = function(context, struct_p, value) {
-    var dst = self.add(context, struct_p, this.offset);
-    var pointerType = this.type.getPointerType();
-    if (this.type.isPointer()) {
-      return self.set(context, dst.cast(self.void_pp), value.cast(self.void_p));
-    } else {
-      return self.set(context, dst.cast(pointerType), value);
-    }
-  };
-
-  StructField.prototype.get = function(context, struct_p) {
-    var ptr = self.add(context, struct_p, this.offset);
-    var pointerType = this.type.getPointerType();
-    if (this.type.isPointer()) {
-      return self.get(context, ptr.cast(self.void_pp)).cast(pointerType);
-    } else {
-      return self.get(context, ptr.cast(pointerType));
-    }
-  };
 
   StructField.prototype.equals = function(other) {
     if (this === other) {
@@ -212,6 +747,7 @@ var nacl = {};
            this.type === other.type &&
            this.offset === other.offset;
   };
+
 
   //// StructType //////////////////////////////////////////////////////////////
   function StructType(size, name) {
@@ -278,9 +814,6 @@ var nacl = {};
     this.fields[name] = new StructField(name, type, offset);
   };
 
-  StructType.prototype.malloc = function(context) {
-    return self.malloc(context, this.sizeof());
-  };
 
   //// FunctionType ////////////////////////////////////////////////////////////
   function FunctionType(retType) {
@@ -336,6 +869,7 @@ var nacl = {};
     return true;
   };
 
+
   //// PepperType //////////////////////////////////////////////////////////////
   function PepperType(name, jsPrototype) {
     Type.call(this);
@@ -363,6 +897,7 @@ var nacl = {};
            this.jsPrototype === other.jsPrototype;
   };
 
+
   //// AliasType ///////////////////////////////////////////////////////////////
   function AliasType(name, type) {
     Type.call(this);
@@ -385,37 +920,27 @@ var nacl = {};
            this.type.equals(other.type);
   };
 
-  //// Handle //////////////////////////////////////////////////////////////////
-  var nextHandleId = 1;
-  var handleIdHash = {};
 
-  function Handle(context, type, id) {
-    this.type = type;
-    if (id !== undefined) {
-      this.id = id;
-    } else {
-      this.id = nextHandleId++;
-      handleIdHash[this.id] = this;
-    }
-
-    this.context = context;
-    context.registerHandle(this);
+  //// FunctionList ////////////////////////////////////////////////////////////
+  function FunctionList() {
+    this.functionNameHash = {};
   }
 
-  Handle.prototype.toString = function() {
-    return '[Handle ' + this.id + ' ' + this.type.toString() + ']';
+  FunctionList.prototype.makeFunction = function(name, types) {
+    assert(!(name in this.functionNameHash), 'Function with this name already exists.');
+
+    var cfunc = new CFunction(name, types);
+    var func = function(context) {
+      var args = Array.prototype.slice.call(arguments, 1);
+      return context.callFunction(cfunc, args);
+    };
+
+    this.functionNameHash[name] = func;
+    return func;
   };
 
-  Handle.prototype.cast = function(newType) {
-    // TODO(binji): check validity of cast
-    return new Handle(this.context, newType, this.id);
-  };
 
-  function getHandle(id) {
-    return handleIdHash[id];
-  }
-
-  // Functions
+  //// Functions ///////////////////////////////////////////////////////////////
   function CFunction(name, types) {
     this.name = name;
     if (types instanceof Array) {
@@ -430,475 +955,5 @@ var nacl = {};
              'CFunction: expected FunctionType');
     });
   }
-
-  CFunction.prototype.findOverload = function(args) {
-    for (var i = 0; i < this.types.length; ++i) {
-      if (CFunction.overloadMatches(this.types[i], args)) {
-        return this.types[i];
-      }
-    }
-
-    // Display helpful warning.
-    var msg;
-    msg = 'No overload found for call "' + this.name + '(';
-    msg += Array.prototype.join.call(args, ', ');
-    msg += ')".\n';
-    msg += "Possibilities:\n";
-    for (var i = 0; i < this.types.length; ++i) {
-      msg += this.types[i].toString() + "\n";
-    }
-    console.log(msg);
-
-    return null;
-  };
-
-  CFunction.getIntType = function(value) {
-    if (value >= -128 && value <= 127) {
-      return self.int8;
-    } else if (value >= -32768 && value <= 32767) {
-      return self.int16;
-    } else if (value >= -2147483648 && value <= 2147483647) {
-      return self.int32;
-    // TODO(binji): JavaScript numbers only have 53-bits of precision, so
-    // this is not correct. We need a 64-bit int type.
-    } else if (value >= -9223372036854775808 &&
-               value <=  9223372036854775807) {
-      return self.int64;
-    } else {
-      assert(value > 0, 'getIntType: Expected uint64. ' + value + ' <= 0.');
-      return self.uint64;
-    }
-  };
-
-  CFunction.canCoercePointer = function(fromType, toType) {
-    assert(fromType.isPointer(),
-           'canCoercePointer: expected pointer, not ' + fromType);
-    assert(toType.isPointer(),
-           'canCoercePointer: expected pointer, not ' + toType);
-    // For now, we can only coerce pointers to void*. At some point, C++
-    // inheritance could be supported as well.
-    if (toType !== self.void_p) {
-      //console.log('Can only coerce to void*, not ' + toType + '.');
-      return false;
-    }
-    return true;
-  };
-
-  CFunction.canCoercePrimitive = function(fromType, toType) {
-    assert(fromType.isPrimitive(),
-           'canCoercePrimitive: expected primitive, not ' + fromType);
-    assert(toType.isPrimitive(),
-           'canCoercePrimitive: expected primitive, not ' + toType);
-
-    if (fromType.isInt() === toType.isInt()) {
-      if (fromType.isInt()) {
-        // Both ints.
-        if (fromType.sizeof() > toType.sizeof()) {
-          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
-          return false;
-        } else if (fromType.sizeof() === toType.sizeof() &&
-                   fromType.isSigned() !== toType.isSigned()) {
-          // console.log('Signed/unsigned mismatch: ' + fromType + ', ' + toType + '.');
-          return false;
-        }
-      } else {
-        // Both floats.
-        if (fromType.sizeof() > toType.sizeof()) {
-          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
-          return false;
-        }
-      }
-    } else {
-      // One int, one float.
-      if (fromType.isInt()) {
-        // From int to float.
-        if ((toType === self.float32 && fromType.sizeof() >= 4) ||
-            (toType === self.float64 && fromType.sizeof() == 8)) {
-          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
-          return false;
-        }
-      } else {
-        // From float to int.
-        // console.log('Implicit cast from float to int: ' + fromType + ' => ' + toType + '.');
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  CFunction.overloadMatches = function(funcType, args) {
-    if (funcType.argTypes.length !== args.length) {
-      return false;
-    }
-
-    for (var i = 0; i < funcType.argTypes.length; ++i) {
-      var arg = args[i];
-      var funcArgType = funcType.argTypes[i];
-      var argType;
-      if (arg instanceof Handle) {
-        argType = arg.type;
-      } else if (typeof(arg) === 'number') {
-        if (Math.floor(arg) === arg) {
-          // Int.
-          argType = CFunction.getIntType(arg);
-        } else {
-          // Float.
-          argType = self.float64;
-        }
-      } else if (arg instanceof ArrayBuffer) {
-        argType = self.arrayBuffer;
-      } else {
-        // TODO(binji): handle other pepper types.
-        // What kind of type is this?
-        console.log('Unexpected type of arg "' + arg + '": ' + typeof(arg));
-        return false;
-      }
-
-      if (argType !== funcArgType) {
-        if (argType.isPointer() && funcArgType.isPointer() &&
-            CFunction.canCoercePointer(argType, funcArgType)) {
-          // OK
-        } else if (argType.isPrimitive() && funcArgType.isPrimitive() &&
-                   CFunction.canCoercePrimitive(argType, funcArgType)) {
-          // OK
-        } else {
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-
-
-  function Context(module) {
-    this.module = module;
-    this.handles = [];
-    // TODO(binji): nice way to clean up all these handles.
-    // It would also be nice to clean up malloc'd memory, release PP_Vars, etc.
-  }
-
-  Context.prototype.registerHandle = function(handle) {
-    assert(handle instanceof Handle, 'registerHandle: handle is not a Handle.');
-    this.handles.push(handle);
-  };
-
-
-  // Module ////////////////////////////////////////////////////////////////////
-  function Module(name, nmf, mimeType) {
-    this.name = name;
-    this.nmf = nmf;
-    this.mimeType = mimeType;
-
-    this.element = null;
-    this.loaded = false;
-    this.nextCallbackId = 1;
-    this.idCallbackMap = [];
-    this.queuedMessages = [];
-
-    this.commands = [];
-    this.functions = [];
-  }
-
-  Module.prototype.create = function() {
-    var that = this;
-    document.addEventListener('DOMContentLoaded', function() {
-      that.element = document.createElement('embed');
-      that.element.setAttribute('width', '0');
-      that.element.setAttribute('height', '0');
-      that.element.setAttribute('src', that.nmf);
-      that.element.setAttribute('type', that.mimetype);
-
-      that.element.addEventListener('load', that.onLoad_.bind(that), false);
-      that.element.addEventListener('message', that.onMessage_.bind(that), false);
-      that.element.addEventListener('error', that.onError_.bind(that), false);
-      that.element.addEventListener('crash', that.onCrash_.bind(that), false);
-      document.body.appendChild(that.element);
-    });
-  };
-
-  Module.prototype.postMessage = function(msg, callback) {
-    var id = this.nextCallbackId++;
-    this.idCallbackMap[id] = callback;
-
-    msg.id = id;
-    if (this.loaded) {
-      this.element.postMessage(msg);
-    } else {
-      this.queuedMessages.push(msg);
-    }
-    return id;
-  };
-
-  Module.prototype.makeContext = function() {
-    return new Context(this);
-  };
-
-  Module.prototype.onLoad_ = function(event) {
-    console.log('module loaded.');
-    this.loaded = true;
-    this.postQueuedMessages_();
-  };
-
-  Module.prototype.onMessage_ = function(event) {
-    var msg = event.data;
-    if (typeof(msg) !== 'object') {
-      var msg = this.name + ': unexpected value from module: ' +
-          JSON.stringify(msg);
-      throw new Error(msg);
-    }
-
-    if (msg.msg) {
-      console.log(msg.msg);
-      return;
-    }
-
-    var id = msg.id;
-    if (id !== 0) {
-      var callback = this.idCallbackMap[id];
-      callback(msg);
-      delete this.idCallbackMap[id];
-    }
-  };
-
-  Module.prototype.onError_ = function(event) {
-    var msg = this.name + ': error loading NaCl module: ' + this.element.lastError;
-    throw new Error(msg);
-  };
-
-  Module.prototype.onCrash_ = function(event) {
-    var msg = this.name + ': NaCl module crashed: ' + this.element.exitStatus;
-    throw new Error(msg);
-  };
-
-  Module.prototype.postQueuedMessages_ = function() {
-    var that = this;
-    this.queuedMessages.forEach(function(msg) {
-      that.element.postMessage(msg);
-    });
-
-    this.queuedMessages = null;
-  };
-
-  Module.prototype.makeFunction = function(name, types) {
-    assert(!(name in this.functions), 'Function with this name already exists.');
-
-    var that = this;
-    var cfunc = new CFunction(name, types);
-    var args = Array.prototype.slice.call(arguments, 1);
-    var func = function(context) {
-      return that.callFunction(context, cfunc, args);
-    };
-
-    this.functions[name] = func;
-    return func;
-  };
-
-  Module.prototype.callFunction = function(context, func, args) {
-    assert(func instanceof CFunction, 'callFunction: Expected func to be CFunction');
-
-    var funcType = func.findOverload(args);
-    assert(funcType !== null);
-
-    var handle = new Handle(context, funcType.retType);
-    var message = {
-      cmd: func.name,
-      type: funcType.id,
-      args: [],
-      argIsHandle: [],
-      ret: handle.id
-    };
-    for (var i = 0; i < funcType.argTypes.length; ++i) {
-      var arg = args[i];
-      var value;
-      if (arg instanceof Handle) {
-        value = arg.id;
-      } else {
-        value = arg;
-      }
-      message.args.push(value);
-      message.argIsHandle.push(arg instanceof Handle);
-    }
-
-    this.commands.push(message);
-
-    return handle;
-  };
-
-
-  Module.prototype.commit = function(context) {
-    assert(arguments.length > 1, 'commit: Expected callback.');
-
-    var callback = arguments[arguments.length - 1];
-    assert(callback instanceof Function, 'commit: callback is not Function.');
-
-    // Slice off context (first element), and callback (last element).
-    var args = Array.prototype.slice.call(arguments, 1, -1);
-
-    var serializeHandle = function(handle) {
-      assert(handle instanceof Handle, 'commit: handle is not a Handle.');
-      return handle.id;
-    };
-
-    var handles = args.map(serializeHandle);
-    var msg = {
-      msgs: this.commands,  // TODO(binji): rename "msgs"
-      handles: handles,
-    };
-
-    // Remove committed commands.
-    this.commands = [];
-
-    this.postMessage(msg, function(result) {
-      function idToHandle(value, ix) {
-        if (typeof(value) === 'number' && !args[ix].type.isPrimitive()) {
-          return getHandle(value);
-        }
-        return value;
-      };
-
-      // convert back from Ids to Handles; keep the primitive values the same.
-      var handles = Array.prototype.map.call(result.values, idToHandle);
-      callback.apply(null, handles);
-    });
-  };
-
-  Module.prototype.commitPromise = function(context) {
-    var that = this;
-    var args = Array.prototype.slice.call(arguments);
-    return new promise.PromisePlus(function(resolve, reject, resolveMany) {
-      args.push(function() {
-        resolveMany.apply(null, arguments);
-      });
-      that.commit.apply(null, args);
-    });
-  };
-
-
-  // Built-Ins /////////////////////////////////////////////////////////////////
-
-  var makeAliasType = makeMakeTypeFunction(AliasType);
-  var makePepperType = makeMakeTypeFunction(PepperType);
-  var makePointerType = makeMakeTypeFunction(PointerType);
-  var makePrimitiveType = makeMakeTypeFunction(PrimitiveType);
-  var makeStructType = makeMakeTypeFunction(StructType);
-  var makeVoidType = makeMakeTypeFunction(VoidType);
-  var makeFunctionType = makeMakeTypeFunction(FunctionType);
-
-  // exported functions
-  self.logTypes = logTypes;
-  self.makeAliasType = makeAliasType;
-  self.makeFunction = makeFunction;
-  self.makeFunctionType = makeFunctionType;
-  self.makePepperType = makePepperType;
-  self.makePointerType = makePointerType;
-  self.makePrimitiveType = makePrimitiveType;
-  self.makeStructType = makeStructType;
-  self.makeVoidType = makeVoidType;
-  self.commit = commit;
-  self.commitPromise = commitPromise;
-
-  // builtin types
-  self.void_ = self.makeVoidType(1);
-  self.int8 = self.makePrimitiveType(2, 'int8', 1, true, true);
-  self.uint8 = self.makePrimitiveType(3, 'uint8', 1, false, true);
-  self.int16 = self.makePrimitiveType(4, 'int16', 2, true, true);
-  self.uint16 = self.makePrimitiveType(5, 'uint16', 2, false, true);
-  self.int32 = self.makePrimitiveType(6, 'int32', 4, true, true);
-  self.uint32 = self.makePrimitiveType(7, 'uint32', 4, false, true);
-  self.int64 = self.makePrimitiveType(8, 'int64', 8, true, true);
-  self.uint64 = self.makePrimitiveType(9, 'uint64', 8, false, true);
-  self.float32 = self.makePrimitiveType(10, 'float32', 4, false, false);
-  self.float64 = self.makePrimitiveType(11, 'float64', 8, false, false);
-
-  self.void_p = self.makePointerType(12, self.void_);
-  self.int8_p = self.makePointerType(13, self.int8);
-  self.uint8_p = self.makePointerType(14, self.uint8);
-  self.int16_p = self.makePointerType(15, self.int16);
-  self.uint16_p = self.makePointerType(16, self.uint16);
-  self.int32_p = self.makePointerType(17, self.int32);
-  self.uint32_p = self.makePointerType(18, self.uint32);
-  self.int64_p = self.makePointerType(19, self.int64);
-  self.uint64_p = self.makePointerType(20, self.uint64);
-  self.float32_p = self.makePointerType(21, self.float32);
-  self.float64_p = self.makePointerType(22, self.float64);
-  self.void_pp = self.makePointerType(23, self.void_p);
-
-  self.var_ = self.makePepperType(24, 'Var', undefined);
-  self.arrayBuffer = self.makePepperType(25, 'ArrayBuffer', ArrayBuffer);
-  self.array = self.makePepperType(26, 'Array', Array);
-  self.dictionary = self.makePepperType(27, 'Dictionary', Object);
-
-  var getTypes = [
-    self.makeFunctionType(28, self.void_p, self.void_pp),
-    self.makeFunctionType(29, self.int8, self.int8_p),
-    self.makeFunctionType(30, self.uint8, self.uint8_p),
-    self.makeFunctionType(31, self.int16, self.int16_p),
-    self.makeFunctionType(32, self.uint16, self.uint16_p),
-    self.makeFunctionType(33, self.int32, self.int32_p),
-    self.makeFunctionType(34, self.uint32, self.uint32_p),
-    self.makeFunctionType(35, self.int64, self.int64_p),
-    self.makeFunctionType(36, self.uint64, self.uint64_p),
-    self.makeFunctionType(37, self.float32, self.float32_p),
-    self.makeFunctionType(38, self.float64, self.float64_p),
-  ];
-
-  var setTypes = [
-    self.makeFunctionType(39, self.void_, self.void_pp, self.void_p),
-    self.makeFunctionType(40, self.void_, self.int8_p, self.int8),
-    self.makeFunctionType(41, self.void_, self.uint8_p, self.uint8),
-    self.makeFunctionType(42, self.void_, self.int16_p, self.int16),
-    self.makeFunctionType(43, self.void_, self.uint16_p, self.uint16),
-    self.makeFunctionType(44, self.void_, self.int32_p, self.int32),
-    self.makeFunctionType(45, self.void_, self.uint32_p, self.uint32),
-    self.makeFunctionType(46, self.void_, self.int64_p, self.int64),
-    self.makeFunctionType(47, self.void_, self.uint64_p, self.uint64),
-    self.makeFunctionType(48, self.void_, self.float32_p, self.float32),
-    self.makeFunctionType(49, self.void_, self.float64_p, self.float64),
-  ];
-
-  var freeType = self.makeFunctionType(50, self.void_, self.void_p);
-  var mallocType = self.makeFunctionType(51, self.void_p, self.uint32);
-  var memsetType = self.makeFunctionType(52, self.void_, self.void_p, self.int32, self.uint32);
-  var memcpyType = self.makeFunctionType(53, self.void_, self.void_p, self.void_p, self.uint32);
-
-  var addRefReleaseType = self.makeFunctionType(54, self.void_, self.var_);
-  var arrayBufferCreateType = self.makeFunctionType(55, self.arrayBuffer, self.uint32);
-  var arrayBufferMapType = self.makeFunctionType(56, self.void_p, self.arrayBuffer);
-  var arrayBufferUnmapType = self.makeFunctionType(57, self.void_, self.arrayBuffer);
-
-  var binopVoidpIntType = self.makeFunctionType(58, self.void_p, self.void_p, self.int32);
-  var binopInt32Type = self.makeFunctionType(59, self.int32, self.int32, self.int32);
-  var binopUint32Type = self.makeFunctionType(60, self.uint32, self.uint32, self.uint32);
-  var binopInt64Type = self.makeFunctionType(61, self.int64, self.int64, self.int64);
-  var binopUint64Type = self.makeFunctionType(62, self.uint64, self.uint64, self.uint64);
-  var binopFloatType = self.makeFunctionType(63, self.float32, self.float32, self.float32);
-  var binopDoubleType = self.makeFunctionType(64, self.float64, self.float64, self.float64);
-
-  var addSubTypes = [
-    binopVoidpIntType, binopInt32Type, binopUint32Type, binopInt64Type,
-    binopUint64Type, binopFloatType, binopDoubleType,
-  ];
-
-  // builtin functions
-  self.get = self.makeFunction('get', getTypes);
-  self.set = self.makeFunction('set', setTypes);
-  self.add = self.makeFunction('add', addSubTypes);
-  self.sub = self.makeFunction('sub', addSubTypes);
-
-  // stdlib
-  self.free = self.makeFunction('free', freeType);
-  self.malloc = self.makeFunction('malloc', mallocType);
-  self.memcpy = self.makeFunction('memcpy', memcpyType);
-  self.memset = self.makeFunction('memset', memsetType);
-
-  // PPB_Var
-  self.addRef = makeFunction('addRef', addRefReleaseType);
-  self.release = makeFunction('release', addRefReleaseType);
-
-  // PPB_VarArrayBuffer
-  self.arrayBufferCreate = makeFunction('arrayBufferCreate', arrayBufferCreateType);
-  self.arrayBufferMap = makeFunction('arrayBufferMap', arrayBufferMapType);
-  self.arrayBufferUnmap = makeFunction('arrayBufferUnmap', arrayBufferUnmapType);
 
 }).call(nacl);
