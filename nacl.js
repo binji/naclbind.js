@@ -402,16 +402,8 @@ define(['promise'], function(promise) {
         return false;
       }
 
-      if (argType !== funcArgType) {
-        if (argType.isPointer() && funcArgType.isPointer() &&
-            this.canCoercePointer_(argType, funcArgType)) {
-          // OK
-        } else if (argType.isPrimitive() && funcArgType.isPrimitive() &&
-                   this.canCoercePrimitive_(argType, funcArgType)) {
-          // OK
-        } else {
-          return false;
-        }
+      if (!this.canCoerceArgument_(argType, funcArgType)) {
+        return false;
       }
     }
     return true;
@@ -433,6 +425,24 @@ define(['promise'], function(promise) {
       assert(value > 0, 'expected uint64. ' + value + ' <= 0.');
       return this.types.uint64;
     }
+  };
+
+  Module.prototype.canCoerceArgument_ = function(fromType, toType) {
+    if (fromType === toType) {
+      return true;
+    }
+
+    if (fromType.isPointer() && toType.isPointer() &&
+        this.canCoercePointer_(fromType, toType)) {
+      return true;
+    }
+
+    if (fromType.isPrimitive() && toType.isPrimitive() &&
+        this.canCoercePrimitive_(fromType, toType)) {
+      return true;
+    }
+
+    return false;
   };
 
   Module.prototype.canCoercePointer_ = function(fromType, toType) {
