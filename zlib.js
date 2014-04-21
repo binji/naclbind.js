@@ -137,6 +137,7 @@ define(['promise', 'nacl'], function(promise, nacl) {
     }).finally(function() {
       f.free(c, dest);
       f.free(c, destLenPtr);
+      m.destroyHandles(c);
       return m.commitPromise();
     });
   }
@@ -213,6 +214,7 @@ define(['promise', 'nacl'], function(promise, nacl) {
     }).finally(function() {
       f.free(c, stream);
       f.free(c, output);
+      m.destroyHandles(c);
       return m.commitPromise();
     });
   }

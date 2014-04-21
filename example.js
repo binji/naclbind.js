@@ -28,6 +28,7 @@ require(['zlib'], function(zlib) {
   }
 
   var ab = makeTestArrayBuffer(16384, 1337, 0xc0dedead);
+
   zlib.compressHard(ab, 9, 16384).then(function(outputAb) {
     var before = ab.byteLength;
     var after = outputAb.byteLength;

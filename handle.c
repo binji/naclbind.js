@@ -591,10 +591,12 @@ bool GetHandleVar(Handle handle, struct PP_Var* out_value) {
 void DestroyHandle(Handle handle) {
   HandleMapPair* pair = NULL;
 
+
   // Binary search.
   size_t lo_ix = 0;  // Inclusive
   size_t hi_ix = s_handle_map_size;  // Exclusive
   size_t mid_ix;
+
   while (lo_ix < hi_ix) {
     mid_ix = (lo_ix + hi_ix) / 2;
     Handle mid_handle = s_handle_map[mid_ix].handle;
@@ -604,10 +606,12 @@ void DestroyHandle(Handle handle) {
       hi_ix = mid_ix;
     } else {
       pair = &s_handle_map[mid_ix];
+      break;
     }
   }
 
   if (pair == NULL) {
+    VERROR("Destroying handle %d, but it doesn't exist.", handle);
     return;
   }
 
@@ -627,6 +631,15 @@ void DestroyHandle(Handle handle) {
             sizeof(HandleMapPair) * (s_handle_map_size - (remove_ix + 1)));
   }
   s_handle_map_size--;
+}
+
+void DestroyHandles(Handle* handles, int32_t handle_count) {
+  // TODO(binji): optimize
+  int32_t i;
+  for (i = 0; i < handle_count; ++i) {
+    Handle handle = handles[i];
+    DestroyHandle(handle);
+  }
 }
 
 bool HandleToVar(Handle handle, struct PP_Var* var) {

@@ -62,9 +62,18 @@ static PP_Bool Instance_HandleDocumentLoad(PP_Instance instance,
 
 static void Messaging_HandleMessage(PP_Instance instance, struct PP_Var var) {
   Message* message = CreateMessage(var);
+  if (!message) {
+    ERROR("Unable to create message.");
+    return;
+  }
+
   int32_t command_count = GetMessageCommandCount(message);
   for (int32_t i = 0; i < command_count; ++i) {
     Command* command = GetMessageCommand(message, i);
+    if (!command) {
+      VERROR("Unable to get command at index %d", i);
+      continue;
+    }
     HandleCommand(command);
     DestroyCommand(command);
   }

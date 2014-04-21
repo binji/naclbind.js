@@ -132,13 +132,19 @@ define(['promise'], function(promise) {
     var funcType = this.findOverload_(func.name, args, func.overloads);
     assert(funcType !== null);
 
-    var handle = this.handles_.makeHandle(context, funcType.retType);
+    var retHandle = null;
+    var retHandleId = 0;
+    if (funcType.retType !== this.types.void) {
+      retHandle = this.handles_.makeHandle(context, funcType.retType);
+      retHandleId = retHandle.id;
+    }
+
     var message = {
       cmd: func.name,
       type: funcType.id,
       args: [],
       argIsHandle: [],
-      ret: handle.id
+      ret: retHandleId
     };
     for (var i = 0; i < funcType.argTypes.length; ++i) {
       var arg = args[i];
@@ -154,7 +160,7 @@ define(['promise'], function(promise) {
 
     this.commands_.push(message);
 
-    return handle;
+    return retHandle;
   };
 
 
@@ -498,6 +504,27 @@ define(['promise'], function(promise) {
     return true;
   };
 
+  // TODO(binji): better name?
+  Module.prototype.destroyHandles = function(context) {
+    // TODO(binji): share code with callFunction?
+    var message = {
+      cmd: '*destroyHandles',
+      type: 0,  // None.
+      args: [],
+      argIsHandle: [],
+      ret: 0,  // Invalid.
+    };
+    for (var i = 0; i < context.handles.length; ++i) {
+      message.args.push(context.handles[i].id);
+      message.argIsHandle.push(true);
+    }
+
+    this.commands_.push(message);
+
+    // Remove them from the module's handle list too.
+    this.handles_.destroyHandles(context.handles);
+  };
+
 
   //// TypeBuilder /////////////////////////////////////////////////////////////
   function TypeBuilder() {
@@ -623,6 +650,15 @@ define(['promise'], function(promise) {
     return id;
   };
 
+  HandleList.prototype.destroyHandles = function(handles) {
+    var that = this;
+    console.log('destroyHandles...');
+    handles.forEach(function(handle) {
+      console.log('  handle.id = ' + handle.id);
+      delete that.handleIdHash_[handle.id];
+    });
+  };
+
 
   //// Handle //////////////////////////////////////////////////////////////////
   function Handle(handleList, context, type, id) {
@@ -632,10 +668,10 @@ define(['promise'], function(promise) {
       this.id = id;
     } else {
       this.id = handleList.registerHandle(this);
+      context.registerHandle(this);
     }
 
     this.context = context;
-    context.registerHandle(this);
   }
 
   Handle.prototype.toString = function() {

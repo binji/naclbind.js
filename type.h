@@ -16,6 +16,7 @@
 #define TYPE_H_
 
 typedef enum {
+  TYPE_NONE = 0,
   TYPE_VOID = 1,
   TYPE_INT8 = 2,
   TYPE_UINT8 = 3,

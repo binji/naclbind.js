@@ -71,6 +71,7 @@ bool GetHandleDouble(Handle, double*);
 bool GetHandleVoidp(Handle, void**);
 bool GetHandleVar(Handle, struct PP_Var*);
 void DestroyHandle(Handle);
+void DestroyHandles(Handle*, int32_t handle_count);
 
 bool HandleToVar(Handle, struct PP_Var*);
 

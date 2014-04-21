@@ -25,6 +25,8 @@
 #include "type.h"
 #include "var.h"
 
+static void Handle_destroyHandles(Command* command);
+
 static void Handle_add(Command* command);
 static void Handle_addRef(Command* command);
 static void Handle_arrayBufferCreate(Command* command);
@@ -50,6 +52,7 @@ typedef struct {
 } NameFunc;
 
 static NameFunc g_FuncMap[] = {
+  {"*destroyHandles", Handle_destroyHandles},
   {"add", Handle_add},
   {"addRef", Handle_addRef},
   {"arrayBufferCreate", Handle_arrayBufferCreate},
@@ -205,6 +208,37 @@ static bool GetArgVar(Command* command, int32_t index,
   return TRUE;
 }
 
+void Handle_destroyHandles(Command* command) {
+  int32_t index;
+  int32_t handle_count = GetCommandArgCount(command);
+  // TODO(binji): use malloc if handle_count is large?
+  Handle* handles = alloca(handle_count * sizeof(Handle));
+  for (index = 0; index < handle_count; ++index) {
+    struct PP_Var arg_var;
+    bool arg_handle;
+    if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
+      CMD_ERROR("Can't get arg %d", index);
+      return;
+    }
+
+    if (!arg_handle) {
+      CMD_ERROR("Expected arg %d to be a Handle", index);
+      return;
+    }
+
+    int32_t arg_handle_int;
+    if (!GetVarInt32(&arg_var, &arg_handle_int)) {
+      CMD_ERROR("Expected handle arg %d to be int32_t", index);
+      return;
+    }
+
+    Handle handle = arg_handle_int;
+    handles[index] = handle;
+  }
+
+  DestroyHandles(handles, handle_count);
+  printf("destroyHandles()\n");
+}
 
 void Handle_add(Command* command) {
   TYPE_CHECK(TYPE_FUNC_BINOP_VOID_P_INT32);

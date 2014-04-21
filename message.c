@@ -79,7 +79,9 @@ Command* GetMessageCommand(Message* message, int32_t index) {
   }
 
   command = (Command*)malloc(sizeof(Command));
+  memset(command, 0, sizeof(Command));
   command->var = var;
+
   AddRefVar(&command->var);
 
   cmd_var = GetDictVar(&var, "cmd");
