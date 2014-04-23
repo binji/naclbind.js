@@ -181,6 +181,8 @@ bool RegisterHandleVar(Handle handle, struct PP_Var value) {
       return RegisterHandle(handle, TYPE_ARRAY, hval);
     case PP_VARTYPE_DICTIONARY:
       return RegisterHandle(handle, TYPE_DICTIONARY, hval);
+    case PP_VARTYPE_STRING:
+      return RegisterHandle(handle, TYPE_STRING, hval);
     default:
       return FALSE;
   }
@@ -578,7 +580,8 @@ bool GetHandleVar(Handle handle, struct PP_Var* out_value) {
 
   if (hobj.type != TYPE_ARRAY_BUFFER &&
       hobj.type != TYPE_ARRAY &&
-      hobj.type != TYPE_DICTIONARY) {
+      hobj.type != TYPE_DICTIONARY &&
+      hobj.type != TYPE_STRING) {
     VERROR("handle %d is of type %s. Expected %s.", handle,
           TypeToString(hobj.type), TypeToString(hobj.type));
     return FALSE;
@@ -619,6 +622,7 @@ void DestroyHandle(Handle handle) {
     case TYPE_ARRAY_BUFFER:
     case TYPE_ARRAY:
     case TYPE_DICTIONARY:
+    case TYPE_STRING:
       ReleaseVar(&pair->object.value.var);
       break;
     default:
@@ -684,6 +688,7 @@ bool HandleToVar(Handle handle, struct PP_Var* var) {
     case TYPE_ARRAY_BUFFER:
     case TYPE_ARRAY:
     case TYPE_DICTIONARY:
+    case TYPE_STRING:
       *var = hobj.value.var;
       AddRefVar(var);
       break;

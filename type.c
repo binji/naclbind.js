@@ -47,61 +47,80 @@ const char* kTypeString[] = {
   /* 25 */ "PP_VarArrayBuffer",
   /* 26 */ "PP_VarArray",
   /* 27 */ "PP_VarDictionary",
+  /* 27 */ "PP_VarString",
 
   // get
-  /* 28 */ "void* (*)(void**)",
-  /* 29 */ "int8_t (*)(int8_t*)",
-  /* 30 */ "uint8_t (*)(uint8_t*)",
-  /* 31 */ "int16_t (*)(int16_t*)",
-  /* 32 */ "uint16_t (*)(uint16_t*)",
-  /* 33 */ "int32_t (*)(int32_t*)",
-  /* 34 */ "uint32_t (*)(uint32_t*)",
-  /* 35 */ "int64_t (*)(int64_t*)",
-  /* 36 */ "uint64_t (*)(uint64_t*)",
-  /* 37 */ "float (*)(float*)",
-  /* 38 */ "double (*)(double*)",
+  /* 29 */ "void* (*)(void**)",
+  /* 30 */ "int8_t (*)(int8_t*)",
+  /* 31 */ "uint8_t (*)(uint8_t*)",
+  /* 32 */ "int16_t (*)(int16_t*)",
+  /* 33 */ "uint16_t (*)(uint16_t*)",
+  /* 34 */ "int32_t (*)(int32_t*)",
+  /* 35 */ "uint32_t (*)(uint32_t*)",
+  /* 36 */ "int64_t (*)(int64_t*)",
+  /* 37 */ "uint64_t (*)(uint64_t*)",
+  /* 38 */ "float (*)(float*)",
+  /* 39 */ "double (*)(double*)",
 
   // set
-  /* 39 */ "void (*)(void**, void*)",
-  /* 40 */ "void (*)(int8_t*, int8_t)",
-  /* 41 */ "void (*)(uint8_t*, uint8_t)",
-  /* 42 */ "void (*)(int16_t*, int16_t)",
-  /* 43 */ "void (*)(uint16_t*, uint16_t)",
-  /* 44 */ "void (*)(int32_t*, int32_t)",
-  /* 45 */ "void (*)(uint32_t*, uint32_t)",
-  /* 46 */ "void (*)(int64_t*, int64_t)",
-  /* 47 */ "void (*)(uint64_t*, uint64_t)",
-  /* 48 */ "void (*)(float*, float)",
-  /* 49 */ "void (*)(double*, double)",
+  /* 40 */ "void (*)(void**, void*)",
+  /* 41 */ "void (*)(int8_t*, int8_t)",
+  /* 42 */ "void (*)(uint8_t*, uint8_t)",
+  /* 43 */ "void (*)(int16_t*, int16_t)",
+  /* 44 */ "void (*)(uint16_t*, uint16_t)",
+  /* 45 */ "void (*)(int32_t*, int32_t)",
+  /* 46 */ "void (*)(uint32_t*, uint32_t)",
+  /* 47 */ "void (*)(int64_t*, int64_t)",
+  /* 48 */ "void (*)(uint64_t*, uint64_t)",
+  /* 49 */ "void (*)(float*, float)",
+  /* 50 */ "void (*)(double*, double)",
 
-  /* 50 */ "void (*)(void*)",  // free
-  /* 51 */ "void* (*)(uint32_t)",  // malloc
-  /* 52 */ "void (*)(void*, int32_t, uint32_t)",  // memset
-  /* 53 */ "void (*)(void*, void*, uint32_t)",  // memcpy
+  /* 51 */ "void (*)(void*)",  // free
+  /* 52 */ "void* (*)(uint32_t)",  // malloc
+  /* 53 */ "void (*)(void*, int32_t, uint32_t)",  // memset
+  /* 54 */ "void (*)(void*, void*, uint32_t)",  // memcpy
+  /* 55 */ "size_t (*)(const char*)",  // strlen
 
-  /* 54 */ "void (*)(PP_Var)",  // PPB_Var.AddRef / PPB_Var.Release
-  /* 55 */ "PP_VarArrayBuffer (*)(uint32_t)",  // PPB_VarArrayBuffer.Create
-  /* 56 */ "void* (*)(PP_VarArrayBuffer)",  // PPB_VarArrayBuffer.Map
-  /* 57 */ "void (*)(PP_VarArrayBuffer)",  // PPB_VarArrayBuffer.Unmap
+  /* 56 */ "void (*)(PP_Var)",  // PPB_Var.AddRef / PPB_Var.Release
+  /* 57 */ "PP_Var (*)(const char*, uint32_t)",  // PPB_Var.VarFromUtf8
+  /* 58 */ "const char* (*)(PP_Var, uint32_t*)",  // PPB_Var.VarToUtf8
+
+  /* 59 */ "PP_VarArray (*)()",  // PPB_VarArray.Create
+  /* 60 */ "PP_Var (*)(PP_VarArray, uint32_t)",  // PPB_VarArray.Get
+  /* 61 */ "PP_Bool (*)(PP_VarArray, uint32_t, PP_Var)",  // PPB_VarArray.Set
+  /* 62 */ "uint32_t (*)(PP_VarArray)",  // PPB_VarArray.GetLength
+  /* 63 */ "PP_Bool (*)(PP_VarArray, uint32_t)",  // PPB_VarArray.SetLength
+
+  /* 64 */ "PP_VarArrayBuffer (*)(uint32_t)",  // PPB_VarArrayBuffer.Create
+  /* 65 */ "PP_Bool (*)(PP_VarArrayBuffer, uint32_t*)",  // PPB_VarArrayBuffer.ByteLength
+  /* 66 */ "void* (*)(PP_VarArrayBuffer)",  // PPB_VarArrayBuffer.Map
+  /* 67 */ "void (*)(PP_VarArrayBuffer)",  // PPB_VarArrayBuffer.Unmap
+
+  /* 68 */ "PP_VarDictionary (*)()",  // PPB_VarDictionary.Create
+  /* 69 */ "PP_Var (*)(PP_VarDictionary, PP_Var)",  // PPB_VarDictionary.Get
+  /* 70 */ "PP_Bool (*)(PP_VarDictionary, PP_Var, PP_Var)",  // PPB_VarDictionary.Set
+  /* 71 */ "void (*)(PP_VarDictionary, PP_Var)",  // PPB_VarDictionary.Delete
+  /* 72 */ "PP_Bool (*)(PP_VarDictionary, PP_Var)",  // PPB_VarDictionary.HasKey
 
   // binary operators: add, sub, etc.
-  /* 58 */ "void* (*)(void*, int32_t)",
+  /* 73 */ "void* (*)(void*, int32_t)",
 
-  /* 59 */ "int32_t (*)(int32_t, int32_t)",
-  /* 60 */ "uint32_t (*)(uint32_t, uint32_t)",
-  /* 61 */ "int64_t (*)(int64_t, int64_t)",
-  /* 62 */ "uint64_t (*)(uint64_t, uint64_t)",
-  /* 63 */ "float (*)(float, float)",
-  /* 64 */ "double (*)(double, double)",
+  /* 74 */ "int32_t (*)(int32_t, int32_t)",
+  /* 75 */ "uint32_t (*)(uint32_t, uint32_t)",
+  /* 76 */ "int64_t (*)(int64_t, int64_t)",
+  /* 77 */ "uint64_t (*)(uint64_t, uint64_t)",
+  /* 78 */ "float (*)(float, float)",
+  /* 79 */ "double (*)(double, double)",
 
   /* EXAMPLE ONLY!
    * TODO(binji): Move this to another file?
    */
-  /* 65 */ "z_stream",
-  /* 66 */ "z_stream*",
-  /* 67 */ "int (*)(z_stream*, int)",
-  /* 68 */ "int (*)(Bytef*, uLongf*, Bytef*, uLong)",
-  /* 69 */ "uLong (*)(uLong)",
+  /* 80 */ "z_stream",
+  /* 81 */ "z_stream*",
+  /* 82 */ "int (*)(z_stream*, int)",
+  /* 83 */ "int (*)(Bytef*, uLongf*, Bytef*, uLong)",
+  /* 84 */ "uLong (*)(uLong)",
+  /* 85 */ "const char* (*)()",
 };
 
 const char* TypeToString(Type id) {

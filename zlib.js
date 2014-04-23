@@ -90,7 +90,7 @@ define(['promise', 'nacl'], function(promise, nacl) {
   var t = m.types;
   var f = m.functions;
 
-  m.makeStructType(65, 'z_stream', 56, {
+  m.makeStructType(80, 'z_stream', 56, {
     next_in: {type: t.uint8$, offset: 0},
     avail_in: {type: t.uint32, offset: 4},
     total_in: {type: t.uint32, offset: 8},
@@ -99,15 +99,32 @@ define(['promise', 'nacl'], function(promise, nacl) {
     total_out: {type: t.uint32, offset: 20}
   });
 
-  m.makePointerType(66, t.z_stream);
-  var deflateType = m.makeFunctionType(67, t.int32, t.z_stream$, t.int32);
-  var compressType = m.makeFunctionType(68, t.int32, t.uint8$, t.uint32$, t.uint8$, t.uint32);
-  var compressBoundType = m.makeFunctionType(69, t.uint32, t.uint32);
+  m.makePointerType(81, t.z_stream);
+  var deflateType = m.makeFunctionType(82, t.int32, t.z_stream$, t.int32);
+  var compressType = m.makeFunctionType(83, t.int32, t.uint8$, t.uint32$, t.uint8$, t.uint32);
+  var compressBoundType = m.makeFunctionType(84, t.uint32, t.uint32);
+  var zlibVersionType = m.makeFunctionType(85, t.uint8$);
 
   m.makeFunction('deflateInit', deflateType);
   m.makeFunction('deflate', deflateType);
   m.makeFunction('compress', compressType);
   m.makeFunction('compressBound', compressBoundType);
+  m.makeFunction('zlibVersion', zlibVersionType);
+
+  function zlibVersion() {
+    var c = m.makeContext();
+    return promise.resolve().then(function() {
+      var version = f.zlibVersion(c);
+      var versionLen = f.strlen(c, version);
+      var result = f.varFromUtf8(c, version, versionLen);
+      return m.commitPromise(result);
+    }).then(function(result) {
+      return promise.resolve(result);
+    }).finally(function() {
+      m.destroyHandles(c);
+      return m.commitPromise();
+    });
+  }
 
   function compressEasy(inputAb) {
     var c = m.makeContext();
@@ -241,6 +258,7 @@ define(['promise', 'nacl'], function(promise, nacl) {
 
     compressEasy: compressEasy,
     compressHard: compressHard,
+    zlibVersion: zlibVersion,
   };
 
 });

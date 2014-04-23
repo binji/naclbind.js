@@ -49,4 +49,10 @@ require(['zlib'], function(zlib) {
     console.log('compressEasy done...\n' + err.stack);
   });
 
+  zlib.zlibVersion().then(function(version) {
+    console.log('version: ' + version);
+  }).catch(function(err) {
+    console.log('zlibVersion error...\n' + err.stack);
+  });
+
 });
