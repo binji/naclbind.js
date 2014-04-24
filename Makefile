@@ -6,8 +6,8 @@
 # See README.Makefiles for more details.
 
 VALID_TOOLCHAINS := pnacl
-LIBDIR := $(PWD)
-EXTRA_LIB_PATHS = $(PWD)
+LIBDIR := $(CURDIR)
+EXTRA_LIB_PATHS = $(CURDIR)
 
 ifeq (,$(NACL_SDK_ROOT))
   $(error NACL_SDK_ROOT is not set.)
@@ -28,33 +28,42 @@ ifeq (pnacl,$(TOOLCHAIN))
 	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=pnacl
 endif
 
-## Rules to build jsnacl library and pexes that use it #########################
+## Rules to build 2nacl library and pexes that use it #########################
 TARGETS = zlib zip
-jsnacl_SOURCES =\
-  commands.c \
-  handle.c \
-  interfaces.c \
-  message.c \
-  queue.c \
-  type.c \
-  var.c \
+2nacl_SOURCES =\
+  2nacl/commands.c \
+  2nacl/handle.c \
+  2nacl/interfaces.c \
+  2nacl/message.c \
+  2nacl/queue.c \
+  2nacl/type.c \
+  2nacl/var.c \
 
 # TODO(binji): it sucks to have to duplicate app.c for zlib/zip, but I'm not
 # sure of a better way using the SDK build system. I'd like to use the same .c
 # file, but there will be multiple rules to generate app.o in that case.
-zlib_SOURCES = zlib_app.c zlib_commands.c zlib_type.c
-zip_SOURCES = zip_app.c ioapi.c zip.c zip_commands.c zip_type.c
+zlib_SOURCES =\
+  zlib/zlib_app.c \
+  zlib/zlib_commands.c \
+  zlib/zlib_type.c \
 
-CFLAGS += -Wall -DUSE_FILE32API -DNOCRYPT -Wno-unused-value
-LIBS = jsnacl nacl_io z ppapi_cpp ppapi
+zip_SOURCES =\
+  zip/ioapi.c \
+  zip/zip_app.c \
+  zip/zip.c \
+  zip/zip_commands.c \
+  zip/zip_type.c \
 
-# Build libjsnacl.a
-$(foreach src,$(jsnacl_SOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGS))))
-$(eval $(call LIB_RULE,jsnacl,$(jsnacl_SOURCES)))
+CFLAGS += -Wall -DUSE_FILE32API -DNOCRYPT -Wno-unused-value -I$(CURDIR)/2nacl
+LIBS = 2nacl nacl_io z ppapi_cpp ppapi
+
+# Build lib2nacl.a
+$(foreach src,$(2nacl_SOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGS))))
+$(eval $(call LIB_RULE,2nacl,$(2nacl_SOURCES)))
 
 # Build targets that use it.
 define TARGET_RULE
-pnacl/$(CONFIG)/$(1)_unstripped.pexe: | pnacl/Release/libjsnacl.a
+pnacl/$(CONFIG)/$(1)_unstripped.bc: | $(LIBDIR)/pnacl/$(CONFIG)/lib2nacl.a
 
 $$(foreach src,$$($(1)_SOURCES),$$(eval $$(call COMPILE_RULE,$$(src),$(CFLAGS))))
 $$(eval $$(call LINK_RULE,$(1)_unstripped,$$($(1)_SOURCES),$(LIBS)))
