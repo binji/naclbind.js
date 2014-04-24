@@ -33,7 +33,7 @@ Message* CreateMessage(struct PP_Var var) {
     goto fail;
   }
 
-  message->commands = GetDictVar(&var, "msgs");
+  message->commands = GetDictVar(&var, "commands");
   if (message->commands.type != PP_VARTYPE_ARRAY) {
     goto fail;
   }

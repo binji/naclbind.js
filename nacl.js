@@ -179,7 +179,7 @@ define(['promise'], function(promise) {
 
     var handles = args.map(serializeHandle);
     var msg = {
-      msgs: this.commands_,  // TODO(binji): rename "msgs"
+      commands: this.commands_,
       handles: handles,
     };
 
