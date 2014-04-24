@@ -34,6 +34,7 @@
 #include "message.h"
 #include "queue.h"
 #include "var.h"
+#include "zip_commands.h"
 
 static PPB_GetInterface get_browser_interface = NULL;
 static pthread_t g_handle_message_thread;
@@ -80,7 +81,13 @@ static void HandleMessage(struct PP_Var var) {
       VERROR("Unable to get command at index %d", i);
       continue;
     }
-    HandleCommand(command);
+
+    if (!HandleZipCommand(command)) {
+      if (!HandleBuiltinCommand(command)) {
+        VERROR("Unknown command: %s", command->command);
+      }
+    }
+
     DestroyCommand(command);
   }
 

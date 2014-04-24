@@ -15,7 +15,7 @@
 #ifndef TYPE_H_
 #define TYPE_H_
 
-typedef enum {
+enum {
   TYPE_NONE = 0,
   TYPE_VOID = 1,
   TYPE_INT8 = 2,
@@ -107,15 +107,11 @@ typedef enum {
   TYPE_FUNC_BINOP_FLOAT = 78,
   TYPE_FUNC_BINOP_DOUBLE = 79,
 
-  TYPE_Z_STREAM = 80,
-  TYPE_Z_STREAM_P = 81,
-  TYPE_FUNC_DEFLATE = 82,
-  TYPE_FUNC_COMPRESS = 83,
-  TYPE_FUNC_COMPRESS_BOUND = 84,
-  TYPE_FUNC_ZLIB_VERSION = 85,
-  NUM_TYPES
-} Type;
+  NUM_BUILTIN_TYPES
+};
+typedef int32_t Type;
 
-const char* TypeToString(Type);
+const char* BuiltinTypeToString(Type);
+const char* TypeToString(Type);  // Defined in module.
 
 #endif  // TYPE_H_

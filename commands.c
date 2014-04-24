@@ -37,10 +37,6 @@ static void Handle_arrayGet(Command* command);
 static void Handle_arrayGetLength(Command* command);
 static void Handle_arraySet(Command* command);
 static void Handle_arraySetLength(Command* command);
-static void Handle_compressBound(Command* command);
-static void Handle_compress(Command* command);
-static void Handle_deflate(Command* command);
-static void Handle_deflateInit(Command* command);
 static void Handle_dictCreate(Command* command);
 static void Handle_dictDelete(Command* command);
 static void Handle_dictGet(Command* command);
@@ -58,7 +54,6 @@ static void Handle_varAddRef(Command* command);
 static void Handle_varFromUtf8(Command* command);
 static void Handle_varRelease(Command* command);
 static void Handle_varToUtf8(Command* command);
-static void Handle_zlibVersion(Command* command);
 
 typedef void (*HandleFunc)(Command*);
 typedef struct {
@@ -79,10 +74,6 @@ static NameFunc g_FuncMap[] = {
   {"arrayGetLength", Handle_arrayGetLength},
   {"arraySet", Handle_arraySet},
   {"arraySetLength", Handle_arraySetLength},
-  {"compressBound", Handle_compressBound},
-  {"compress", Handle_compress},
-  {"deflate", Handle_deflate},
-  {"deflateInit", Handle_deflateInit},
   {"dictCreate", Handle_dictCreate},
   {"dictDelete", Handle_dictDelete},
   {"dictGet", Handle_dictGet},
@@ -100,38 +91,21 @@ static NameFunc g_FuncMap[] = {
   {"varFromUtf8", Handle_varFromUtf8},
   {"varRelease", Handle_varRelease},
   {"varToUtf8", Handle_varToUtf8},
-  {"zlibVersion", Handle_zlibVersion},
   {NULL, NULL},
 };
 
-void HandleCommand(Command* command) {
+bool HandleBuiltinCommand(Command* command) {
   NameFunc* name_func = &g_FuncMap[0];
   for (; name_func->name; name_func++) {
     if (strcmp(name_func->name, command->command) == 0) {
       name_func->func(command);
-      return;
+      return TRUE;
     }
   }
-
-  VERROR("Unknown command: %s", command->command);
+  return FALSE;
 }
 
-#define TYPE_CHECK(expected) \
-  VERROR_IF(command->type == expected, \
-            "Type mismatch. Expected %s. Got %s.", \
-            TypeToString(expected), \
-            TypeToString(command->type))
-
-#define TYPE_FAIL \
-  VERROR("Type didn't match any types. Got %s.", TypeToString(command->type))
-
-#define CMD_VERROR(fmt, ...) \
-  VERROR("%s: " fmt, command->command, __VA_ARGS__)
-
-#define CMD_ERROR(msg) \
-  VERROR("%s: " msg, command->command)
-
-static bool GetArgVoidp(Command* command, int32_t index, void** out_value) {
+bool GetArgVoidp(Command* command, int32_t index, void** out_value) {
   struct PP_Var arg_var;
   bool arg_handle;
   if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
@@ -157,7 +131,7 @@ static bool GetArgVoidp(Command* command, int32_t index, void** out_value) {
   return TRUE;
 }
 
-static bool GetArgInt32(Command* command, int32_t index, int32_t* out_value) {
+bool GetArgInt32(Command* command, int32_t index, int32_t* out_value) {
   struct PP_Var arg_var;
   bool arg_handle;
   if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
@@ -186,7 +160,7 @@ static bool GetArgInt32(Command* command, int32_t index, int32_t* out_value) {
   return TRUE;
 }
 
-static bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
+bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
   struct PP_Var arg_var;
   bool arg_handle;
   if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
@@ -215,8 +189,7 @@ static bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
   return TRUE;
 }
 
-static bool GetArgVar(Command* command, int32_t index,
-                      struct PP_Var* out_value) {
+bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value) {
   struct PP_Var arg_var;
   bool arg_handle;
   if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
@@ -396,59 +369,6 @@ void Handle_arraySetLength(Command* command) {
   RegisterHandleUint32(command->ret_handle, result);
   printf("arraySetLength(%lld, %u) => %d (%d)\n", arg0.value.as_id, arg1,
          result, command->ret_handle);
-}
-
-void Handle_compress(Command* command) {
-  TYPE_CHECK(TYPE_FUNC_COMPRESS);
-  void* arg0_voidp;
-  if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-  Bytef* arg0 = (Bytef*)arg0_voidp;
-  void* arg1_voidp;
-  if (!GetArgVoidp(command, 1, &arg1_voidp)) return;
-  uLongf* arg1 = (uLongf*)arg1_voidp;
-  void* arg2_voidp;
-  if (!GetArgVoidp(command, 2, &arg2_voidp)) return;
-  Bytef* arg2 = (Bytef*)arg2_voidp;
-  int arg3_int;
-  if (!GetArgInt32(command, 3, &arg3_int)) return;
-  uLong arg3 = (uLong)arg3_int;
-  int result = compress(arg0, arg1, arg2, arg3);
-  RegisterHandleInt32(command->ret_handle, result);
-  printf("compress(%p, %p, %p, %lu) => %d\n", arg0, arg1, arg2, arg3, result);
-}
-
-void Handle_compressBound(Command* command) {
-  TYPE_CHECK(TYPE_FUNC_COMPRESS_BOUND);
-  int arg0_int;
-  if (!GetArgInt32(command, 0, &arg0_int)) return;
-  uLong arg0 = (uLong)arg0_int;
-  uLong result = compressBound(arg0);
-  RegisterHandleInt32(command->ret_handle, result);
-  printf("compressBound(%lu) => %lu\n", arg0, result);
-}
-
-void Handle_deflate(Command* command) {
-  TYPE_CHECK(TYPE_FUNC_DEFLATE);
-  void* arg0_voidp;
-  if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-  z_stream* arg0 = (z_stream*)arg0_voidp;
-  int arg1;
-  if (!GetArgInt32(command, 1, &arg1)) return;
-  int result = deflate(arg0, arg1);
-  RegisterHandleInt32(command->ret_handle, result);
-  printf("deflate(%p, %d) => %d\n", arg0, arg1, result);
-}
-
-void Handle_deflateInit(Command* command) {
-  TYPE_CHECK(TYPE_FUNC_DEFLATE);
-  void* arg0_voidp;
-  if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-  z_stream* arg0 = (z_stream*)arg0_voidp;
-  int arg1;
-  if (!GetArgInt32(command, 1, &arg1)) return;
-  int result = deflateInit(arg0, arg1);
-  RegisterHandleInt32(command->ret_handle, result);
-  printf("deflateInit(%p, %d) => %d\n", arg0, arg1, result);
 }
 
 void Handle_dictCreate(Command* command) {
@@ -695,13 +615,5 @@ void Handle_varToUtf8(Command* command) {
   void* result = (void*)g_ppb_var->VarToUtf8(arg0, arg1);
   RegisterHandleVoidp(command->ret_handle, result);
   printf("varToUtf8(%lld, %p) => %p (%d)\n", arg0.value.as_id, arg1, result,
-         command->ret_handle);
-}
-
-void Handle_zlibVersion(Command* command) {
-  TYPE_CHECK(TYPE_FUNC_ZLIB_VERSION);
-  void* result = (void*)zlibVersion();
-  RegisterHandleVoidp(command->ret_handle, result);
-  printf("zlibVersion() => \"%s\" (%d)\n", (const char*)result,
          command->ret_handle);
 }

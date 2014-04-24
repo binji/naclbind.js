@@ -15,8 +15,31 @@
 #ifndef COMMANDS_H_
 #define COMMANDS_H_
 
+#include "bool.h"
 #include "message.h"
 
-void HandleCommand(Command* command);
+
+bool HandleBuiltinCommand(Command* command);
+bool GetArgVoidp(Command* command, int32_t index, void** out_value);
+bool GetArgInt32(Command* command, int32_t index, int32_t* out_value);
+bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value);
+bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value);
+
+
+#define TYPE_CHECK(expected) \
+  VERROR_IF(command->type == expected, \
+            "Type mismatch. Expected %s. Got %s.", \
+            TypeToString(expected), \
+            TypeToString(command->type))
+
+#define TYPE_FAIL \
+  VERROR("Type didn't match any types. Got %s.", TypeToString(command->type))
+
+#define CMD_VERROR(fmt, ...) \
+  VERROR("%s: " fmt, command->command, __VA_ARGS__)
+
+#define CMD_ERROR(msg) \
+  VERROR("%s: " msg, command->command)
+
 
 #endif  // COMMANDS_H_

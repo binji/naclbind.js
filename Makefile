@@ -42,8 +42,8 @@ jsnacl_SOURCES =\
 # TODO(binji): it sucks to have to duplicate app.c for zlib/zip, but I'm not
 # sure of a better way using the SDK build system. I'd like to use the same .c
 # file, but there will be multiple rules to generate app.o in that case.
-zlib_SOURCES = zlib_app.c
-zip_SOURCES = zip_app.c ioapi.c zip.c
+zlib_SOURCES = zlib_app.c zlib_commands.c zlib_type.c
+zip_SOURCES = zip_app.c ioapi.c zip.c zip_commands.c zip_type.c
 
 CFLAGS += -Wall -DUSE_FILE32API -DNOCRYPT -Wno-unused-value
 LIBS = jsnacl nacl_io z ppapi_cpp ppapi

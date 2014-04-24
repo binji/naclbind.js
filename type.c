@@ -16,7 +16,7 @@
 
 #include "type.h"
 
-const char* kTypeString[] = {
+static const char* kTypeString[] = {
   /*  0 */ "(null)",
   /*  1 */ "void",
   /*  2 */ "int8_t",
@@ -111,20 +111,10 @@ const char* kTypeString[] = {
   /* 77 */ "uint64_t (*)(uint64_t, uint64_t)",
   /* 78 */ "float (*)(float, float)",
   /* 79 */ "double (*)(double, double)",
-
-  /* EXAMPLE ONLY!
-   * TODO(binji): Move this to another file?
-   */
-  /* 80 */ "z_stream",
-  /* 81 */ "z_stream*",
-  /* 82 */ "int (*)(z_stream*, int)",
-  /* 83 */ "int (*)(Bytef*, uLongf*, Bytef*, uLong)",
-  /* 84 */ "uLong (*)(uLong)",
-  /* 85 */ "const char* (*)()",
 };
 
-const char* TypeToString(Type id) {
-  if (id <= 0 || id >= NUM_TYPES) {
+const char* BuiltinTypeToString(Type id) {
+  if (id <= 0 || id >= NUM_BUILTIN_TYPES) {
     return "<unknown>";
   }
   return kTypeString[id];
