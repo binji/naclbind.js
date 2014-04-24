@@ -14,17 +14,20 @@ include $(NACL_SDK_ROOT)/tools/common.mk
 
 PORTS = zlib
 TARGET = zlib
-CFLAGS += -Wall # -std=c99
+CFLAGS += -Wall -DUSE_FILE32API -DNOCRYPT -Wno-unused-value
 SOURCES = \
   app.c \
   commands.c \
   handle.c \
   interfaces.c \
+  ioapi.c \
   message.c \
+  queue.c \
   type.c \
   var.c \
+  zip.c \
 
-LIBS = z ppapi_cpp ppapi
+LIBS = nacl_io z ppapi_cpp ppapi
 
 .PHONY: ports
 ports:

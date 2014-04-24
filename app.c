@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <pthread.h>
 #include <stdint.h>
 #include <string.h>
-
-#include <zlib.h>
+#include <sys/mount.h>
 
 #include <ppapi/c/pp_errors.h>
 #include <ppapi/c/pp_module.h>
@@ -26,41 +26,47 @@
 #include <ppapi/c/ppp_instance.h>
 #include <ppapi/c/ppp_messaging.h>
 
-#ifdef WIN32
-#undef PostMessage
-// Allow 'this' in initializer list
-#pragma warning(disable : 4355)
-#endif
+#include "nacl_io/nacl_io.h"
 
 #include "commands.h"
 #include "error.h"
 #include "interfaces.h"
 #include "message.h"
+#include "queue.h"
 #include "var.h"
 
 static PPB_GetInterface get_browser_interface = NULL;
+static pthread_t g_handle_message_thread;
+
+
+static void* HandleMessageThread(void*);
+static void HandleMessage(struct PP_Var);
+
 
 static PP_Bool Instance_DidCreate(PP_Instance instance,
                                   uint32_t argc,
                                   const char* argn[],
                                   const char* argv[]) {
   InitInterfaces(instance, get_browser_interface);
+  nacl_io_init_ppapi(instance, get_browser_interface);
+  umount("/");
+  mount("", "/", "memfs", 0, "");
+  InitializeMessageQueue();
+  pthread_create(&g_handle_message_thread, NULL, &HandleMessageThread, NULL);
+
   return PP_TRUE;
 }
 
-static void Instance_DidDestroy(PP_Instance instance) {}
-
-static void Instance_DidChangeView(PP_Instance instance,
-                                   PP_Resource view_resource) {}
-
-static void Instance_DidChangeFocus(PP_Instance instance, PP_Bool has_focus) {}
-
-static PP_Bool Instance_HandleDocumentLoad(PP_Instance instance,
-                                           PP_Resource url_loader) {
-  return PP_FALSE;
+static void* HandleMessageThread(void* user_data) {
+  while (1) {
+    struct PP_Var message = DequeueMessage();
+    HandleMessage(message);
+    ReleaseVar(&message);
+  }
+  return NULL;
 }
 
-static void Messaging_HandleMessage(PP_Instance instance, struct PP_Var var) {
+static void HandleMessage(struct PP_Var var) {
   Message* message = CreateMessage(var);
   if (!message) {
     ERROR("Unable to create message.");
@@ -105,6 +111,28 @@ static void Messaging_HandleMessage(PP_Instance instance, struct PP_Var var) {
   ReleaseVar(&response);
 
   DestroyMessage(message);
+}
+
+
+
+static void Instance_DidDestroy(PP_Instance instance) {}
+
+static void Instance_DidChangeView(PP_Instance instance,
+                                   PP_Resource view_resource) {}
+
+static void Instance_DidChangeFocus(PP_Instance instance, PP_Bool has_focus) {}
+
+static PP_Bool Instance_HandleDocumentLoad(PP_Instance instance,
+                                           PP_Resource url_loader) {
+  return PP_FALSE;
+}
+
+static void Messaging_HandleMessage(PP_Instance instance,
+                                    struct PP_Var message) {
+  AddRefVar(&message);
+  if (!EnqueueMessage(message)) {
+    ERROR("Warning: dropped message because the queue was full.");
+  }
 }
 
 
