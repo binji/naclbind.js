@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/mount.h>
+#include <sys/stat.h>
 
 #include <ppapi/c/pp_errors.h>
 #include <ppapi/c/pp_module.h>

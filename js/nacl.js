@@ -280,8 +280,8 @@ define(['promise'], function(promise) {
     var strlenType = this.makeFunctionType(55, t.uint32, t.uint8$);
 
     var varAddRefReleaseType = this.makeFunctionType(56, t.void, t.Var);
-    var varFromUtf8Type = this.makeFunctionType(57, t.Var, t.uint8$, t.uint32);
-    var varToUtf8Type = this.makeFunctionType(58, t.uint8$, t.Var, t.uint32$);
+    var varFromUtf8Type = this.makeFunctionType(57, t.String, t.uint8$, t.uint32);
+    var varToUtf8Type = this.makeFunctionType(58, t.uint8$, t.String, t.uint32$);
 
     var arrayCreateType = this.makeFunctionType(59, t.Array);
     var arrayGetType = this.makeFunctionType(60, t.Var, t.Array, t.uint32);
@@ -435,8 +435,16 @@ define(['promise'], function(promise) {
           // Float.
           argType = this.types.float64;
         }
+      } else if (arg === null) {
+        argType = this.types.void$;
+      } else if (typeof(arg) === 'string') {
+        argType = this.types.String;
       } else if (arg instanceof ArrayBuffer) {
         argType = this.types.ArrayBuffer;
+      } else if (arg instanceof Array) {
+        argType = this.types.Array;
+      } else if (arg instanceof Object) {
+        argType = this.types.Dictionary;
       } else {
         // TODO(binji): handle other pepper types.
         // What kind of type is this?
@@ -444,7 +452,7 @@ define(['promise'], function(promise) {
         return false;
       }
 
-      if (!this.canCoerceArgument_(argType, funcArgType)) {
+      if (!this.canCoerceArgument_(arg, argType, funcArgType)) {
         return false;
       }
     }
@@ -469,27 +477,31 @@ define(['promise'], function(promise) {
     }
   };
 
-  Module.prototype.canCoerceArgument_ = function(fromType, toType) {
+  Module.prototype.canCoerceArgument_ = function(fromValue, fromType, toType) {
     if (fromType === toType) {
       return true;
     }
 
     if (fromType.isPointer() && toType.isPointer() &&
-        this.canCoercePointer_(fromType, toType)) {
+        this.canCoercePointer_(fromValue, fromType, toType)) {
       return true;
     }
 
     if (fromType.isPrimitive() && toType.isPrimitive() &&
-        this.canCoercePrimitive_(fromType, toType)) {
+        this.canCoercePrimitive_(fromValue, fromType, toType)) {
       return true;
     }
 
     return false;
   };
 
-  Module.prototype.canCoercePointer_ = function(fromType, toType) {
+  Module.prototype.canCoercePointer_ = function(fromValue, fromType, toType) {
     assert(fromType.isPointer(), 'expected pointer, not ' + fromType);
     assert(toType.isPointer(), 'expected pointer, not ' + toType);
+
+    if (fromValue === null) {
+      return true;
+    }
     // For now, we can only coerce pointers to void*. At some point, C++
     // inheritance could be supported as well.
     if (toType !== this.types.void$) {
@@ -499,7 +511,7 @@ define(['promise'], function(promise) {
     return true;
   };
 
-  Module.prototype.canCoercePrimitive_ = function(fromType, toType) {
+  Module.prototype.canCoercePrimitive_ = function(fromValue, fromType, toType) {
     assert(fromType.isPrimitive(), 'expected primitive, not ' + fromType);
     assert(toType.isPrimitive(), 'expected primitive, not ' + toType);
 
@@ -509,8 +521,20 @@ define(['promise'], function(promise) {
         if (fromType.sizeof() > toType.sizeof()) {
           // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
           return false;
-        } else if (fromType.sizeof() === toType.sizeof() &&
-                   fromType.isSigned() !== toType.isSigned()) {
+        } else if (fromType.sizeof() === toType.sizeof()) {
+          if (fromType.isSigned() === toType.isSigned()) {
+            return true;
+          }
+
+          if (fromType.isSigned()) {
+            // Cast from signed to unsigned.
+            return fromValue >= 0;
+          } else {
+            // Cast from unsigned to signed.
+            // TODO(binji): fix this check.
+            return true;
+          }
+
           // console.log('Signed/unsigned mismatch: ' + fromType + ', ' + toType + '.');
           return false;
         }

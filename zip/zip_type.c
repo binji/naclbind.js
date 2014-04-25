@@ -17,6 +17,25 @@
 #include "zip_type.h"
 
 static const char* kTypeString[] = {
+  /* 80 */ "tm_zip_s",
+  /* 81 */ "zip_fileinfo",
+  /* 82 */ "zip_fileinfo*",
+  /* 83 */ "zipFile",
+  /* 84 */ "zipFile*",
+  /* 85 */ "zipFile (*)(const char*, int)",
+  /* 86 */ "int (*)(zipFile, const char*, const zip_fileinfo*, const void*, uInt, const void*, uInt, const char*, int, int)",
+  /* 87 */ "int (*)(zipFile, const void*, unsigned)",
+  /* 88 */ "int (*)(zipFile)",
+  /* 89 */ "int (*)(zipFile, const char*)",
+
+  /* 90 */ "FILE",
+  /* 91 */ "FILE*",
+  /* 92 */ "struct stat",
+  /* 93 */ "struct stat*",
+  /* 94 */ "FILE* (*)(const char*, const char*)",
+  /* 95 */ "int (*)(void*, size_t, size_t, FILE*)",
+  /* 96 */ "int (*)(FILE*)",
+  /* 97 */ "int (*)(const char*, struct stat*)",
 };
 
 const char* TypeToString(Type id) {

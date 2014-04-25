@@ -112,6 +112,10 @@ bool GetArgVoidp(Command* command, int32_t index, void** out_value) {
     CMD_VERROR("Can't get arg %d", index);
     return FALSE;
   }
+  if (arg_var.type == PP_VARTYPE_NULL) {
+    *out_value = NULL;
+    return TRUE;
+  }
   if (!arg_handle) {
     CMD_VERROR("Expected arg %d to be handle", index);
     return FALSE;
@@ -249,10 +253,8 @@ void Handle_destroyHandles(Command* command) {
 
 void Handle_add(Command* command) {
   TYPE_CHECK(TYPE_FUNC_BINOP_VOID_P_INT32);
-  void* arg0;
-  int32_t arg1;
-  if (!GetArgVoidp(command, 0, &arg0)) return;
-  if (!GetArgInt32(command, 1, &arg1)) return;
+  ARG_VOIDP(0);
+  ARG_INT(1);
   void* result = ((uint8_t*)arg0) + arg1;
   RegisterHandleVoidp(command->ret_handle, result);
 
@@ -261,11 +263,8 @@ void Handle_add(Command* command) {
 
 void Handle_arrayBufferByteLength(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_BUFFER_BYTE_LENGTH);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  void* arg1_voidp;
-  if (!GetArgVoidp(command, 1, &arg1_voidp)) return;
-  uint32_t* arg1 = (uint32_t*)arg1_voidp;
+  ARG_VAR(0);
+  ARG_VOIDP_CAST(1, uint32_t*);
   int32_t result = (int32_t)g_ppb_var_array_buffer->ByteLength(arg0, arg1);
   RegisterHandleInt32(command->ret_handle, result);
   printf("arrayBufferByteLength(%lld, %p) => %d (%d)\n", arg0.value.as_id, arg1,
@@ -275,8 +274,7 @@ void Handle_arrayBufferByteLength(Command* command) {
 
 void Handle_arrayBufferCreate(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_BUFFER_CREATE);
-  uint32_t arg0;
-  if (!GetArgUint32(command, 0, &arg0)) return;
+  ARG_UINT(0);
   struct PP_Var result = g_ppb_var_array_buffer->Create(arg0);
   if (result.type != PP_VARTYPE_ARRAY_BUFFER) {
     CMD_VERROR("Couldn't create ArrayBuffer of size %u", arg0);
@@ -291,8 +289,7 @@ void Handle_arrayBufferCreate(Command* command) {
 
 void Handle_arrayBufferMap(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_BUFFER_MAP);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
+  ARG_VAR(0);
   void* result = g_ppb_var_array_buffer->Map(arg0);
   RegisterHandleVoidp(command->ret_handle, result);
   printf("arrayBufferMap(%lld) => %p (%d)\n", arg0.value.as_id,
@@ -301,8 +298,7 @@ void Handle_arrayBufferMap(Command* command) {
 
 void Handle_arrayBufferUnmap(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_BUFFER_UNMAP);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
+  ARG_VAR(0);
   g_ppb_var_array_buffer->Unmap(arg0);
   printf("arrayBufferUnmap(%lld)\n", arg0.value.as_id);
 }
@@ -323,10 +319,8 @@ void Handle_arrayCreate(Command* command) {
 
 void Handle_arrayGet(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_GET);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  uint32_t arg1;
-  if (!GetArgUint32(command, 1, &arg1)) return;
+  ARG_VAR(0);
+  ARG_UINT(1);
   struct PP_Var result = g_ppb_var_array->Get(arg0, arg1);
   RegisterHandleVar(command->ret_handle, result);
   // TODO(binji): describe var
@@ -336,8 +330,7 @@ void Handle_arrayGet(Command* command) {
 
 void Handle_arrayGetLength(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_GET_LENGTH);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
+  ARG_VAR(0);
   uint32_t result = g_ppb_var_array->GetLength(arg0);
   RegisterHandleUint32(command->ret_handle, result);
   printf("arrayGetLength(%lld) => %u (%d)\n", arg0.value.as_id, result,
@@ -346,12 +339,9 @@ void Handle_arrayGetLength(Command* command) {
 
 void Handle_arraySet(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_SET);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  uint32_t arg1;
-  if (!GetArgUint32(command, 1, &arg1)) return;
-  struct PP_Var arg2;
-  if (!GetArgVar(command, 2, &arg2)) return;
+  ARG_VAR(0);
+  ARG_UINT(1);
+  ARG_VAR(2);
   int32_t result = (int32_t)g_ppb_var_array->Set(arg0, arg1, arg2);
   RegisterHandleInt32(command->ret_handle, result);
   // TODO(binji): describe var
@@ -361,10 +351,8 @@ void Handle_arraySet(Command* command) {
 
 void Handle_arraySetLength(Command* command) {
   TYPE_CHECK(TYPE_FUNC_ARRAY_SET_LENGTH);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  uint32_t arg1;
-  if (!GetArgUint32(command, 1, &arg1)) return;
+  ARG_VAR(0);
+  ARG_UINT(1);
   int32_t result = (int32_t)g_ppb_var_array->SetLength(arg0, arg1);
   RegisterHandleUint32(command->ret_handle, result);
   printf("arraySetLength(%lld, %u) => %d (%d)\n", arg0.value.as_id, arg1,
@@ -374,9 +362,6 @@ void Handle_arraySetLength(Command* command) {
 void Handle_dictCreate(Command* command) {
   TYPE_CHECK(TYPE_FUNC_DICT_CREATE);
   struct PP_Var result = g_ppb_var_dictionary->Create();
-  RegisterHandleVar(command->ret_handle, result);
-  printf("dictCreate() => %lld (%d)\n", result.value.as_id,
-         command->ret_handle);
   if (result.type != PP_VARTYPE_DICTIONARY) {
     CMD_ERROR("Couldn't create Dictionary.");
     return;
@@ -390,20 +375,16 @@ void Handle_dictCreate(Command* command) {
 
 void Handle_dictDelete(Command* command) {
   TYPE_CHECK(TYPE_FUNC_DICT_DELETE);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  struct PP_Var arg1;
-  if (!GetArgVar(command, 1, &arg1)) return;
+  ARG_VAR(0);
+  ARG_VAR(1);
   g_ppb_var_dictionary->Delete(arg0, arg1);
   printf("dictDelete(%lld, %lld)\n", arg0.value.as_id, arg1.value.as_id);
 }
 
 void Handle_dictGet(Command* command) {
   TYPE_CHECK(TYPE_FUNC_DICT_GET);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  struct PP_Var arg1;
-  if (!GetArgVar(command, 1, &arg1)) return;
+  ARG_VAR(0);
+  ARG_VAR(1);
   struct PP_Var result = g_ppb_var_dictionary->Get(arg0, arg1);
   RegisterHandleVar(command->ret_handle, result);
   printf("dictGet(%lld, %lld) => <Var> (%d)\n", arg0.value.as_id,
@@ -412,10 +393,8 @@ void Handle_dictGet(Command* command) {
 
 void Handle_dictHasKey(Command* command) {
   TYPE_CHECK(TYPE_FUNC_DICT_HAS_KEY);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  struct PP_Var arg1;
-  if (!GetArgVar(command, 1, &arg1)) return;
+  ARG_VAR(0);
+  ARG_VAR(1);
   int32_t result = (int32_t)g_ppb_var_dictionary->HasKey(arg0, arg1);
   RegisterHandleInt32(command->ret_handle, result);
   printf("dictHasKey(%lld, %lld) => %d (%d)\n", arg0.value.as_id,
@@ -424,12 +403,9 @@ void Handle_dictHasKey(Command* command) {
 
 void Handle_dictSet(Command* command) {
   TYPE_CHECK(TYPE_FUNC_DICT_SET);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  struct PP_Var arg1;
-  if (!GetArgVar(command, 1, &arg1)) return;
-  struct PP_Var arg2;
-  if (!GetArgVar(command, 2, &arg2)) return;
+  ARG_VAR(0);
+  ARG_VAR(1);
+  ARG_VAR(2);
   int32_t result = (int32_t)g_ppb_var_dictionary->Set(arg0, arg1, arg2);
   RegisterHandleInt32(command->ret_handle, result);
   printf("dictSet(%lld, %lld, <Var>) => %d (%d)\n", arg0.value.as_id,
@@ -438,8 +414,7 @@ void Handle_dictSet(Command* command) {
 
 void Handle_free(Command* command) {
   TYPE_CHECK(TYPE_FUNC_FREE);
-  void* arg0;
-  if (!GetArgVoidp(command, 0, &arg0)) return;
+  ARG_VOIDP(0);
   free(arg0);
   printf("free(%p)\n", arg0);
 }
@@ -447,9 +422,7 @@ void Handle_free(Command* command) {
 void Handle_get(Command* command) {
   switch (command->type) {
     case TYPE_FUNC_GET_VOID_P: {
-      void* arg0_voidp;
-      if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-      void** arg0 = (void**)arg0_voidp;
+      ARG_VOIDP_CAST(0, void**);
       void* result = *arg0;
       HandleValue hval;
       hval.voidp = result;
@@ -458,9 +431,7 @@ void Handle_get(Command* command) {
       break;
     }
     case TYPE_FUNC_GET_UINT32: {
-      void* arg0_voidp;
-      if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-      uint32_t* arg0 = (uint32_t*)arg0_voidp;
+      ARG_VOIDP_CAST(0, uint32_t*);
       uint32_t result = *arg0;
       HandleValue hval;
       hval.uint32 = result;
@@ -476,8 +447,7 @@ void Handle_get(Command* command) {
 
 void Handle_malloc(Command* command) {
   TYPE_CHECK(TYPE_FUNC_MALLOC);
-  uint32_t arg0;
-  if (!GetArgUint32(command, 0, &arg0)) return;
+  ARG_UINT(0);
   void* result = malloc(arg0);
   RegisterHandleVoidp(command->ret_handle, result);
   printf("malloc(%u) => %p (%d)\n", arg0, result, command->ret_handle);
@@ -485,47 +455,34 @@ void Handle_malloc(Command* command) {
 
 void Handle_memcpy(Command* command) {
   TYPE_CHECK(TYPE_FUNC_MEMCPY);
-  void* dst;
-  void* src;
-  size_t size;
-  if (!GetArgVoidp(command, 0, &dst)) return;
-  if (!GetArgVoidp(command, 1, &src)) return;
-  if (!GetArgUint32(command, 2, &size)) return;
-  memcpy(dst, src, size);
-  printf("memcpy(%p, %p, %u)\n", dst, src, size);
+  ARG_VOIDP(0);
+  ARG_VOIDP(1);
+  ARG_UINT(2);
+  memcpy(arg0, arg1, arg2);
+  printf("memcpy(%p, %p, %u)\n", arg0, arg1, arg2);
 }
 
 void Handle_memset(Command* command) {
   TYPE_CHECK(TYPE_FUNC_MEMSET);
-  void* buffer;
-  int32_t value;
-  size_t size;
-  if (!GetArgVoidp(command, 0, &buffer)) return;
-  if (!GetArgInt32(command, 1, &value)) return;
-  if (!GetArgUint32(command, 2, &size)) return;
-  memset(buffer, value, size);
-  printf("memset(%p, %d, %u)\n", buffer, value, size);
+  ARG_VOIDP(0);
+  ARG_INT(1);
+  ARG_UINT(2);
+  memset(arg0, arg1, arg2);
+  printf("memset(%p, %d, %u)\n", arg0, arg1, arg2);
 }
 
 void Handle_set(Command* command) {
   switch (command->type) {
     case TYPE_FUNC_SET_VOID_P: {
-      void* arg0_voidp;
-      if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-      void** arg0 = (void**)arg0_voidp;
-      void* arg1_voidp;
-      if (!GetArgVoidp(command, 1, &arg1_voidp)) return;
-      void* arg1 = (void*)arg1_voidp;
+      ARG_VOIDP_CAST(0, void**);
+      ARG_VOIDP(1);
       *arg0 = arg1;
       printf("*(void**)%p = %p\n", arg0, arg1);
       break;
     }
     case TYPE_FUNC_SET_UINT32: {
-      void* arg0_voidp;
-      if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-      uint32_t* arg0 = (uint32_t*)arg0_voidp;
-      uint32_t arg1;
-      if (!GetArgUint32(command, 1, &arg1)) return;
+      ARG_VOIDP_CAST(0, uint32_t*);
+      ARG_UINT(1);
       *arg0 = arg1;
       printf("*(uint32_t*)%p = %u\n", arg0, arg1);
       break;
@@ -538,9 +495,7 @@ void Handle_set(Command* command) {
 
 void Handle_strlen(Command* command) {
   TYPE_CHECK(TYPE_FUNC_STRLEN);
-  void* arg0_voidp;
-  if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-  const char* arg0 = (const char*)arg0_voidp;
+  ARG_VOIDP_CAST(0, const char*);
   uint32_t result = (uint32_t)strlen(arg0);
   RegisterHandleUint32(command->ret_handle, result);
   printf("strlen(\"%s\") => %u (%d)\n", arg0, result, command->ret_handle);
@@ -549,10 +504,8 @@ void Handle_strlen(Command* command) {
 void Handle_sub(Command* command) {
   switch (command->type) {
     case TYPE_FUNC_BINOP_INT32: {
-      int32_t arg0;
-      int32_t arg1;
-      if (!GetArgInt32(command, 0, &arg0)) return;
-      if (!GetArgInt32(command, 1, &arg1)) return;
+      ARG_INT(0);
+      ARG_INT(1);
       int32_t result = arg0 - arg1;
       RegisterHandleInt32(command->ret_handle, result);
       printf("sub(%d, %d) => %d (%d)\n", arg0, arg1, result,
@@ -560,10 +513,8 @@ void Handle_sub(Command* command) {
       break;
     }
     case TYPE_FUNC_BINOP_UINT32: {
-      uint32_t arg0;
-      uint32_t arg1;
-      if (!GetArgUint32(command, 0, &arg0)) return;
-      if (!GetArgUint32(command, 1, &arg1)) return;
+      ARG_UINT(0);
+      ARG_UINT(1);
       uint32_t result = arg0 - arg1;
       RegisterHandleUint32(command->ret_handle, result);
       printf("sub(%u, %u) => %u (%d)\n", arg0, arg1, result,
@@ -578,19 +529,15 @@ void Handle_sub(Command* command) {
 
 void Handle_varAddRef(Command* command) {
   TYPE_CHECK(TYPE_FUNC_VAR_ADDREF_RELEASE);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
+  ARG_VAR(0);
   g_ppb_var->AddRef(arg0);
   printf("varAddRef(%lld)\n", arg0.value.as_id);
 }
 
 void Handle_varFromUtf8(Command* command) {
   TYPE_CHECK(TYPE_FUNC_VAR_FROM_UTF8);
-  void* arg0_voidp;
-  if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-  const char* arg0 = (const char*)arg0_voidp;
-  uint32_t arg1;
-  if (!GetArgUint32(command, 1, &arg1)) return;
+  ARG_VOIDP_CAST(0, const char*);
+  ARG_UINT(1);
   struct PP_Var result = g_ppb_var->VarFromUtf8(arg0, arg1);
   RegisterHandleVar(command->ret_handle, result);
   printf("varFromUtf8(%p, %u) => %lld (%d)\n", arg0, arg1, result.value.as_id,
@@ -599,19 +546,15 @@ void Handle_varFromUtf8(Command* command) {
 
 void Handle_varRelease(Command* command) {
   TYPE_CHECK(TYPE_FUNC_VAR_ADDREF_RELEASE);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
+  ARG_VAR(0);
   g_ppb_var->Release(arg0);
   printf("varRelease(%lld)\n", arg0.value.as_id);
 }
 
 void Handle_varToUtf8(Command* command) {
   TYPE_CHECK(TYPE_FUNC_VAR_TO_UTF8);
-  struct PP_Var arg0;
-  if (!GetArgVar(command, 0, &arg0)) return;
-  void* arg1_voidp;
-  if (!GetArgVoidp(command, 1, &arg1_voidp)) return;
-  uint32_t* arg1 = (uint32_t*)arg1_voidp;
+  ARG_VAR(0);
+  ARG_VOIDP_CAST(1, uint32_t*);
   void* result = (void*)g_ppb_var->VarToUtf8(arg0, arg1);
   RegisterHandleVoidp(command->ret_handle, result);
   printf("varToUtf8(%lld, %p) => %p (%d)\n", arg0.value.as_id, arg1, result,

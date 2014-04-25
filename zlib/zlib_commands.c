@@ -62,18 +62,10 @@ bool HandleZlibCommand(Command* command) {
 
 void Handle_compress(Command* command) {
   TYPE_CHECK(TYPE_FUNC_COMPRESS);
-  void* arg0_voidp;
-  if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-  Bytef* arg0 = (Bytef*)arg0_voidp;
-  void* arg1_voidp;
-  if (!GetArgVoidp(command, 1, &arg1_voidp)) return;
-  uLongf* arg1 = (uLongf*)arg1_voidp;
-  void* arg2_voidp;
-  if (!GetArgVoidp(command, 2, &arg2_voidp)) return;
-  Bytef* arg2 = (Bytef*)arg2_voidp;
-  int arg3_int;
-  if (!GetArgInt32(command, 3, &arg3_int)) return;
-  uLong arg3 = (uLong)arg3_int;
+  ARG_VOIDP_CAST(0, Bytef*);
+  ARG_VOIDP_CAST(1, uLongf*);
+  ARG_VOIDP_CAST(2, Bytef*);
+  ARG_UINT_CAST(3, uLong);
   int result = compress(arg0, arg1, arg2, arg3);
   RegisterHandleInt32(command->ret_handle, result);
   printf("compress(%p, %p, %p, %lu) => %d\n", arg0, arg1, arg2, arg3, result);
@@ -81,9 +73,7 @@ void Handle_compress(Command* command) {
 
 void Handle_compressBound(Command* command) {
   TYPE_CHECK(TYPE_FUNC_COMPRESS_BOUND);
-  int arg0_int;
-  if (!GetArgInt32(command, 0, &arg0_int)) return;
-  uLong arg0 = (uLong)arg0_int;
+  ARG_UINT_CAST(0, uLong);
   uLong result = compressBound(arg0);
   RegisterHandleInt32(command->ret_handle, result);
   printf("compressBound(%lu) => %lu\n", arg0, result);
@@ -91,11 +81,8 @@ void Handle_compressBound(Command* command) {
 
 void Handle_deflate(Command* command) {
   TYPE_CHECK(TYPE_FUNC_DEFLATE);
-  void* arg0_voidp;
-  if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-  z_stream* arg0 = (z_stream*)arg0_voidp;
-  int arg1;
-  if (!GetArgInt32(command, 1, &arg1)) return;
+  ARG_VOIDP_CAST(0, z_stream*);
+  ARG_INT(1);
   int result = deflate(arg0, arg1);
   RegisterHandleInt32(command->ret_handle, result);
   printf("deflate(%p, %d) => %d\n", arg0, arg1, result);
@@ -103,11 +90,8 @@ void Handle_deflate(Command* command) {
 
 void Handle_deflateInit(Command* command) {
   TYPE_CHECK(TYPE_FUNC_DEFLATE);
-  void* arg0_voidp;
-  if (!GetArgVoidp(command, 0, &arg0_voidp)) return;
-  z_stream* arg0 = (z_stream*)arg0_voidp;
-  int arg1;
-  if (!GetArgInt32(command, 1, &arg1)) return;
+  ARG_VOIDP_CAST(0, z_stream*);
+  ARG_INT(1);
   int result = deflateInit(arg0, arg1);
   RegisterHandleInt32(command->ret_handle, result);
   printf("deflateInit(%p, %d) => %d\n", arg0, arg1, result);

@@ -41,5 +41,36 @@ bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value);
 #define CMD_ERROR(msg) \
   VERROR("%s: " msg, command->command)
 
+#define ARG_VOIDP(index) \
+  void* arg##index; \
+  if (!GetArgVoidp(command, index, &arg##index)) return
+
+#define ARG_VOIDP_CAST(index, type) \
+  void* arg##index##_voidp; \
+  if (!GetArgVoidp(command, index, &arg##index##_voidp)) return; \
+  type arg##index = (type)arg##index##_voidp
+
+#define ARG_INT(index) \
+  int32_t arg##index; \
+  if (!GetArgInt32(command, index, &arg##index)) return
+
+#define ARG_INT_CAST(index, type) \
+  int32_t arg##index##_int; \
+  if (!GetArgInt32(command, index, &arg##index##_int)) return; \
+  type arg##index = (type)arg##index##_int
+
+#define ARG_UINT(index) \
+  uint32_t arg##index; \
+  if (!GetArgUint32(command, index, &arg##index)) return
+
+#define ARG_UINT_CAST(index, type) \
+  uint32_t arg##index##_uint; \
+  if (!GetArgUint32(command, index, &arg##index##_uint)) return; \
+  type arg##index = (type)arg##index##_uint
+
+#define ARG_VAR(index) \
+  struct PP_Var arg##index; \
+  if (!GetArgVar(command, index, &arg##index)) return
+
 
 #endif  // COMMANDS_H_
