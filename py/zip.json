@@ -1,0 +1,99 @@
+{
+  "name": "zip",
+  "system_headers": [
+    "sys/stat.h",
+    "zlib.h"
+  ],
+  "headers": [
+    "zip.h"
+  ],
+  "types": [
+    {"name": "tm_zip_s",
+     "kind": "struct",
+     "size": 24,
+     "fields": [
+       {"name": "tm_sec", "type": "uint32", "offset": 0},
+       {"name": "tm_min", "type": "uint32", "offset": 4},
+       {"name": "tm_hour", "type": "uint32", "offset": 8},
+       {"name": "tm_mday", "type": "uint32", "offset": 12},
+       {"name": "tm_mon", "type": "uint32", "offset": 16},
+       {"name": "tm_year", "type": "uint32", "offset": 20}
+    ]},
+    {"name": "zip_fileinfo",
+     "kind": "struct",
+     "size": 36,
+     "fields": [
+       {"name": "tmz_date", "type": "tm_zip_s", "offset": 0},
+       {"name": "dosDate", "type": "uint32", "offset": 24},
+       {"name": "internal_fa", "type": "uint32", "offset": 28},
+       {"name": "external_fa", "type": "uint32", "offset": 32}
+    ]},
+    {"name": "zip_fileinfo_p", "kind": "pointer", "base": "zip_fileinfo"},
+    {"name": "_zipFile", "kind": "struct", "size": 0, "fields": []},
+    {"name": "_zipFile_p", "kind": "pointer", "base": "_zipFile"},
+    {"name": "stat",
+     "kind": "struct",
+     "size": 104,
+     "fields": [
+       {"name": "st_dev", "type": "uint64", "offset": 0},
+       {"name": "st_ino", "type": "uint64", "offset": 8},
+       {"name": "st_mode", "type": "uint32", "offset": 16},
+       {"name": "st_nlink", "type": "uint32", "offset": 20},
+       {"name": "st_uid", "type": "uint32", "offset": 24},
+       {"name": "st_gid", "type": "uint32", "offset": 28},
+       {"name": "st_rdev", "type": "uint32", "offset": 32},
+       {"name": "st_size", "type": "uint32", "offset": 40},
+       {"name": "st_blksize", "type": "uint32", "offset": 48},
+       {"name": "st_blocks", "type": "uint32", "offset": 52},
+       {"name": "st_atime", "type": "uint32", "offset": 56},
+       {"name": "st_mtime", "type": "uint32", "offset": 72},
+       {"name": "st_ctime", "type": "uint32", "offset": 88}
+    ]},
+    {"name": "stat_p", "kind": "pointer", "base": "stat"},
+    {"name": "FILE", "kind": "struct", "size": 0, "fields": []},
+    {"name": "FILE_p", "kind": "pointer", "base": "FILE"}
+  ],
+  "aliases": [
+    {"name": "zipFile", "alias": "_zipFile_p"},
+    {"name": "char*", "alias": "uint8_p"}
+  ],
+  "functions": [
+    {"name": "zipOpen",
+     "result": "zipFile",
+     "args": ["char*", "int32"]
+    },
+    {"name": "zipOpenNewFileInZip",
+     "result": "int32",
+     "args": ["zipFile", "char*", "zip_fileinfo_p", "void_p", "uint32",
+              "void_p", "uint32", "char*", "int32", "int32"]
+    },
+    {"name": "zipWriteInFileInZip",
+     "result": "int32",
+     "args": ["zipFile", "void_p", "uint32"]
+    },
+    {"name": "zipCloseFileInZip",
+     "result": "int32",
+     "args": ["zipFile"]
+    },
+    {"name": "zipClose",
+     "result": "int32",
+     "args": ["zipFile", "char*"]
+    },
+    {"name": "fopen",
+     "result": "FILE_p",
+     "args": ["char*", "char*"]
+    },
+    {"name": "fread",
+     "result": "int32",
+     "args": ["void_p", "uint32", "uint32", "FILE_p"]
+    },
+    {"name": "fclose",
+     "result": "int32",
+     "args": ["FILE_p"]
+    },
+    {"name": "stat",
+     "result": "int32",
+     "args": ["char*", "stat_p"]
+    }
+  ]
+}

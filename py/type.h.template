@@ -1,0 +1,42 @@
+/* Copyright 2014 Ben Smith. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef {{name.upper()}}_TYPE_H_
+#define {{name.upper()}}_TYPE_H_
+
+#include "type.h"
+
+[[[
+from helper import *
+types = FixTypes(types, aliases, functions)
+
+def Suffix(ix):
+  if ix == FIRST_ID:
+    return ' = NUM_BUILTIN_TYPES'
+  return ''
+]]]
+
+enum {
+[[for type in types.no_builtins.itervalues():]]
+  /* {{type.id}} */ TYPE_{{CamelToMacro(type.name)}}{{Suffix(type.id)}},
+[[for type in types.function_types.itervalues():]]
+  /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.name)}}{{Suffix(type.id)}},
+[[]]
+  NUM_TYPES
+};
+
+const char* TypeToString(Type id);
+
+#endif  /* {{name.upper()}}_TYPE_H_ */

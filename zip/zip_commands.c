@@ -96,7 +96,7 @@ void Handle_zipOpenNewFileInZip(Command* command) {
   int32_t result = (int32_t)zipOpenNewFileInZip(arg0, arg1, arg2, arg3, arg4,
                                                 arg5, arg6, arg7, arg8, arg9);
   RegisterHandleInt32(command->ret_handle, result);
-  printf("zipOpenInNewFileInZip(%p, \"%s\", %p, %p, %u, %p, %u, \"%s\", %d, %d) => %d (%d)\n",
+  printf("zipOpenNewFileInZip(%p, \"%s\", %p, %p, %u, %p, %u, \"%s\", %d, %d) => %d (%d)\n",
          arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9,
          result, command->ret_handle);
 }

@@ -1,2 +1,3 @@
 /user-data-dir
 /pnacl
+*.pyc
