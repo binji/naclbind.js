@@ -86,6 +86,10 @@ def CamelToMacro(name):
   return CamelToSnake(name).upper()
 
 
+def Titlecase(name):
+  return name[0].upper() + name[1:]
+
+
 def CommaSep(arr):
   return ', '.join(arr)
 
