@@ -35,18 +35,18 @@ BUILTIN_TYPES = [
   {'name': 'uint64', 'kind': 'prim', 'size': 8, 'signed': False, 'int': True},
   {'name': 'float32', 'kind': 'prim', 'size': 4, 'int': False},
   {'name': 'float64', 'kind': 'prim', 'size': 8, 'int': False},
-  {'name': 'void_p', 'kind': 'pointer', 'base': 'void'},
-  {'name': 'int8_p', 'kind': 'pointer', 'base': 'int8'},
-  {'name': 'uint8_p', 'kind': 'pointer', 'base': 'uint8'},
-  {'name': 'int16_p', 'kind': 'pointer', 'base': 'int16'},
-  {'name': 'uint16_p', 'kind': 'pointer', 'base': 'uint16'},
-  {'name': 'int32_p', 'kind': 'pointer', 'base': 'int32'},
-  {'name': 'uint32_p', 'kind': 'pointer', 'base': 'uint32'},
-  {'name': 'int64_p', 'kind': 'pointer', 'base': 'int64'},
-  {'name': 'uint64_p', 'kind': 'pointer', 'base': 'uint64'},
-  {'name': 'float32_p', 'kind': 'pointer', 'base': 'float32'},
-  {'name': 'float64_p', 'kind': 'pointer', 'base': 'float64'},
-  {'name': 'void_pp', 'kind': 'pointer', 'base': 'void_p'},
+  {'name': 'void$', 'kind': 'pointer', 'base': 'void'},
+  {'name': 'int8$', 'kind': 'pointer', 'base': 'int8'},
+  {'name': 'uint8$', 'kind': 'pointer', 'base': 'uint8'},
+  {'name': 'int16$', 'kind': 'pointer', 'base': 'int16'},
+  {'name': 'uint16$', 'kind': 'pointer', 'base': 'uint16'},
+  {'name': 'int32$', 'kind': 'pointer', 'base': 'int32'},
+  {'name': 'uint32$', 'kind': 'pointer', 'base': 'uint32'},
+  {'name': 'int64$', 'kind': 'pointer', 'base': 'int64'},
+  {'name': 'uint64$', 'kind': 'pointer', 'base': 'uint64'},
+  {'name': 'float32$', 'kind': 'pointer', 'base': 'float32'},
+  {'name': 'float64$', 'kind': 'pointer', 'base': 'float64'},
+  {'name': 'void$$', 'kind': 'pointer', 'base': 'void$'},
   {'name': 'Var', 'kind': 'pepper', 'prototype': 'undefined'},
   {'name': 'ArrayBuffer', 'kind': 'pepper', 'prototype': 'ArrayBuffer'},
   {'name': 'Array', 'kind': 'pepper', 'prototype': 'Array'},
@@ -94,6 +94,10 @@ def CommaSep(arr):
   return ', '.join(arr)
 
 
+def MakeCName(name):
+  return name.replace('$', '_p')
+
+
 class Type(object):
   def __init__(self, id_):
     self.id = id_
@@ -121,6 +125,7 @@ class VoidType(Type):
   def __init__(self, id_, typ, _):
     Type.__init__(self, id_)
     self.name = typ.name
+    self.cname = typ.name
 
   def __str__(self):
     return self.name
@@ -133,7 +138,8 @@ class PrimType(Type):
   def __init__(self, id_, typ, _):
     Type.__init__(self, id_)
     self.name = typ.name
-    self.str_ = PRIM_NAMES[typ.name]
+    self.cname = typ.name
+    self.str = PRIM_NAMES[typ.name]
     self.signed = ('signed' in typ) and typ.signed
     self.size = typ.size
     self.is_int = typ.int
@@ -148,7 +154,7 @@ class PrimType(Type):
     return self._GetDefaultFormatArg(ix)
 
   def __str__(self):
-    return self.str_
+    return self.str
 
   def IsPrimitive(self):
     return True
@@ -158,6 +164,7 @@ class StructType(Type):
   def __init__(self, id_, typ, _):
     Type.__init__(self, id_)
     self.name = typ.name
+    self.cname = typ.name
 
   def __str__(self):
     return self.name
@@ -167,6 +174,7 @@ class PepperType(Type):
   def __init__(self, id_, typ, _):
     Type.__init__(self, id_)
     self.name = typ.name
+    self.cname = typ.name
 
   def GetFormat(self):
     # TODO(binji): better output here.
@@ -174,9 +182,6 @@ class PepperType(Type):
 
   def GetFormatArg(self, ix):
     return None
-
-  def HasFormat(self):
-    return True
 
   def __str__(self):
     return self.name
@@ -186,7 +191,8 @@ class PointerType(Type):
   def __init__(self, id_, typ, types):
     Type.__init__(self, id_)
     self.name = typ.name
-    self.str_ = str(types.all_types[typ.base]) + '*'
+    self.cname = MakeCName(typ.name)
+    self.str = str(types.all_types[typ.base]) + '*'
 
   def GetFormat(self):
     return '%p'
@@ -195,7 +201,7 @@ class PointerType(Type):
     return self._GetDefaultFormatArg(ix)
 
   def __str__(self):
-    return self.str_
+    return self.str
 
   def IsPointer(self):
     return True
@@ -208,9 +214,11 @@ class AliasType(Type):
 
     Type.__init__(self, self.alias.id)
     self.name = typ.name
+    self.cname = MakeCName(typ.name)
+    self.str = typ.str
 
   def __str__(self):
-    return self.name
+    return self.str
 
   def __getattr__(self, name):
     return getattr(self.alias, name)
@@ -236,10 +244,10 @@ class FunctionType(Type):
     self.return_type = types.all_types[fn.result]
 
     args = ', '.join(map(str, self.arg_types))
-    self.str_ = '%s (*)(%s)' % (self.return_type, args)
+    self.str = '%s (*)(%s)' % (self.return_type, args)
 
   def __str__(self):
-    return self.str_
+    return self.str
 
 
 KIND_TO_CONSTRUCTOR = {

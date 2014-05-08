@@ -28,9 +28,9 @@
        {"name": "internal_fa", "type": "uint32", "offset": 28},
        {"name": "external_fa", "type": "uint32", "offset": 32}
     ]},
-    {"name": "zip_fileinfo_p", "kind": "pointer", "base": "zip_fileinfo"},
+    {"name": "zip_fileinfo$", "kind": "pointer", "base": "zip_fileinfo"},
     {"name": "_zipFile", "kind": "struct", "size": 0, "fields": []},
-    {"name": "_zipFile_p", "kind": "pointer", "base": "_zipFile"},
+    {"name": "_zipFile$", "kind": "pointer", "base": "_zipFile"},
     {"name": "stat",
      "kind": "struct",
      "size": 104,
@@ -49,27 +49,27 @@
        {"name": "st_mtime", "type": "uint32", "offset": 72},
        {"name": "st_ctime", "type": "uint32", "offset": 88}
     ]},
-    {"name": "stat_p", "kind": "pointer", "base": "stat"},
+    {"name": "stat$", "kind": "pointer", "base": "stat"},
     {"name": "FILE", "kind": "struct", "size": 0, "fields": []},
-    {"name": "FILE_p", "kind": "pointer", "base": "FILE"}
+    {"name": "FILE$", "kind": "pointer", "base": "FILE"}
   ],
   "aliases": [
-    {"name": "zipFile", "alias": "_zipFile_p"},
-    {"name": "char*", "alias": "uint8_p"}
+    {"name": "zipFile", "alias": "_zipFile$", "str": "zipFile"},
+    {"name": "char$", "alias": "uint8$", "str": "char*"}
   ],
   "functions": [
     {"name": "zipOpen",
      "result": "zipFile",
-     "args": ["char*", "int32"]
+     "args": ["char$", "int32"]
     },
     {"name": "zipOpenNewFileInZip",
      "result": "int32",
-     "args": ["zipFile", "char*", "zip_fileinfo_p", "void_p", "uint32",
-              "void_p", "uint32", "char*", "int32", "int32"]
+     "args": ["zipFile", "char$", "zip_fileinfo$", "void$", "uint32",
+              "void$", "uint32", "char$", "int32", "int32"]
     },
     {"name": "zipWriteInFileInZip",
      "result": "int32",
-     "args": ["zipFile", "void_p", "uint32"]
+     "args": ["zipFile", "void$", "uint32"]
     },
     {"name": "zipCloseFileInZip",
      "result": "int32",
@@ -77,23 +77,23 @@
     },
     {"name": "zipClose",
      "result": "int32",
-     "args": ["zipFile", "char*"]
+     "args": ["zipFile", "char$"]
     },
     {"name": "fopen",
-     "result": "FILE_p",
-     "args": ["char*", "char*"]
+     "result": "FILE$",
+     "args": ["char$", "char$"]
     },
     {"name": "fread",
      "result": "int32",
-     "args": ["void_p", "uint32", "uint32", "FILE_p"]
+     "args": ["void$", "uint32", "uint32", "FILE$"]
     },
     {"name": "fclose",
      "result": "int32",
-     "args": ["FILE_p"]
+     "args": ["FILE$"]
     },
     {"name": "stat",
      "result": "int32",
-     "args": ["char*", "stat_p"]
+     "args": ["char$", "stat$"]
     }
   ]
 }

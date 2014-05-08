@@ -30,7 +30,7 @@ def Suffix(ix):
 
 enum {
 [[for type in types.no_builtins.itervalues():]]
-  /* {{type.id}} */ TYPE_{{CamelToMacro(type.name)}}{{Suffix(type.id)}},
+  /* {{type.id}} */ TYPE_{{CamelToMacro(type.cname)}}{{Suffix(type.id)}},
 [[for type in types.function_types.itervalues():]]
   /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.name)}}{{Suffix(type.id)}},
 [[]]
