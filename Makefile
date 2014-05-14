@@ -59,7 +59,9 @@ LIBS = 2nacl nacl_io z ppapi_cpp ppapi
 
 EASY_TEMPLATE = py/easy_template.py
 ZIP_JSON = py/zip.json
+ZLIB_JSON = py/zlib.json
 
+# Zip generated files
 zip/zip_type.h: py/type.h.template $(EASY_TEMPLATE) $(ZIP_JSON)
 	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZIP_JSON) $< > $@)
 
@@ -75,6 +77,25 @@ zip/zip_commands.c: py/commands.c.template $(EASY_TEMPLATE) $(ZIP_JSON)
 all: js/zip_gen.js
 js/zip_gen.js: py/gen.js.template $(EASY_TEMPLATE) $(ZIP_JSON)
 	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZIP_JSON) $< > $@)
+
+
+# Zlib generated files
+zlib/zlib_type.h: py/type.h.template $(EASY_TEMPLATE) $(ZLIB_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZLIB_JSON) $< > $@)
+
+zlib/zlib_type.c: py/type.c.template $(EASY_TEMPLATE) $(ZLIB_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZLIB_JSON) $< > $@)
+
+zlib/zlib_commands.h: py/commands.h.template $(EASY_TEMPLATE) $(ZLIB_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZLIB_JSON) $< > $@)
+
+zlib/zlib_commands.c: py/commands.c.template $(EASY_TEMPLATE) $(ZLIB_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZLIB_JSON) $< > $@)
+
+all: js/zlib_gen.js
+js/zlib_gen.js: py/gen.js.template $(EASY_TEMPLATE) $(ZLIB_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZLIB_JSON) $< > $@)
+
 
 # Build lib2nacl.a
 $(foreach src,$(2nacl_SOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGS))))

@@ -227,7 +227,7 @@ class AliasType(Type):
     Type.__init__(self, self.alias.id)
     self.name = typ.name
     self.cname = MakeCName(typ.name)
-    self.str = typ.str
+    self.str = getattr(typ, 'str', self.name)
 
   def __str__(self):
     return self.str

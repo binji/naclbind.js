@@ -40,9 +40,21 @@ define(['nacl'], function(nacl) {
   m.makePointerType({{type.id}}, t.{{type.base.name}});
 [[]]
 
+[[[
+def ArgTypesString(fn):
+  if fn.arg_types:
+    return ', ' + CommaSep(['t.%s' % t.name for t in fn.arg_types])
+  return ''
+
+def ReturnTypeString(fn):
+  if not fn.return_type.IsVoid():
+    return ', t.' + fn.return_type.name
+  return ''
+]]]
+
 [[for _, fn in types.function_types.iteritems():]]
   m.makeFunction('{{fn.name}}',
-      m.makeFunctionType({{fn.id}}, t.{{fn.return_type.name}}, {{CommaSep(['t.%s' % t.name for t in fn.arg_types])}}));
+      m.makeFunctionType({{fn.id}}{{ReturnTypeString(fn)}}{{ArgTypesString(fn)}}));
 [[]]
 
   return m;

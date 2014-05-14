@@ -5,7 +5,12 @@
 # Generated files.
 # TODO(binji): move to out folder?
 js/zip_gen.js
+js/zlib_gen.js
 zip/zip_commands.c
 zip/zip_commands.h
 zip/zip_type.c
 zip/zip_type.h
+zlib/zlib_commands.c
+zlib/zlib_commands.h
+zlib/zlib_type.c
+zlib/zlib_type.h

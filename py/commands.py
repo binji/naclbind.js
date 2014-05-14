@@ -53,11 +53,13 @@ def ArgsCommaSep(args):
 
 
 def PrintFunction(fn):
-  result = 'printf("%s(%s) ' % (fn.name, FmtArgs(fn.arg_types))
+  result = 'printf("%s(%s)' % (fn.name, FmtArgs(fn.arg_types))
   if not fn.return_type.IsVoid():
-    result += '=> %s ' % fn.return_type.GetFormat()
-  result += '(%%d)\\n", %s' % ArgsCommaSep(fn.arg_types)
+    result += ' => %s (%%d)' % fn.return_type.GetFormat()
+  result += '\\n"'
+  if fn.arg_types:
+    result += ', %s' % ArgsCommaSep(fn.arg_types)
   if not fn.return_type.IsVoid():
-    result += ', result'
-  result += ', command->ret_handle);'
+    result += ', result, command->ret_handle'
+  result += ');'
   return result
