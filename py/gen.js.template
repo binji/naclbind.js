@@ -1,0 +1,49 @@
+// Copyright 2014 Ben Smith. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+[[[
+from helper import *
+from commands import *
+
+types = FixTypes(types, functions)
+]]]
+
+"use strict";
+
+define(['nacl'], function(nacl) {
+  var m = nacl.makeModule(
+      '{{name}}-nacl', 'pnacl/Release/{{name}}.nmf', 'application/x-pnacl');
+  var t = m.types;
+  var f = m.functions;
+
+[[for _, type in types.no_builtins.iteritems():]]
+[[  if type.IsAlias():]]
+  m.makeAliasType('{{type.name}}', t.{{type.alias.name}});
+[[  elif type.IsStruct():]]
+  m.makeStructType({{type.id}}, '{{type.name}}', {{type.size}}, {
+[[    for field in type.fields:]]
+    {{field.name}}: {type: t.{{field.type}}, offset: {{field.offset}}},
+[[    ]]
+  });
+[[  elif type.IsPointer():]]
+  m.makePointerType({{type.id}}, t.{{type.base.name}});
+[[]]
+
+[[for _, fn in types.function_types.iteritems():]]
+  m.makeFunction('{{fn.name}}',
+      m.makeFunctionType({{fn.id}}, t.{{fn.return_type.name}}, {{CommaSep(['t.%s' % t.name for t in fn.arg_types])}}));
+[[]]
+
+  return m;
+});

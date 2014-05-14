@@ -361,6 +361,10 @@ define(['promise'], function(promise) {
     return this.typeBuilder_.makeStructType(id, size, name, fields);
   };
 
+  Module.prototype.makeAliasType = function(name, alias) {
+    return this.typeBuilder_.makeAliasType(name, alias);
+  };
+
   Module.prototype.makeFunctionType = function(id, retType) {
     return this.typeBuilder_.makeFunctionType.apply(this.typeBuilder_, arguments);
   };
@@ -478,7 +482,7 @@ define(['promise'], function(promise) {
   };
 
   Module.prototype.canCoerceArgument_ = function(fromValue, fromType, toType) {
-    if (fromType === toType) {
+    if (fromType.aliasEquals(toType)) {
       return true;
     }
 
@@ -608,8 +612,9 @@ define(['promise'], function(promise) {
     return this.nameHash;
   };
 
-  TypeBuilder.prototype.makeAliasType = function(id, name, type) {
-    return this.registerType_(id, new AliasType(name, type));
+  TypeBuilder.prototype.makeAliasType = function(name, alias) {
+    this.nameHash[name] = new AliasType(name, alias);
+    return alias;
   };
 
   TypeBuilder.prototype.makePepperType = function(id, name, type) {
@@ -747,6 +752,13 @@ define(['promise'], function(promise) {
 
   Type.prototype.equals = function(other) {
     return false;
+  };
+
+  Type.prototype.aliasEquals = function(other) {
+    if (other instanceof AliasType) {
+      return other.aliasEquals(this);
+    }
+    return this.equals(other);
   };
 
   Type.prototype.isPrimitive = function() {
@@ -1013,26 +1025,36 @@ define(['promise'], function(promise) {
 
 
   //// AliasType ///////////////////////////////////////////////////////////////
-  function AliasType(name, type) {
+  function AliasType(name, alias) {
     Type.call(this);
     this.name = name;
-    this.type = type;
+    this.alias = alias;
+    while (this.alias instanceof AliasType) {
+      this.alias = this.alias.alias;
+    }
   }
 
   AliasType.prototype = new Type();
   AliasType.prototype.constructor = AliasType;
-  AliasType.prototype.sizeof = function() { return this.type.sizeof(); };
+  AliasType.prototype.sizeof = function() { return this.alias.sizeof(); };
   AliasType.prototype.toString = function() { return this.name; };
   AliasType.prototype.getName = function() { return this.name; };
-  AliasType.prototype.isPrimitive = function() { return this.type.isPrimitive(); };
-  AliasType.prototype.isPointer = function() { return this.type.isPointer(); };
-  AliasType.prototype.isInt = function() { return this.type.isInt_; };
-  AliasType.prototype.isSigned = function() { return this.type.isSigned_; };
+  AliasType.prototype.isPrimitive = function() { return this.alias.isPrimitive(); };
+  AliasType.prototype.isPointer = function() { return this.alias.isPointer(); };
+  AliasType.prototype.isInt = function() { return this.alias.isInt_; };
+  AliasType.prototype.isSigned = function() { return this.alias.isSigned_; };
 
   AliasType.prototype.equals = function(other) {
     return this.constructor === other.constructor &&
            this.name === other.name &&
-           this.type.equals(other.type);
+           this.alias.equals(other.alias);
+  };
+
+  AliasType.prototype.aliasEquals = function(other) {
+    if (other instanceof AliasType) {
+      other = other.alias;
+    }
+    return this.alias.equals(other);
   };
 
 

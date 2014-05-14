@@ -19,7 +19,7 @@
        {"name": "tm_mon", "type": "uint32", "offset": 16},
        {"name": "tm_year", "type": "uint32", "offset": 20}
     ]},
-    {"name": "zip_fileinfo",
+    {"name": "_zip_fileinfo",
      "kind": "struct",
      "size": 36,
      "fields": [
@@ -28,9 +28,12 @@
        {"name": "internal_fa", "type": "uint32", "offset": 28},
        {"name": "external_fa", "type": "uint32", "offset": 32}
     ]},
+    {"name": "zip_fileinfo", "kind": "alias", "alias": "_zip_fileinfo", "str": "zip_fileinfo"},
     {"name": "zip_fileinfo$", "kind": "pointer", "base": "zip_fileinfo"},
     {"name": "_zipFile", "kind": "struct", "size": 0, "fields": []},
     {"name": "_zipFile$", "kind": "pointer", "base": "_zipFile"},
+    {"name": "zipFile", "kind": "alias", "alias": "_zipFile$", "str": "zipFile"},
+    {"name": "char$", "kind": "alias", "alias": "uint8$", "str": "char*"},
     {"name": "stat",
      "kind": "struct",
      "size": 104,
@@ -50,12 +53,9 @@
        {"name": "st_ctime", "type": "uint32", "offset": 88}
     ]},
     {"name": "stat$", "kind": "pointer", "base": "stat"},
-    {"name": "FILE", "kind": "struct", "size": 0, "fields": []},
+    {"name": "_FILE", "kind": "struct", "size": 0, "fields": []},
+    {"name": "FILE", "kind": "alias", "alias": "_FILE", "str": "FILE"},
     {"name": "FILE$", "kind": "pointer", "base": "FILE"}
-  ],
-  "aliases": [
-    {"name": "zipFile", "alias": "_zipFile$", "str": "zipFile"},
-    {"name": "char$", "alias": "uint8$", "str": "char*"}
   ],
   "functions": [
     {"name": "zipOpen",

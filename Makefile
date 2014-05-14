@@ -20,12 +20,12 @@ PORTS = zlib
 .PHONY: ports
 ports:
 ifeq (newlib,$(TOOLCHAIN))
-	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=i686
-	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=x86_64
-	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=arm
+	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=i686 FORCE=1
+	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=x86_64 FORCE=1
+	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=arm FORCE=1
 endif
 ifeq (pnacl,$(TOOLCHAIN))
-	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=pnacl
+	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=pnacl FORCE=1
 endif
 
 ## Rules to build 2nacl library and pexes that use it #########################
@@ -56,6 +56,25 @@ zip_SOURCES =\
 
 CFLAGS += -Wall -DUSE_FILE32API -DNOCRYPT -Wno-unused-value -I$(CURDIR)/2nacl
 LIBS = 2nacl nacl_io z ppapi_cpp ppapi
+
+EASY_TEMPLATE = py/easy_template.py
+ZIP_JSON = py/zip.json
+
+zip/zip_type.h: py/type.h.template $(EASY_TEMPLATE) $(ZIP_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZIP_JSON) $< > $@)
+
+zip/zip_type.c: py/type.c.template $(EASY_TEMPLATE) $(ZIP_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZIP_JSON) $< > $@)
+
+zip/zip_commands.h: py/commands.h.template $(EASY_TEMPLATE) $(ZIP_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZIP_JSON) $< > $@)
+
+zip/zip_commands.c: py/commands.c.template $(EASY_TEMPLATE) $(ZIP_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZIP_JSON) $< > $@)
+
+all: js/zip_gen.js
+js/zip_gen.js: py/gen.js.template $(EASY_TEMPLATE) $(ZIP_JSON)
+	$(call LOG,TEMPLATE,$@,$(EASY_TEMPLATE) -j $(ZIP_JSON) $< > $@)
 
 # Build lib2nacl.a
 $(foreach src,$(2nacl_SOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGS))))

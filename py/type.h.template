@@ -20,7 +20,7 @@
 
 [[[
 from helper import *
-types = FixTypes(types, aliases, functions)
+types = FixTypes(types, functions)
 
 def Suffix(ix):
   if ix == FIRST_ID:
@@ -30,6 +30,7 @@ def Suffix(ix):
 
 enum {
 [[for type in types.no_builtins.itervalues():]]
+[[  if not type.IsAlias():]]
   /* {{type.id}} */ TYPE_{{CamelToMacro(type.cname)}}{{Suffix(type.id)}},
 [[for type in types.function_types.itervalues():]]
   /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.name)}}{{Suffix(type.id)}},

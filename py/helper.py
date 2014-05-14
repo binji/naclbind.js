@@ -120,6 +120,12 @@ class Type(object):
   def IsPrimitive(self):
     return False
 
+  def IsStruct(self):
+    return False
+
+  def IsAlias(self):
+    return False
+
 
 class VoidType(Type):
   def __init__(self, id_, typ, _):
@@ -165,9 +171,14 @@ class StructType(Type):
     Type.__init__(self, id_)
     self.name = typ.name
     self.cname = typ.name
+    self.size = typ.size
+    self.fields = typ.fields
 
   def __str__(self):
-    return self.name
+    return 'struct %s' % self.name
+
+  def IsStruct(self):
+    return True
 
 
 class PepperType(Type):
@@ -192,7 +203,8 @@ class PointerType(Type):
     Type.__init__(self, id_)
     self.name = typ.name
     self.cname = MakeCName(typ.name)
-    self.str = str(types.all_types[typ.base]) + '*'
+    self.base = types.all_types[typ.base]
+    self.str = str(self.base) + '*'
 
   def GetFormat(self):
     return '%p'
@@ -235,6 +247,12 @@ class AliasType(Type):
   def IsPrimitive(self):
     return self.alias.IsPrimitive()
 
+  def IsStruct(self):
+    return self.alias.IsStruct()
+
+  def IsAlias(self):
+    return True
+
 
 class FunctionType(Type):
   def __init__(self, id_, fn, types):
@@ -256,13 +274,13 @@ KIND_TO_CONSTRUCTOR = {
   'struct': StructType,
   'pepper': PepperType,
   'pointer': PointerType,
+  'alias': AliasType,
 }
 
 
-def FixTypes(type_dicts, alias_dicts, fn_dicts):
+def FixTypes(type_dicts, fn_dicts):
   types = Types()
   types.AddTypes(type_dicts)
-  types.AddAliases(alias_dicts)
   types.AddFunctionTypes(fn_dicts)
   return types
 
@@ -291,16 +309,11 @@ class Types(object):
       self.all_types[typ.name] = typ
       if not builtins:
         self.no_builtins[typ.name] = typ
-      self.next_id += 1
+      if type_dict.kind != 'alias':
+        self.next_id += 1
 
   def MakeType(self, id_, type_dict):
     return KIND_TO_CONSTRUCTOR[type_dict.kind](id_, type_dict, self)
-
-  def AddAliases(self, alias_dicts):
-    for alias_dict in alias_dicts:
-      # Aliases don't have a unique id.
-      typ = AliasType(0, alias_dict, self)
-      self.all_types[typ.name] = typ
 
   def AddFunctionTypes(self, fn_dicts):
     for fn_dict in fn_dicts:

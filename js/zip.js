@@ -14,10 +14,8 @@
 
 "use strict";
 
-define(['promise', 'nacl'], function(promise, nacl) {
-
-  var m = nacl.makeModule(
-      'zip-nacl', 'pnacl/Release/zip.nmf', 'application/x-pnacl');
+define(['promise', 'nacl', 'zip_gen'], function(promise, nacl, zip_gen) {
+  var m = zip_gen;
   var t = m.types;
   var f = m.functions;
 
@@ -30,69 +28,6 @@ define(['promise', 'nacl'], function(promise, nacl) {
   var ZIP_PARAMERROR = -102;
   var ZIP_BADZIPFILE = -103;
   var ZIP_INTERNALERROR = -104;
-
-  m.makeStructType(80, 'tm_zip_s', 24, {
-    tm_sec: {type: t.uint32, offset: 0},
-    tm_min: {type: t.uint32, offset: 4},
-    tm_hour: {type: t.uint32, offset: 8},
-    tm_mday: {type: t.uint32, offset: 12},
-    tm_mon: {type: t.uint32, offset: 16},
-    tm_year: {type: t.uint32, offset: 20},
-  });
-
-  m.makeStructType(81, 'zip_fileinfo', 36, {
-    tmz_date: {type: t.tm_zip_s, offset: 0},
-    dosDate: {type: t.uint32, offset: 24},
-    internal_fa: {type: t.uint32, offset: 28},
-    external_fa: {type: t.uint32, offset: 32},
-  });
-  m.makePointerType(82, t.zip_fileinfo);
-
-  m.makeStructType(83, 'zipFile', 0, {});
-  m.makePointerType(84, t.zipFile);
-  var char$ = t.uint8$;
-
-  m.makeFunction('zipOpen', m.makeFunctionType(85, t.zipFile$, char$, t.int32));
-  m.makeFunction('zipOpenNewFileInZip',
-                 m.makeFunctionType(86, t.int32, t.zipFile$, char$,
-                                    t.zip_fileinfo$,
-                                    t.void$, t.uint32,
-                                    t.void$, t.uint32,
-                                    char$, t.int32, t.int32));
-  m.makeFunction('zipWriteInFileInZip',
-                 m.makeFunctionType(87, t.int32, t.zipFile$, t.void$,
-                                    t.uint32));
-  m.makeFunction('zipCloseFileInZip',
-                 m.makeFunctionType(88, t.int32, t.zipFile$));
-  m.makeFunction('zipClose',
-                 m.makeFunctionType(89, t.int32, t.zipFile$, char$));
-
-  m.makeStructType(90, 'stat', 104, {
-    st_dev: {type: t.uint64, offset: 0},
-    st_ino: {type: t.uint64, offset: 8},
-    st_mode: {type: t.uint32, offset: 16},
-    st_nlink: {type: t.uint32, offset: 20},
-    st_uid: {type: t.uint32, offset: 24},
-    st_gid: {type: t.uint32, offset: 28},
-    st_rdev: {type: t.uint32, offset: 32},
-    // st_size: {type: t.uint64, offset: 40},
-    // TODO(binji): add 64-bit int support so we can use the real type.
-    st_size: {type: t.uint32, offset: 40},
-    st_blksize: {type: t.uint32, offset: 48},
-    st_blocks: {type: t.uint32, offset: 52},
-    st_atime: {type: t.uint64, offset: 56},
-    st_mtime: {type: t.uint64, offset: 72},
-    st_ctime: {type: t.uint64, offset: 88},
-  });
-  m.makePointerType(91, t.stat);
-
-  m.makeStructType(92, 'FILE', 0, {});
-  m.makePointerType(93, t.FILE);
-  m.makeFunction('fopen', m.makeFunctionType(94, t.FILE$, char$, char$));
-  m.makeFunction('fread', m.makeFunctionType(95, t.int32, t.void$, t.uint32,
-                                             t.uint32, t.FILE$));
-  m.makeFunction('fclose', m.makeFunctionType(96, t.int32, t.FILE$));
-  m.makeFunction('stat', m.makeFunctionType(97, t.int32, char$, t.stat$));
 
   var numFiles = 0;
 
@@ -131,7 +66,9 @@ define(['promise', 'nacl'], function(promise, nacl) {
     var c = m.makeContext();
     this.p = this.p.then(function() {
       var lenPtr = m.mallocType(c, t.uint32);
+      // TODO(binji): Stack allocation of handles...?
       var nameCstr = f.varToUtf8(c, name, lenPtr);
+      // TODO(binji): If error occurs, debugging info...?
       var result = f.zipOpenNewFileInZip(c,
         that.zipFile, nameCstr, null, null, 0, null, 0, null, Z_DEFLATED,
         Z_DEFAULT_COMPRESSION);
@@ -154,6 +91,7 @@ define(['promise', 'nacl'], function(promise, nacl) {
       }
     }).finally(function() {
       f.zipCloseFileInZip(c, that.zipFile);
+      // TODO(binji): Can this be encoded in the command buffer?
       m.destroyHandles(c);
       return m.commitPromise();
     });
@@ -193,6 +131,7 @@ define(['promise', 'nacl'], function(promise, nacl) {
     }).finally(function() {
       m.destroyHandles(that.c);
       that.c = null;
+      // TODO(binji): Common pattern... simplify into a function?
       m.commitPromise();
     });
   };

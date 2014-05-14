@@ -17,7 +17,7 @@
 from helper import *
 from commands import *
 
-types = FixTypes(types, aliases, functions)
+types = FixTypes(types, functions)
 ]]]
 
 #include "{{name}}_commands.h"
