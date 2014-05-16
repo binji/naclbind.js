@@ -37,7 +37,7 @@ define(['nacl'], function(nacl) {
 [[    ]]
   });
 [[  elif type.is_pointer:]]
-  m.makePointerType({{type.id}}, t.{{type.base_type.js_ident}});
+  m.makePointerType({{type.id}}, '{{type.js_ident}}', t.{{type.base_type.js_ident}});
 [[]]
 
 [[[

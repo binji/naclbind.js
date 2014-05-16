@@ -430,6 +430,15 @@ void Handle_get(Command* command) {
       printf("*(void**)%p => %p\n", arg0, result);
       break;
     }
+    case TYPE_FUNC_GET_INT32: {
+      ARG_VOIDP_CAST(0, int32_t*);
+      int32_t result = *arg0;
+      HandleValue hval;
+      hval.int32 = result;
+      RegisterHandle(command->ret_handle, TYPE_INT32, hval);
+      printf("*(int32_t*)%p => %u\n", arg0, result);
+      break;
+    }
     case TYPE_FUNC_GET_UINT32: {
       ARG_VOIDP_CAST(0, uint32_t*);
       uint32_t result = *arg0;
@@ -478,6 +487,13 @@ void Handle_set(Command* command) {
       ARG_VOIDP(1);
       *arg0 = arg1;
       printf("*(void**)%p = %p\n", arg0, arg1);
+      break;
+    }
+    case TYPE_FUNC_SET_INT32: {
+      ARG_VOIDP_CAST(0, int32_t*);
+      ARG_INT(1);
+      *arg0 = arg1;
+      printf("*(int32_t*)%p = %u\n", arg0, arg1);
       break;
     }
     case TYPE_FUNC_SET_UINT32: {

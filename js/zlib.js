@@ -106,8 +106,8 @@ define(['promise', 'nacl', 'zlib_gen'], function(promise, nacl, zlib_gen) {
 
   function compressEasy(inputAb) {
     var c = m.makeContext();
-    var dest;
-    var destLenPtr;
+    var dest = null;
+    var destLenPtr = null;
     return promise.resolve().then(function() {
       var sourceLen = inputAb.byteLength;
       var destLenBound = f.compressBound(c, sourceLen);
@@ -138,8 +138,8 @@ define(['promise', 'nacl', 'zlib_gen'], function(promise, nacl, zlib_gen) {
   }
 
   function compressHard(inputAb, level, bufferSize) {
-    var stream;
-    var output;
+    var stream = null;
+    var output = null;
     var inputOffset = 0;
     var outputAb = null;
     var outputOffset = 0;

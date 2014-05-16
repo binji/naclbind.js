@@ -18,6 +18,9 @@ define(['promise'], function(promise) {
 
   function assert(cond, msg) {
     if (!cond) {
+      if (typeof msg === 'function') {
+        msg = msg();
+      }
       throw new Error('Assertion failed' + (msg ? (': ' + msg) : '.'));
     }
   }
@@ -134,8 +137,8 @@ define(['promise'], function(promise) {
 
     var retHandle = null;
     var retHandleId = 0;
-    if (funcType.retType !== this.types.void) {
-      retHandle = this.handles_.makeHandle(context, funcType.retType);
+    if (funcType.data.retType !== this.types.void) {
+      retHandle = this.handles_.makeHandle(context, funcType.data.retType);
       retHandleId = retHandle.id;
     }
 
@@ -146,7 +149,7 @@ define(['promise'], function(promise) {
       argIsHandle: [],
       ret: retHandleId
     };
-    for (var i = 0; i < funcType.argTypes.length; ++i) {
+    for (var i = 0; i < funcType.data.argTypes.length; ++i) {
       var arg = args[i];
       var value;
       if (arg instanceof Handle) {
@@ -214,7 +217,7 @@ define(['promise'], function(promise) {
   Module.prototype.initDefaults_ = function() {
     var t = this.types;
 
-    this.typeBuilder_.makeVoidType(1);
+    this.typeBuilder_.makeVoidType(1, 'void');
     this.typeBuilder_.makePrimitiveType(2, 'char', 1, true, true);
     this.typeBuilder_.makePrimitiveType(3, 'int8', 1, true, true);
     this.typeBuilder_.makePrimitiveType(4, 'uint8', 1, false, true);
@@ -237,26 +240,26 @@ define(['promise'], function(promise) {
     this.makeAliasType('longlong', t.int64);
     this.makeAliasType('ulonglong', t.uint64);
     this.makeAliasType('float', t.float32);
-    this.makeAliasType('double', t.double);
+    this.makeAliasType('double', t.float64);
     this.makeAliasType('size_t', t.uint32);
     this.makeAliasType('ssize_t', t.int32);
     this.makeAliasType('off_t', t.int64);
 
-    this.makePointerType(15, t.void);
-    this.makePointerType(16, t.char);
-    this.makePointerType(17, t.int8);
-    this.makePointerType(18, t.uint8);
-    this.makePointerType(19, t.int16);
-    this.makePointerType(20, t.uint16);
-    this.makePointerType(21, t.int32);
-    this.makePointerType(22, t.uint32);
-    this.makePointerType(23, t.long);
-    this.makePointerType(24, t.ulong);
-    this.makePointerType(25, t.int64);
-    this.makePointerType(26, t.uint64);
-    this.makePointerType(27, t.float32);
-    this.makePointerType(28, t.float64);
-    this.makePointerType(29, t.void$);
+    this.makePointerType(15, 'void$', t.void);
+    this.makePointerType(16, 'char$', t.char);
+    this.makePointerType(17, 'int8$', t.int8);
+    this.makePointerType(18, 'uint8$', t.uint8);
+    this.makePointerType(19, 'int16$', t.int16);
+    this.makePointerType(20, 'uint16$', t.uint16);
+    this.makePointerType(21, 'int32$', t.int32);
+    this.makePointerType(22, 'uint32$', t.uint32);
+    this.makePointerType(23, 'long$', t.long);
+    this.makePointerType(24, 'ulong$', t.ulong);
+    this.makePointerType(25, 'int64$', t.int64);
+    this.makePointerType(26, 'uint64$', t.uint64);
+    this.makePointerType(27, 'float32$', t.float32);
+    this.makePointerType(28, 'float64$', t.float64);
+    this.makePointerType(29, 'void$$', t.void$);
 
     this.typeBuilder_.makePepperType(30, 'Var', undefined);
     this.typeBuilder_.makePepperType(31, 'ArrayBuffer', ArrayBuffer);
@@ -378,16 +381,16 @@ define(['promise'], function(promise) {
     this.makeFunction('dictGetKeys', dictGetType);
   };
 
-  Module.prototype.makePointerType = function(id, baseType) {
-    return this.typeBuilder_.makePointerType(id, baseType);
+  Module.prototype.makePointerType = function(id, name, baseType) {
+    return this.typeBuilder_.makePointerType.apply(this.typeBuilder_, arguments);
   };
 
   Module.prototype.makeStructType = function(id, size, name, fields) {
-    return this.typeBuilder_.makeStructType(id, size, name, fields);
+    return this.typeBuilder_.makeStructType.apply(this.typeBuilder_, arguments);
   };
 
   Module.prototype.makeAliasType = function(name, alias) {
-    return this.typeBuilder_.makeAliasType(name, alias);
+    return this.typeBuilder_.makeAliasType.apply(this.typeBuilder_, arguments);
   };
 
   Module.prototype.makeFunctionType = function(id, retType) {
@@ -395,7 +398,7 @@ define(['promise'], function(promise) {
   };
 
   Module.prototype.makeFunction = function(name, overloads) {
-    return this.functionBuilder_.makeFunction(name, overloads);
+    return this.functionBuilder_.makeFunction.apply(this.functionBuilder_, arguments);
   };
 
   // TODO(binji): Where should these go? On the context...?
@@ -425,9 +428,14 @@ define(['promise'], function(promise) {
   };
 
   Module.prototype.findOverload_ = function(funcName, args, funcTypeList) {
+    var errorMessages = [];
     for (var i = 0; i < funcTypeList.length; ++i) {
-      if (this.overloadMatches_(funcTypeList[i], args)) {
-        return funcTypeList[i];
+      try {
+        if (this.overloadMatches_(funcTypeList[i], args)) {
+          return funcTypeList[i];
+        }
+      } catch(e) {
+        errorMessages.push(e.message);
       }
     }
 
@@ -439,6 +447,7 @@ define(['promise'], function(promise) {
     msg += "Possibilities:\n";
     for (var i = 0; i < funcTypeList.length; ++i) {
       msg += funcTypeList[i].toString() + "\n";
+      msg += '  ' + errorMessages[i] + '\n';
     }
     console.log(msg);
 
@@ -507,7 +516,7 @@ define(['promise'], function(promise) {
   };
 
   Module.prototype.canCoerceArgument_ = function(fromValue, fromType, toType) {
-    if (fromType.aliasEquals(toType)) {
+    if (fromType.data.equals(toType.data)) {
       return true;
     }
 
@@ -531,11 +540,16 @@ define(['promise'], function(promise) {
     if (fromValue === null) {
       return true;
     }
-    // For now, we can only coerce pointers to void*. At some point, C++
-    // inheritance could be supported as well.
+
+    // Unwrap the pointers and compare the base types. This will allow us to
+    // implicitly cast from int32* to long*, for example.
+    if (this.canCoerceArgument_(undefined, fromType.baseType, toType.baseType)) {
+      return true;
+    }
+
+    // Coercing a pointer to void* is always valid.
     if (toType !== this.types.void$) {
-      //console.log('Can only coerce to void*, not ' + toType + '.');
-      return false;
+      throw new Error('Can only coerce to void*, not ' + toType + '.');
     }
     return true;
   };
@@ -544,49 +558,49 @@ define(['promise'], function(promise) {
     assert(fromType.isPrimitive(), 'expected primitive, not ' + fromType);
     assert(toType.isPrimitive(), 'expected primitive, not ' + toType);
 
-    if (fromType.isInt() === toType.isInt()) {
-      if (fromType.isInt()) {
+    if (fromType.isInt === toType.isInt) {
+      if (fromType.isInt) {
         // Both ints.
         if (fromType.sizeof() > toType.sizeof()) {
-          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
-          return false;
+          throw new Error('Argument type is too large: ' + fromType + ' > ' + toType + '.');
         } else if (fromType.sizeof() === toType.sizeof()) {
-          if (fromType.isSigned() === toType.isSigned()) {
+          if (fromType.isSigned === toType.isSigned) {
             return true;
           }
 
-          if (fromType.isSigned()) {
+          if (fromType.isSigned) {
             // Cast from signed to unsigned.
-            return fromValue >= 0;
+            if (typeof fromValue === 'number') {
+              return fromValue >= 0;
+            } else {
+              // We don't know what the value is, assume that this is OK.
+              return true;
+            }
           } else {
             // Cast from unsigned to signed.
             // TODO(binji): fix this check.
             return true;
           }
 
-          // console.log('Signed/unsigned mismatch: ' + fromType + ', ' + toType + '.');
-          return false;
+          throw new Error('Signed/unsigned mismatch: ' + fromType + ', ' + toType + '.');
         }
       } else {
         // Both floats.
         if (fromType.sizeof() > toType.sizeof()) {
-          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
-          return false;
+          throw new Error('Argument type is too large: ' + fromType + ' > ' + toType + '.');
         }
       }
     } else {
       // One int, one float.
-      if (fromType.isInt()) {
+      if (fromType.isInt) {
         // From int to float.
         if ((toType === this.types.float32 && fromType.sizeof() >= 4) ||
             (toType === this.types.float64 && fromType.sizeof() == 8)) {
-          // console.log('Argument type is too large: ' + fromType + ' > ' + toType + '.');
-          return false;
+          throw new Error('Argument type is too large: ' + fromType + ' > ' + toType + '.');
         }
       } else {
         // From float to int.
-        // console.log('Implicit cast from float to int: ' + fromType + ' => ' + toType + '.');
-        return false;
+        throw new Error('Implicit cast from float to int: ' + fromType + ' => ' + toType + '.');
       }
     }
 
@@ -621,76 +635,87 @@ define(['promise'], function(promise) {
     this.nameHash = {};
   }
 
-  TypeBuilder.prototype.registerType_ = function(id, newType) {
-    assert(id !== 0, 'id !== 0');
-    assert(!(id in this.idHash), 'id ' + id + ' already exists');
-    assert(this.getTypeId(newType) === 0,
-           'type ' + newType + ' already made with id ' + id);
-
-    newType.id = id;
-    this.idHash[id] = newType;
-    this.nameHash[newType.getName()] = newType;
-    return newType;
-  };
-
   TypeBuilder.prototype.getNameHash = function() {
     return this.nameHash;
   };
 
-  TypeBuilder.prototype.makeAliasType = function(name, alias) {
-    this.nameHash[name] = new AliasType(name, alias);
-    return alias;
+  TypeBuilder.prototype.findTypeData = function(typeData) {
+    for (var id in this.idHash) {
+      var type = this.idHash[id];
+      if (type.data.equals(typeData)) {
+        return type;
+      }
+    }
+    return null;
+  };
+
+  TypeBuilder.prototype.registerType_ = function(id, name, cStr, typeData) {
+    assert(id !== 0, 'id === 0');
+    assert(!(id in this.idHash), 'id ' + id + ' already exists');
+    assert(!(name in this.nameHash), 'name ' + name + ' already exists');
+
+    var otherType = this.findTypeData(typeData);
+    assert(otherType === null,
+           function() {
+             return 'type ' + name + ' already exists. id = ' + otherType.id +
+             ' name = ' + otherType.name; });
+    var newType = new Type(id, name, cStr, typeData, null);
+    this.idHash[id] = newType;
+    this.nameHash[name] = newType;
+    return newType;
+  };
+
+  TypeBuilder.prototype.makeAliasType = function(name, alias, cStr) {
+    var otherType = this.nameHash[alias.name];
+    var newType = new Type(otherType.id, name, cStr, otherType.data, otherType);
+    this.nameHash[name] = newType;
+    return newType;
   };
 
   TypeBuilder.prototype.makePepperType = function(id, name, type) {
-    return this.registerType_(id, new PepperType(name, type));
+    var typeData = new PepperTypeData(name, type);
+    return this.registerType_(id, name, null, typeData);
   };
 
-  TypeBuilder.prototype.makePointerType = function(id, baseType) {
-    return this.registerType_(id, new PointerType(baseType));
+  TypeBuilder.prototype.makePointerType = function(id, name, baseType) {
+    var typeData = new PointerTypeData(baseType);
+    return this.registerType_(id, name, null, typeData);
   };
 
   TypeBuilder.prototype.makePrimitiveType = function(id, name, size, isSigned, isInt) {
-    return this.registerType_(id, new PrimitiveType(name, size, isSigned, isInt));
+    var typeData = new PrimitiveTypeData(name, size, isSigned, isInt);
+    return this.registerType_(id, name, null, typeData);
   };
 
   TypeBuilder.prototype.makeStructType = function(id, name, size, fields) {
-    return this.registerType_(id, new StructType(name, size, fields));
+    var typeData = new StructTypeData(name, size, fields);
+    return this.registerType_(id, name, null, typeData);
   };
 
-  TypeBuilder.prototype.makeVoidType = function(id) {
-    return this.registerType_(id, new VoidType(id));
+  TypeBuilder.prototype.makeVoidType = function(id, name) {
+    var typeData = new VoidTypeData();
+    return this.registerType_(id, name, null, typeData);
   };
 
   TypeBuilder.prototype.makeFunctionType = function(id, retType) {
     var args = Array.prototype.slice.call(arguments, 1);
-    var constructor = Function.bind.apply(FunctionType, [null].concat(args));
-    return this.registerType_(id, new constructor());
-  };
-
-  TypeBuilder.prototype.getTypeId = function(type) {
-    for (var id in this.idHash) {
-      if (this.idHash[id].equals(type)) {
-        return id;
-      }
-    }
-    return 0;
+    var constructor = Function.bind.apply(FunctionTypeData, [null].concat(args));
+    var typeData = new constructor();
+    var name = '__FunctionType' + id;
+    return this.registerType_(id, name, null, typeData);
   };
 
   TypeBuilder.prototype.getPointerType = function(baseType) {
-    var newPointerType = new PointerType(baseType);
-    var id = this.getTypeId(newPointerType);
-    if (id === 0) {
-      // Don't blow up yet... it is not an error to create a type that doesn't
-      // have an id. We can't send it to the NaCl module, but we can use it for
-      // type-checking.
-      this.createStack = new Error().stack;
-      return newPointerType;
-      //throw new Error('Pointer type "' + pointerType + '" not defined.');
+    var newTypeData = new PointerTypeData(baseType);
+    var otherType = this.findTypeData(newTypeData);
+    if (otherType !== null) {
+      return otherType;
     }
 
-    // Get the correct one.
-    return this.idHash[id];
+    // Don't blow up yet... it is not an error to create a type that doesn't
+    // have an id. We can't send it to the NaCl module, but we can use it for
+    // type-checking.
+    return new Type(0, name, null, newTypeData);
   };
 
   TypeBuilder.prototype.log = function() {
@@ -773,41 +798,68 @@ define(['promise'], function(promise) {
 
 
   //// Type ////////////////////////////////////////////////////////////////////
-  function Type() { this.id = 0; }
+  function Type(id, name, cStr, typeData, aliasOf) {
+    this.id = id;
+    this.name = name;
+    this.cStr = cStr;
+    this.data = typeData;
+    this.aliasOf = aliasOf || null;
 
-  Type.prototype.equals = function(other) {
-    return false;
-  };
+    var that = this;
 
-  Type.prototype.aliasEquals = function(other) {
-    if (other instanceof AliasType) {
-      return other.aliasEquals(this);
+    // Delegate other properties to TypeData.
+    for (var propName in typeData) {
+      if (propName in this) {
+        continue;
+      }
+
+      var prop = typeData[propName];
+      this.delegateToTypeData_(propName, prop);
     }
-    return this.equals(other);
+  }
+
+  Type.prototype.delegateToTypeData_ = function(propName, prop) {
+    if (typeof prop === 'function') {
+      this[propName] = prop.bind(this.data);
+    } else {
+      Object.defineProperty(this, propName, {
+        get: function() { return prop; }
+      });
+    }
   };
 
-  Type.prototype.isPrimitive = function() {
-    return this instanceof PrimitiveType;
-  };
+  Type.prototype.toString = function() {
+    return this.cStr || this.data.toString();
+  }
 
-  Type.prototype.isPointer = function() {
-    return this instanceof PointerType;
-  };
+  //// TypeData ////////////////////////////////////////////////////////////////
+  function TypeData() {}
 
-  Type.prototype.isInt = function() { return false; };
-  Type.prototype.isSigned = function() { return false; };
+  TypeData.KIND_VOID = 0;
+  TypeData.KIND_POINTER = 1;
+  TypeData.KIND_PRIMITIVE = 2;
+  TypeData.KIND_PEPPER = 3;
+  TypeData.KIND_STRUCT = 4;
+  TypeData.KIND_FUNCTION = 5;
 
-  Type.prototype.getName = function() { return null; };
+  TypeData.prototype.isVoid = function() { return this.kind == TypeData.KIND_VOID; }
+  TypeData.prototype.isPointer = function() { return this.kind == TypeData.KIND_POINTER; }
+  TypeData.prototype.isPrimitive = function() { return this.kind == TypeData.KIND_PRIMITIVE; }
+  TypeData.prototype.isPepper = function() { return this.kind == TypeData.KIND_PEPPER; }
+  TypeData.prototype.isStruct = function() { return this.kind == TypeData.KIND_STRUCT; }
+  TypeData.prototype.isFunction = function() { return this.kind == TypeData.KIND_FUNCTION; }
 
-  //// VoidType ////////////////////////////////////////////////////////////////
-  function VoidType() { Type.call(this); }
-  VoidType.prototype = new Type();
-  VoidType.prototype.constructor = VoidType;
-  VoidType.prototype.sizeof = function() { return 0; };
-  VoidType.prototype.toString = function() { return 'void'; };
-  VoidType.prototype.getName = function() { return 'void'; };
+  TypeData.prototype.equals = function(other) { return false; }
 
-  VoidType.prototype.equals = function(other) {
+  //// VoidTypeData ////////////////////////////////////////////////////////////
+  function VoidTypeData() { TypeData.call(this); }
+  VoidTypeData.prototype = Object.create(TypeData.prototype);
+  VoidTypeData.prototype.constructor = VoidTypeData;
+  VoidTypeData.prototype.kind = TypeData.KIND_VOID;
+  VoidTypeData.prototype.sizeof = function() { return 0; };
+  VoidTypeData.prototype.toString = function() { return 'void'; };
+
+  VoidTypeData.prototype.equals = function(other) {
     if (this === other) {
       return true;
     }
@@ -816,65 +868,78 @@ define(['promise'], function(promise) {
   };
 
 
-  //// PrimitiveType ///////////////////////////////////////////////////////////
-  function PrimitiveType(name, size, isSigned, isInt) {
-    Type.call(this);
+  //// PrimitiveTypeData ///////////////////////////////////////////////////////
+  function PrimitiveTypeData(name, size, isSigned, isInt) {
+    TypeData.call(this);
     this.name = name;
     this.size = size;
-    this.isSigned_ = isSigned;
-    this.isInt_ = isInt;
+    this.isSigned = isSigned;
+    this.isInt = isInt;
   }
 
-  PrimitiveType.prototype = new Type();
-  PrimitiveType.prototype.constructor = PrimitiveType;
-  PrimitiveType.prototype.sizeof = function() { return this.size; };
-  PrimitiveType.prototype.toString = function() { return this.name; };
-  PrimitiveType.prototype.getName = function() { return this.name; };
-  PrimitiveType.prototype.isInt = function() { return this.isInt_; };
-  PrimitiveType.prototype.isSigned = function() { return this.isSigned_; };
+  PrimitiveTypeData.TO_STR = {
+    char: 'char',
+    int8: 'int8_t',
+    uint8: 'uint8_t',
+    int16: 'int16_t',
+    uint16: 'uint16_t',
+    int32: 'int32_t',
+    uint32: 'uint32_t',
+    long: 'long',
+    ulong: 'unsigned long',
+    int64: 'int64_t',
+    uint64: 'uint64_t',
+    float32: 'float',
+    float64: 'double',
+  };
 
-  PrimitiveType.prototype.equals = function(other) {
+  PrimitiveTypeData.prototype = Object.create(TypeData.prototype);
+  PrimitiveTypeData.prototype.constructor = PrimitiveTypeData;
+  PrimitiveTypeData.prototype.kind = TypeData.KIND_PRIMITIVE;
+  PrimitiveTypeData.prototype.sizeof = function() { return this.size; };
+
+  PrimitiveTypeData.prototype.toString = function() {
+    return PrimitiveTypeData.TO_STR[this.name];
+  }
+
+  PrimitiveTypeData.prototype.equals = function(other) {
     if (this === other) {
       return true;
     }
 
     return this.constructor === other.constructor &&
-           this.size === other.size &&
            this.name === other.name &&
-           this.isInt_ === other.isInt_ &&
-           this.isSigned_ === other.isSigned_;
+           this.size === other.size &&
+           this.isSigned === other.isSigned &&
+           this.isInt === other.isInt;
   };
 
 
-  //// PointerType /////////////////////////////////////////////////////////////
-  function PointerType(baseType) {
-    Type.call(this);
+  //// PointerTypeData /////////////////////////////////////////////////////////
+  function PointerTypeData(baseType) {
+    TypeData.call(this);
     this.baseType = baseType;
   }
 
-  PointerType.prototype = new Type();
-  PointerType.prototype.constructor = PointerType;
+  PointerTypeData.prototype = Object.create(TypeData.prototype);
+  PointerTypeData.prototype.constructor = PointerTypeData;
+  PointerTypeData.prototype.kind = TypeData.KIND_POINTER;
 
-  PointerType.prototype.sizeof = function() {
+  PointerTypeData.prototype.sizeof = function() {
     return 4;  // NaCl pointers are always 32-bit.
   };
 
-  PointerType.prototype.toString = function() {
+  PointerTypeData.prototype.toString = function() {
     return this.baseType.toString() + '*';
   };
 
-  PointerType.prototype.getName = function() {
-    // So it can be used as a JavaScript identifier.
-    return this.baseType.getName() + '$';
-  };
-
-  PointerType.prototype.equals = function(other) {
+  PointerTypeData.prototype.equals = function(other) {
     if (this === other) {
       return true;
     }
 
     return this.constructor === other.constructor &&
-           this.baseType.equals(other.baseType);
+           this.baseType.data.equals(other.baseType.data);
   };
 
 
@@ -897,60 +962,34 @@ define(['promise'], function(promise) {
   };
 
 
-  //// StructType //////////////////////////////////////////////////////////////
-  function StructType(name, size, fields) {
-    Type.call(this);
+  //// StructTypeData //////////////////////////////////////////////////////////
+  function StructTypeData(name, size, fields) {
+    TypeData.call(this);
     this.name = name;
     this.size = size;
     this.fields = {};
     this.addFields_(fields);
   }
 
-  StructType.prototype = new Type();
-  StructType.prototype.constructor = StructType;
+  StructTypeData.prototype = Object.create(TypeData.prototype);
+  StructTypeData.prototype.constructor = StructTypeData;
+  StructTypeData.prototype.kind = TypeData.KIND_STRUCT;
 
-  StructType.prototype.sizeof = function() { return this.size; };
-  StructType.prototype.toString = function() { return this.name; };
-  StructType.prototype.getName = function() { return this.name; };
+  StructTypeData.prototype.sizeof = function() { return this.size; };
+  StructTypeData.prototype.toString = function() {
+    return 'struct ' + this.name;
+  };
 
-  StructType.prototype.equals = function(other) {
+  StructTypeData.prototype.equals = function(other) {
     if (this === other) {
       return true;
     }
 
-    if (this.constructor !== other.constructor ||
-        this.name !== other.name ||
-        this.size !== other.size) {
-      return false;
-    }
-
-    var thisFieldKeys = Object.keys(this.fields);
-    var otherFieldKeys = Object.keys(other.fields);
-    if (thisFieldKeys.length !== otherFieldKeys.length) {
-      return false;
-    }
-
-    thisFieldKeys = thisFieldKeys.sort();
-    otherFieldKeys = otherFieldKeys.sort();
-
-    for (var i = 0; i < thisFieldKeys.length; ++i) {
-      var thisFieldKey = thisFieldKeys[i];
-      var otherFieldKey = otherFieldKeys[i];
-      if (thisFieldKey !== otherFieldKey) {
-        return false;
-      }
-
-      var thisFieldValue = this.fields[thisFieldKey];
-      var otherFieldValue = other.fields[thisFieldKey];
-      if (!thisFieldValue.equals(otherFieldValue)) {
-        return false;
-      }
-    }
-
-    return true;
+    return this.constructor === other.constructor ||
+           this.name === other.name;
   };
 
-  StructType.prototype.addFields_ = function(fields) {
+  StructTypeData.prototype.addFields_ = function(fields) {
     for (var name in fields) {
       if (!fields.hasOwnProperty(name)) {
         continue;
@@ -961,19 +1000,20 @@ define(['promise'], function(promise) {
     }
   };
 
-  StructType.prototype.addField_ = function(name, type, offset) {
+  StructTypeData.prototype.addField_ = function(name, type, offset) {
     assert(type instanceof Type, 'type is not instance of Type.');
     assert(offset >= 0, 'offset ' + offset + ' < 0');
-    assert(offset + type.sizeof() <= this.size, 'offset ' + offset + ' > size');
+    assert(offset + type.sizeof() <= this.size,
+           'offset ' + offset + ' > size');
     assert(!this.fields.hasOwnProperty(name),
            'field ' + name + ' already exists');
     this.fields[name] = new StructField(name, type, offset);
   };
 
 
-  //// FunctionType ////////////////////////////////////////////////////////////
-  function FunctionType(retType) {
-    Type.call(this);
+  //// FunctionTypeData ////////////////////////////////////////////////////////
+  function FunctionTypeData(retType) {
+    TypeData.call(this);
     this.retType = retType;
     this.argTypes = Array.prototype.slice.call(arguments, 1);
 
@@ -985,14 +1025,15 @@ define(['promise'], function(promise) {
     });
   }
 
-  FunctionType.prototype = new Type();
-  FunctionType.prototype.constructor = FunctionType;
+  FunctionTypeData.prototype = Object.create(TypeData.prototype);
+  FunctionTypeData.prototype.constructor = FunctionTypeData;
+  FunctionTypeData.prototype.kind = TypeData.KIND_FUNCTION;
 
-  FunctionType.prototype.sizeof = function() {
+  FunctionTypeData.prototype.sizeof = function() {
     return 4;
   };
 
-  FunctionType.prototype.toString = function() {
+  FunctionTypeData.prototype.toString = function() {
     var s = '';
     s += this.retType.toString();
     s += ' (*)(';
@@ -1001,13 +1042,13 @@ define(['promise'], function(promise) {
     return s;
   };
 
-  FunctionType.prototype.equals = function(other) {
+  FunctionTypeData.prototype.equals = function(other) {
     if (this === other) {
       return true;
     }
 
     if (this.constructor !== other.constructor ||
-        !this.retType.equals(other.retType)) {
+        !this.retType.data.equals(other.retType.data)) {
       return false;
     }
 
@@ -1016,7 +1057,7 @@ define(['promise'], function(promise) {
     }
 
     for (var i = 0; i < this.argTypes.length; ++i) {
-      if (!this.argTypes[i].equals(other.argTypes[i])) {
+      if (!this.argTypes[i].data.equals(other.argTypes[i].data)) {
         return false;
       }
     }
@@ -1025,61 +1066,27 @@ define(['promise'], function(promise) {
   };
 
 
-  //// PepperType //////////////////////////////////////////////////////////////
-  function PepperType(name, jsPrototype) {
-    Type.call(this);
+  //// PepperTypeData //////////////////////////////////////////////////////////
+  function PepperTypeData(name, jsPrototype) {
+    TypeData.call(this);
     this.name = name;
     this.jsPrototype = jsPrototype;
   }
 
-  PepperType.prototype = new Type();
+  PepperTypeData.prototype = Object.create(TypeData.prototype);
+  PepperTypeData.constructor = PepperTypeData;
+  PepperTypeData.prototype.kind = TypeData.KIND_PEPPER;
 
-  PepperType.prototype.sizeof = function() { return 20;  /* sizeof(PP_Var) */ };
-  PepperType.prototype.toString = function() { return this.name; };
-  PepperType.prototype.getName = function() { return this.name; };
+  PepperTypeData.prototype.sizeof = function() { return 20;  /* sizeof(PP_Var) */ };
+  PepperTypeData.prototype.toString = function() { return this.name; };
 
-  PepperType.prototype.equals = function(other) {
+  PepperTypeData.prototype.equals = function(other) {
     if (this === other) {
       return true;
     }
 
     return this.constructor === other.constructor &&
-           this.name === other.name &&
            this.jsPrototype === other.jsPrototype;
-  };
-
-
-  //// AliasType ///////////////////////////////////////////////////////////////
-  function AliasType(name, alias) {
-    Type.call(this);
-    this.name = name;
-    this.alias = alias;
-    while (this.alias instanceof AliasType) {
-      this.alias = this.alias.alias;
-    }
-  }
-
-  AliasType.prototype = new Type();
-  AliasType.prototype.constructor = AliasType;
-  AliasType.prototype.sizeof = function() { return this.alias.sizeof(); };
-  AliasType.prototype.toString = function() { return this.name; };
-  AliasType.prototype.getName = function() { return this.name; };
-  AliasType.prototype.isPrimitive = function() { return this.alias.isPrimitive(); };
-  AliasType.prototype.isPointer = function() { return this.alias.isPointer(); };
-  AliasType.prototype.isInt = function() { return this.alias.isInt_; };
-  AliasType.prototype.isSigned = function() { return this.alias.isSigned_; };
-
-  AliasType.prototype.equals = function(other) {
-    return this.constructor === other.constructor &&
-           this.name === other.name &&
-           this.alias.equals(other.alias);
-  };
-
-  AliasType.prototype.aliasEquals = function(other) {
-    if (other instanceof AliasType) {
-      other = other.alias;
-    }
-    return this.alias.equals(other);
   };
 
 
@@ -1117,7 +1124,8 @@ define(['promise'], function(promise) {
 
     // Quick sanity check.
     this.overloads.forEach(function(funcType) {
-      assert(funcType instanceof FunctionType, 'expected FunctionType');
+      assert(funcType.data instanceof FunctionTypeData,
+             'expected FunctionTypeData');
     });
   }
 
