@@ -16,7 +16,7 @@
 from helper import *
 from commands import *
 
-types = FixTypes(types, functions)
+types, functions = FixTypes(types, functions)
 ]]]
 
 "use strict";
@@ -28,33 +28,38 @@ define(['nacl'], function(nacl) {
   var f = m.functions;
 
 [[for _, type in types.no_builtins.iteritems():]]
-[[  if type.IsAlias():]]
-  m.makeAliasType('{{type.name}}', t.{{type.alias.name}});
-[[  elif type.IsStruct():]]
-  m.makeStructType({{type.id}}, '{{type.name}}', {{type.size}}, {
+[[  if type.is_alias:]]
+  m.makeAliasType('{{type.js_ident}}', t.{{type.alias_of.js_ident}});
+[[  elif type.is_struct:]]
+  m.makeStructType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {
 [[    for field in type.fields:]]
-    {{field.name}}: {type: t.{{field.type}}, offset: {{field.offset}}},
+    {{field.name}}: {type: t.{{field.type.js_ident}}, offset: {{field.offset}}},
 [[    ]]
   });
-[[  elif type.IsPointer():]]
-  m.makePointerType({{type.id}}, t.{{type.base.name}});
+[[  elif type.is_pointer:]]
+  m.makePointerType({{type.id}}, t.{{type.base_type.js_ident}});
 [[]]
 
 [[[
-def ArgTypesString(fn):
-  if fn.arg_types:
-    return ', ' + CommaSep(['t.%s' % t.name for t in fn.arg_types])
+def ArgTypesString(fn_type):
+  if fn_type.arg_types:
+    return ', ' + CommaSep(['t.%s' % t.js_ident for t in fn_type.arg_types])
   return ''
 
-def ReturnTypeString(fn):
-  if not fn.return_type.IsVoid():
-    return ', t.' + fn.return_type.name
+def ReturnTypeString(fn_type):
+  if not fn_type.return_type.is_void:
+    return ', t.' + fn_type.return_type.js_ident
   return ''
 ]]]
+[[for fn_type in types.function_types.itervalues():]]
+[[  if fn_type.is_alias:]]
+  var fnType_{{fn_type.js_ident}} = fnType_{{fn_type.alias_of.js_ident}};
+[[  else:]]
+  var fnType_{{fn_type.js_ident}} = m.makeFunctionType({{fn_type.id}}{{ReturnTypeString(fn_type)}}{{ArgTypesString(fn_type)}});
+[[]]
 
-[[for _, fn in types.function_types.iteritems():]]
-  m.makeFunction('{{fn.name}}',
-      m.makeFunctionType({{fn.id}}{{ReturnTypeString(fn)}}{{ArgTypesString(fn)}}));
+[[for fn in functions:]]
+  m.makeFunction('{{fn.js_ident}}', fnType_{{fn.js_ident}});
 [[]]
 
   return m;

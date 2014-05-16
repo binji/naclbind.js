@@ -21,54 +21,61 @@ class AttrDict(dict):
     self.__dict__ = self
 
 
-FIRST_ID = 80
+FIRST_ID = 92
 
 BUILTIN_TYPES = [
   {'name': 'void', 'kind': 'void'},
-  {'name': 'int8', 'kind': 'prim', 'size': 1, 'signed': True, 'int': True},
-  {'name': 'uint8', 'kind': 'prim', 'size': 1, 'signed': False, 'int': True},
-  {'name': 'int16', 'kind': 'prim', 'size': 2, 'signed': True, 'int': True},
-  {'name': 'uint16', 'kind': 'prim', 'size': 2, 'signed': False, 'int': True},
-  {'name': 'int32', 'kind': 'prim', 'size': 4, 'signed': True, 'int': True},
-  {'name': 'uint32', 'kind': 'prim', 'size': 4, 'signed': False, 'int': True},
-  {'name': 'int64', 'kind': 'prim', 'size': 8, 'signed': True, 'int': True},
-  {'name': 'uint64', 'kind': 'prim', 'size': 8, 'signed': False, 'int': True},
-  {'name': 'float32', 'kind': 'prim', 'size': 4, 'int': False},
-  {'name': 'float64', 'kind': 'prim', 'size': 8, 'int': False},
+  {'name': 'char', 'kind': 'prim', 'size': 1, 'is_signed': True, 'is_int': True},
+  {'name': 'int8', 'kind': 'prim', 'size': 1, 'is_signed': True, 'is_int': True},
+  {'name': 'uint8', 'kind': 'prim', 'size': 1, 'is_signed': False, 'is_int': True},
+  {'name': 'int16', 'kind': 'prim', 'size': 2, 'is_signed': True, 'is_int': True},
+  {'name': 'uint16', 'kind': 'prim', 'size': 2, 'is_signed': False, 'is_int': True},
+  {'name': 'int32', 'kind': 'prim', 'size': 4, 'is_signed': True, 'is_int': True},
+  {'name': 'uint32', 'kind': 'prim', 'size': 4, 'is_signed': False, 'is_int': True},
+  {'name': 'long', 'kind': 'prim', 'size': 4, 'is_signed': True, 'is_int': True},
+  {'name': 'ulong', 'kind': 'prim', 'size': 4, 'is_signed': False, 'is_int': True},
+  {'name': 'int64', 'kind': 'prim', 'size': 8, 'is_signed': True, 'is_int': True},
+  {'name': 'uint64', 'kind': 'prim', 'size': 8, 'is_signed': False, 'is_int': True},
+  {'name': 'float32', 'kind': 'prim', 'size': 4, 'is_int': False},
+  {'name': 'float64', 'kind': 'prim', 'size': 8, 'is_int': False},
+
+  {'name': 'uchar', 'kind': 'alias', 'alias': 'uint8', 'str': 'unsigned char'},
+  {'name': 'short', 'kind': 'alias', 'alias': 'int16', 'str': 'short'},
+  {'name': 'ushort', 'kind': 'alias', 'alias': 'uint16', 'str': 'unsigned short'},
+  {'name': 'int', 'kind': 'alias', 'alias': 'int32', 'str': 'int'},
+  {'name': 'uint', 'kind': 'alias', 'alias': 'uint32', 'str': 'unsigned int'},
+  {'name': 'longlong', 'kind': 'alias', 'alias': 'int64', 'str': 'long long'},
+  {'name': 'ulonglong', 'kind': 'alias', 'alias': 'uint64', 'str': 'unsigned long long'},
+  {'name': 'float', 'kind': 'alias', 'alias': 'float32'},
+  {'name': 'double', 'kind': 'alias', 'alias': 'float64'},
+  {'name': 'size_t', 'kind': 'alias', 'alias': 'uint32'},
+  {'name': 'ssize_t', 'kind': 'alias', 'alias': 'int32'},
+  {'name': 'off_t', 'kind': 'alias', 'alias': 'int64'},
+
   {'name': 'void$', 'kind': 'pointer', 'base': 'void'},
+  {'name': 'char$', 'kind': 'pointer', 'base': 'char'},
   {'name': 'int8$', 'kind': 'pointer', 'base': 'int8'},
   {'name': 'uint8$', 'kind': 'pointer', 'base': 'uint8'},
   {'name': 'int16$', 'kind': 'pointer', 'base': 'int16'},
   {'name': 'uint16$', 'kind': 'pointer', 'base': 'uint16'},
   {'name': 'int32$', 'kind': 'pointer', 'base': 'int32'},
   {'name': 'uint32$', 'kind': 'pointer', 'base': 'uint32'},
+  {'name': 'long$', 'kind': 'pointer', 'base': 'long'},
+  {'name': 'ulong$', 'kind': 'pointer', 'base': 'ulong'},
   {'name': 'int64$', 'kind': 'pointer', 'base': 'int64'},
   {'name': 'uint64$', 'kind': 'pointer', 'base': 'uint64'},
   {'name': 'float32$', 'kind': 'pointer', 'base': 'float32'},
   {'name': 'float64$', 'kind': 'pointer', 'base': 'float64'},
   {'name': 'void$$', 'kind': 'pointer', 'base': 'void$'},
-  {'name': 'Var', 'kind': 'pepper', 'prototype': 'undefined'},
-  {'name': 'ArrayBuffer', 'kind': 'pepper', 'prototype': 'ArrayBuffer'},
-  {'name': 'Array', 'kind': 'pepper', 'prototype': 'Array'},
-  {'name': 'Dictionary', 'kind': 'pepper', 'prototype': 'Object'},
-  {'name': 'String', 'kind': 'pepper', 'prototype': 'String'},
+
+  {'name': 'Var', 'kind': 'pepper', 'pepper_type': 'Var'},
+  {'name': 'ArrayBuffer', 'kind': 'pepper', 'pepper_type': 'ArrayBuffer'},
+  {'name': 'Array', 'kind': 'pepper', 'pepper_type': 'Array'},
+  {'name': 'Dictionary', 'kind': 'pepper', 'pepper_type': 'Dictionary'},
+  {'name': 'String', 'kind': 'pepper', 'pepper_type': 'String'},
 ]
 # Convert each element to AttrDict
 BUILTIN_TYPES = [AttrDict(d) for d in BUILTIN_TYPES]
-
-PRIM_NAMES = {
-  'int8': 'int8_t',
-  'uint8': 'uint8_t',
-  'int16': 'int16_t',
-  'uint16': 'uint16_t',
-  'int32': 'int32_t',
-  'uint32': 'uint32_t',
-  'int64': 'int64_t',
-  'uint64': 'uint64_t',
-  'float32': 'float',
-  'float64': 'double',
-}
-
 
 def CamelToSnake(name):
   result = ''
@@ -94,13 +101,30 @@ def CommaSep(arr):
   return ', '.join(arr)
 
 
-def MakeCName(name):
-  return name.replace('$', '_p')
+def MakeCIdent(js_ident):
+  return js_ident.replace('$', '_p')
 
 
-class Type(object):
-  def __init__(self, id_):
-    self.id = id_
+class IdGenerator(object):
+  def __init__(self):
+    self.next_id = 1
+
+  def Get(self):
+    id_ = self.next_id
+    self.next_id += 1
+    return id_
+
+  def Set(self, next_id):
+    self.next_id = next_id
+
+
+class TypeData(object):
+  KIND_VOID = 0
+  KIND_POINTER = 1
+  KIND_PRIMITIVE = 2
+  KIND_PEPPER = 3
+  KIND_STRUCT = 4
+  KIND_FUNCTION = 5
 
   def GetFormat(self):
     return None
@@ -111,81 +135,146 @@ class Type(object):
   def _GetDefaultFormatArg(self, ix):
     return 'arg%d' % ix
 
-  def IsVoid(self):
-    return False
+  @property
+  def is_void(self):
+    return self.kind == self.KIND_VOID
 
-  def IsPointer(self):
-    return False
+  @property
+  def is_pointer(self):
+    return self.kind == self.KIND_POINTER
 
-  def IsPrimitive(self):
-    return False
+  @property
+  def is_primitive(self):
+    return self.kind == self.KIND_PRIMITIVE
 
-  def IsStruct(self):
-    return False
+  @property
+  def is_pepper(self):
+    return self.kind == self.KIND_PEPPER
 
-  def IsAlias(self):
-    return False
+  @property
+  def is_struct(self):
+    return self.kind == self.KIND_STRUCT
+
+  @property
+  def is_function(self):
+    return self.kind == self.KIND_FUNCTION
+
+  def __ne__(self, other):
+    return not (self == other)
 
 
-class VoidType(Type):
-  def __init__(self, id_, typ, _):
-    Type.__init__(self, id_)
-    self.name = typ.name
-    self.cname = typ.name
+class VoidTypeData(TypeData):
+  kind = TypeData.KIND_VOID
 
   def __str__(self):
-    return self.name
+    return 'void'
 
-  def IsVoid(self):
-    return True
+  def __eq__(self, other):
+    return isinstance(other, TypeData) and other.is_void
+
+  def __hash__(self):
+    return hash(VoidTypeData)
 
 
-class PrimType(Type):
-  def __init__(self, id_, typ, _):
-    Type.__init__(self, id_)
-    self.name = typ.name
-    self.cname = typ.name
-    self.str = PRIM_NAMES[typ.name]
-    self.signed = ('signed' in typ) and typ.signed
-    self.size = typ.size
-    self.is_int = typ.int
+class PrimitiveTypeData(TypeData):
+  kind = TypeData.KIND_PRIMITIVE
+
+  TO_STR = {
+    "char": "char",
+    "int8": "int8_t",
+    "uint8": "uint8_t",
+    "int16": "int16_t",
+    "uint16": "uint16_t",
+    "int32": "int32_t",
+    "uint32": "uint32_t",
+    "long": "long",
+    "ulong": "unsigned long",
+    "int64": "int64_t",
+    "uint64": "uint64_t",
+    "float32": "float",
+    "float64": "double",
+  }
+
+  def __init__(self, js_ident, is_signed, size, is_int):
+    TypeData.__init__(self)
+    self.js_ident = js_ident
+    self.is_signed = is_signed
+    self.size = size
+    self.is_int = is_int
+    self.c_str = self.TO_STR[js_ident]
 
   def GetFormat(self):
     if self.size <= 4:
-      return '%d' if self.signed else '%u'
+      return '%d' if self.is_signed else '%u'
     else:
-      return '%lld' if self.signed else '%llu'
+      return '%lld' if self.is_signed else '%llu'
 
   def GetFormatArg(self, ix):
     return self._GetDefaultFormatArg(ix)
 
   def __str__(self):
-    return self.str
+    return self.c_str
 
-  def IsPrimitive(self):
-    return True
+  def __eq__(self, other):
+    return (isinstance(other, TypeData) and
+            other.is_primitive and
+            self.js_ident == other.js_ident and
+            self.is_signed == other.is_signed and
+            self.size == other.size and
+            self.is_int == other.is_int)
+
+  def __hash__(self):
+    return hash((PrimitiveTypeData, self.js_ident, self.is_signed, self.size,
+                 self.is_int))
 
 
-class StructType(Type):
-  def __init__(self, id_, typ, _):
-    Type.__init__(self, id_)
-    self.name = typ.name
-    self.cname = typ.name
-    self.size = typ.size
-    self.fields = typ.fields
+class StructField(object):
+  def __init__(self, name, type_, offset):
+    self.name = name
+    self.offset = offset
+    self.type = type_
+
+
+class StructTypeData(TypeData):
+  kind = TypeData.KIND_STRUCT
+
+  def __init__(self, name, size, fields):
+    TypeData.__init__(self)
+    self.name = name
+    self.size = size
+    self.fields = fields
 
   def __str__(self):
     return 'struct %s' % self.name
 
-  def IsStruct(self):
-    return True
+  def __eq__(self, other):
+    return (isinstance(other, TypeData) and
+            other.is_struct and
+            self.name == other.name)
+
+  def __hash__(self):
+    return hash((StructTypeData, self.name))
 
 
-class PepperType(Type):
-  def __init__(self, id_, typ, _):
-    Type.__init__(self, id_)
-    self.name = typ.name
-    self.cname = typ.name
+class PepperTypeData(TypeData):
+  kind = TypeData.KIND_PEPPER
+  TYPE_VAR = 0
+  TYPE_STRING = 1
+  TYPE_ARRAY = 2
+  TYPE_ARRAY_BUFFER = 3
+  TYPE_DICTIONARY = 4
+  TO_STR = {
+    TYPE_VAR: "Var",
+    TYPE_STRING: "String",
+    TYPE_ARRAY: "Array",
+    TYPE_ARRAY_BUFFER: "ArrayBuffer",
+    TYPE_DICTIONARY: "Dictionary"
+  }
+
+  def __init__(self, pepper_type):
+    TypeData.__init__(self)
+    self.pepper_type = pepper_type
+    self.c_str = self.TO_STR[pepper_type]
 
   def GetFormat(self):
     # TODO(binji): better output here.
@@ -195,16 +284,24 @@ class PepperType(Type):
     return None
 
   def __str__(self):
-    return self.name
+    return self.c_str
+
+  def __eq__(self, other):
+    return (isinstance(other, TypeData) and
+            other.is_pepper and
+            self.pepper_type == other.pepper_type)
+
+  def __hash__(self):
+    return hash((PepperTypeData, self.pepper_type))
 
 
-class PointerType(Type):
-  def __init__(self, id_, typ, types):
-    Type.__init__(self, id_)
-    self.name = typ.name
-    self.cname = MakeCName(typ.name)
-    self.base = types.all_types[typ.base]
-    self.str = str(self.base) + '*'
+class PointerTypeData(TypeData):
+  kind = TypeData.KIND_POINTER
+
+  def __init__(self, base_type):
+    TypeData.__init__(self)
+    self.base_type = base_type
+    self.c_str = str(self.base_type) + '*'
 
   def GetFormat(self):
     return '%p'
@@ -213,111 +310,222 @@ class PointerType(Type):
     return self._GetDefaultFormatArg(ix)
 
   def __str__(self):
-    return self.str
+    return self.c_str
 
-  def IsPointer(self):
-    return True
+  def __eq__(self, other):
+    return (isinstance(other, TypeData) and
+            other.is_pointer and
+            self.base_type.data == other.base_type.data)
 
-
-class AliasType(Type):
-  def __init__(self, _, typ, types):
-    self.alias = types.all_types[typ.alias]
-    assert not isinstance(self.alias, AliasType)
-
-    Type.__init__(self, self.alias.id)
-    self.name = typ.name
-    self.cname = MakeCName(typ.name)
-    self.str = getattr(typ, 'str', self.name)
-
-  def __str__(self):
-    return self.str
-
-  def __getattr__(self, name):
-    return getattr(self.alias, name)
-
-  def GetFormat(self):
-    return self.alias.GetFormat()
-
-  def GetFormatArg(self, ix):
-    return self.alias.GetFormatArg(ix)
-
-  def IsPointer(self):
-    return self.alias.IsPointer()
-
-  def IsPrimitive(self):
-    return self.alias.IsPrimitive()
-
-  def IsStruct(self):
-    return self.alias.IsStruct()
-
-  def IsAlias(self):
-    return True
+  def __hash__(self):
+    return hash((PointerTypeData, self.base_type.data))
 
 
-class FunctionType(Type):
-  def __init__(self, id_, fn, types):
-    Type.__init__(self, id_)
-    self.name = fn.name
-    self.arg_types = [types.all_types[arg] for arg in fn.args]
-    self.return_type = types.all_types[fn.result]
+class FunctionTypeData(TypeData):
+  kind = TypeData.KIND_FUNCTION
+
+  def __init__(self, return_type, arg_types):
+    TypeData.__init__(self)
+    self.return_type = return_type
+    self.arg_types = arg_types
 
     args = ', '.join(map(str, self.arg_types))
-    self.str = '%s (*)(%s)' % (self.return_type, args)
+    self.c_str = '%s (*)(%s)' % (self.return_type, args)
+
+  def _GetArgTypeData(self):
+    return [arg_type.data for arg_type in self.arg_types]
 
   def __str__(self):
-    return self.str
+    return self.c_str
+
+  def __eq__(self, other):
+    return (isinstance(other, TypeData) and
+            other.is_function and
+            self._GetArgTypeData() == other._GetArgTypeData() and
+            self.return_type.data == other.return_type.data)
+
+  def __hash__(self):
+    return hash((FunctionTypeData,
+                 self.return_type.data,
+                 tuple(self._GetArgTypeData())))
 
 
-KIND_TO_CONSTRUCTOR = {
-  'void': VoidType,
-  'prim': PrimType,
-  'struct': StructType,
-  'pepper': PepperType,
-  'pointer': PointerType,
-  'alias': AliasType,
-}
+class Type(object):
+  def __init__(self, id_, js_ident, c_ident, c_str, type_data,
+               is_builtin=False, alias_of=None):
+    assert isinstance(type_data, TypeData)
+    assert alias_of is None or isinstance(alias_of, Type)
+    self.id = id_
+    self.js_ident = js_ident
+    self.c_ident = c_ident
+    self.c_str = c_str
+    self.data = type_data
+    self.is_builtin = is_builtin
+    self.alias_of = alias_of
 
+  @property
+  def is_alias(self):
+    return self.alias_of is not None
 
-def FixTypes(type_dicts, fn_dicts):
-  types = Types()
-  types.AddTypes(type_dicts)
-  types.AddFunctionTypes(fn_dicts)
-  return types
+  def __str__(self):
+    return self.c_str
 
-
-#def FixFunctions(types, fn_dicts):
-#  types.AddFunctionTypes(fn_dicts)
-#  functions = []
-#  for fn_dict in fn_dicts:
-#    functions.append(Function(types, fn_dict))
-#  return functions
+  def __getattr__(self, name):
+    return getattr(self.data, name)
 
 
 class Types(object):
   def __init__(self):
-    self.next_id = 1
-    self.all_types = collections.OrderedDict()
+    self.type_ident_dict = {}
     self.no_builtins = collections.OrderedDict()
     self.function_types = collections.OrderedDict()
-    self.AddTypes(BUILTIN_TYPES, builtins=True)
-    # TODO(binji): hack because not all types are specified in BUILTIN_TYPES
-    self.next_id = FIRST_ID
+    self.type_data_dict = collections.defaultdict(list)
 
-  def AddTypes(self, type_dicts, builtins=False):
+  def AddType(self, type_):
+    self.type_data_dict[type_.data].append(type_)
+
+    if type_.data.is_function:
+      self.function_types[type_.js_ident] = type_
+    else:
+      # TODO(binji): handle struct namespace; i.e. struct foo != typedef foo
+      assert type_.js_ident not in self.type_ident_dict, \
+          'typename "%s" already in dict' % type_.js_ident
+      self.type_ident_dict[type_.js_ident] = type_
+
+      if not type_.is_builtin:
+        self.no_builtins[type_.js_ident] = type_
+
+
+class TypesBuilder(object):
+  def __init__(self):
+    self.types = Types()
+    self.id_gen = IdGenerator()
+    self.AddTypeDicts(BUILTIN_TYPES, is_builtin=True)
+    self.id_gen.Set(FIRST_ID)
+
+  def AddTypeDicts(self, type_dicts, is_builtin=False):
     for type_dict in type_dicts:
-      typ = self.MakeType(self.next_id, type_dict)
-      self.all_types[typ.name] = typ
-      if not builtins:
-        self.no_builtins[typ.name] = typ
-      if type_dict.kind != 'alias':
-        self.next_id += 1
+      self.AddTypeDict(type_dict, is_builtin)
 
-  def MakeType(self, id_, type_dict):
-    return KIND_TO_CONSTRUCTOR[type_dict.kind](id_, type_dict, self)
+  def AddTypeDict(self, type_dict, is_builtin=False):
+    type_ = self._TypeDictToType(type_dict, is_builtin)
+    self.types.AddType(type_)
+    return type_
 
-  def AddFunctionTypes(self, fn_dicts):
+  def AddFunctionDict(self, fn_dict, is_builtin):
+    type_ = self._FunctionDictToType(fn_dict, is_builtin)
+    self.types.AddType(type_)
+    return type_
+
+  def _TypeDictToType(self, type_dict, is_builtin):
+    type_data = self._TypeDictToTypeData(type_dict)
+    kind = type_dict.kind
+    return self._DictToType(type_dict, kind, type_data, is_builtin)
+
+  def _FunctionDictToType(self, fn_dict, is_builtin):
+    type_data = self._FunctionDictToTypeData(fn_dict)
+    return self._DictToType(fn_dict, None, type_data, is_builtin)
+
+  def _TypeDictToTypeData(self, type_dict):
+    if type_dict.kind == 'void':
+      return VoidTypeData()
+    elif type_dict.kind == 'prim':
+      is_signed = getattr(type_dict, 'is_signed', False)
+      return PrimitiveTypeData(type_dict.name, is_signed, type_dict.size,
+                               type_dict.is_int)
+    elif type_dict.kind == 'struct':
+      fields = []
+      for field in type_dict.fields:
+        field_type = self.types.type_ident_dict[field.type]
+        fields.append(StructField(field.name, field_type, field.offset))
+      return StructTypeData(type_dict.name, type_dict.size, fields)
+    elif type_dict.kind == 'pepper':
+      if type_dict.pepper_type == 'Var':
+        pepper_type = PepperTypeData.TYPE_VAR
+      elif type_dict.pepper_type == 'String':
+        pepper_type = PepperTypeData.TYPE_STRING
+      elif type_dict.pepper_type == 'Array':
+        pepper_type = PepperTypeData.TYPE_ARRAY
+      elif type_dict.pepper_type == 'ArrayBuffer':
+        pepper_type = PepperTypeData.TYPE_ARRAY_BUFFER
+      elif type_dict.pepper_type == 'Dictionary':
+        pepper_type = PepperTypeData.TYPE_DICTIONARY
+      else:
+        raise Exception('Unknown pepper_type %r' % type_dict.pepper_type)
+      return PepperTypeData(pepper_type)
+    elif type_dict.kind == 'pointer':
+      return PointerTypeData(self.types.type_ident_dict[type_dict.base])
+    elif type_dict.kind == 'function':
+      return self.FunctionDictToTypeData(type_dict)
+    elif type_dict.kind == 'alias':
+      # Handled in _DictToType. That way we can specify the correct alias even
+      # if there are multiple with the same TypeData.
+      return None
+    raise Exception('Unknown kind %r' % type_dict.kind)
+
+  def _FunctionDictToTypeData(self, fn_dict):
+    return_type = self.types.type_ident_dict[fn_dict.result]
+    arg_types = []
+    for arg_type_ident in fn_dict.args:
+      arg_types.append(self.types.type_ident_dict[arg_type_ident])
+    return FunctionTypeData(return_type, arg_types)
+
+  def _DictToType(self, dict_, kind, type_data, is_builtin):
+    other_types = self.types.type_data_dict.get(type_data)
+    alias_of = None
+    js_ident = dict_.name
+    c_ident = MakeCIdent(js_ident)
+    c_str = getattr(dict_, 'str', None)
+    if not c_str:
+      if type_data:
+        c_str = str(type_data)
+      else:
+        c_str = c_ident
+
+    if kind == 'alias':
+      alias_of = self.types.type_ident_dict[dict_.alias]
+    elif other_types:
+      # This type already exists, so this is an alias. Just pick the first one.
+      alias_of = other_types[0]
+    if alias_of:
+      type_data = alias_of.data
+      id_ = alias_of.id
+    else:
+      id_ = self.id_gen.Get()
+    return Type(id_, js_ident, c_ident, c_str, type_data, is_builtin, alias_of)
+
+
+class Function(object):
+  def __init__(self, js_ident, type_):
+    self.js_ident = js_ident
+    self.c_ident = MakeCIdent(js_ident)
+    self.type = type_
+
+
+class FunctionsBuilder(object):
+  def __init__(self, types_builder):
+    self.function_ident_dict = collections.OrderedDict()
+    self.types_builder = types_builder
+
+  def AddFunctionDicts(self, fn_dicts, is_builtin=False):
     for fn_dict in fn_dicts:
-      typ = FunctionType(self.next_id, fn_dict, self)
-      self.all_types[typ.name] = typ
-      self.function_types[typ.name] = typ
-      self.next_id += 1
+      self.AddFunctionDict(fn_dict, is_builtin)
+
+  def AddFunctionDict(self, fn_dict, is_builtin=False):
+    type_ = self.types_builder.AddFunctionDict(fn_dict, is_builtin)
+    js_ident = fn_dict.name
+    function = Function(js_ident, type_)
+    self.function_ident_dict[js_ident] =  function
+
+  @property
+  def functions(self):
+    return self.function_ident_dict.values()
+
+
+def FixTypes(type_dicts, fn_dicts):
+  types_builder = TypesBuilder()
+  fn_builder = FunctionsBuilder(types_builder)
+  types_builder.AddTypeDicts(type_dicts)
+  fn_builder.AddFunctionDicts(fn_dicts)
+
+  return types_builder.types, fn_builder.functions

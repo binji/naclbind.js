@@ -20,20 +20,19 @@
 
 [[[
 from helper import *
-types = FixTypes(types, functions)
-
-def Suffix(ix):
-  if ix == FIRST_ID:
-    return ' = NUM_BUILTIN_TYPES'
-  return ''
+types, functions = FixTypes(types, functions)
 ]]]
 
 enum {
+  TYPE_{{name.upper()}}_FIRST = NUM_BUILTIN_TYPES - 1,
 [[for type in types.no_builtins.itervalues():]]
-[[  if not type.IsAlias():]]
-  /* {{type.id}} */ TYPE_{{CamelToMacro(type.cname)}}{{Suffix(type.id)}},
+[[  if not type.is_alias:]]
+  /* {{type.id}} */ TYPE_{{CamelToMacro(type.c_ident)}},
 [[for type in types.function_types.itervalues():]]
-  /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.name)}}{{Suffix(type.id)}},
+[[  if type.is_alias:]]
+  /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.c_ident)}} = TYPE_FUNC_{{CamelToMacro(type.alias_of.c_ident)}},
+[[  else:]]
+  /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.c_ident)}},
 [[]]
   NUM_TYPES
 };

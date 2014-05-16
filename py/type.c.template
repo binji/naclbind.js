@@ -19,14 +19,15 @@
 
 [[[
 from helper import *
-types = FixTypes(types, functions)
+types, functions = FixTypes(types, functions)
 ]]]
 
 static const char* kTypeString[] = {
 [[for _, type in types.no_builtins.iteritems():]]
-[[  if not type.IsAlias():]]
+[[  if not type.is_alias:]]
   /* {{type.id}} */ "{{type}}",
 [[for _, type in types.function_types.iteritems():]]
+[[  if not type.is_alias:]]
   /* {{type.id}} */ "{{type}}",
 [[]]
 };

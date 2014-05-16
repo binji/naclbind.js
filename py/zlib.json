@@ -6,9 +6,9 @@
   "headers": [],
   "types": [
     {"name": "Bytef", "kind": "alias", "alias": "uint8"},
-    {"name": "Bytef$", "kind": "alias", "alias": "uint8$", "str": "Bytef*"},
-    {"name": "uLongf", "kind": "alias", "alias": "uint32"},
-    {"name": "uLongf$", "kind": "alias", "alias": "uint32$", "str": "uLongf*"},
+    {"name": "uLongf", "kind": "alias", "alias": "ulong"},
+    {"name": "Bytef$", "kind": "pointer", "base": "Bytef"},
+    {"name": "uLongf$", "kind": "pointer", "base": "uLongf"},
     {"name": "z_stream_s",
      "kind": "struct",
      "size": 56,

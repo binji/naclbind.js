@@ -15,13 +15,14 @@
 import helper
 
 def ArgInit(ix, type_):
-  if type_.IsPointer():
-    if type_.name != 'void_p':
+  if type_.is_pointer:
+    # TODO(binji): better way to detect void*?
+    if type_.c_ident != 'void_p':
       return 'ARG_VOIDP_CAST(%s, %s);' % (ix, str(type_))
     else:
       return 'ARG_VOIDP(%s);' % ix
-  elif type_.IsPrimitive():
-    if type_.signed:
+  elif type_.is_primitive:
+    if type_.is_signed:
       return 'ARG_INT(%s);' % ix
     else:
       return 'ARG_UINT(%s);' % ix
@@ -31,10 +32,10 @@ def ArgInit(ix, type_):
 
 
 def RegisterHandle(type_):
-  if type_.IsPointer():
+  if type_.is_pointer:
     return 'RegisterHandleVoidp(command->ret_handle, result);'
-  elif type_.IsPrimitive():
-    if type_.signed:
+  elif type_.is_primitive:
+    if type_.is_signed:
       return 'RegisterHandleInt32(command->ret_handle, result);'
     else:
       return 'RegisterHandleUint32(command->ret_handle, result);'
@@ -53,13 +54,13 @@ def ArgsCommaSep(args):
 
 
 def PrintFunction(fn):
-  result = 'printf("%s(%s)' % (fn.name, FmtArgs(fn.arg_types))
-  if not fn.return_type.IsVoid():
-    result += ' => %s (%%d)' % fn.return_type.GetFormat()
+  result = 'printf("%s(%s)' % (fn.c_ident, FmtArgs(fn.type.arg_types))
+  if not fn.type.return_type.is_void:
+    result += ' => %s (%%d)' % fn.type.return_type.GetFormat()
   result += '\\n"'
-  if fn.arg_types:
-    result += ', %s' % ArgsCommaSep(fn.arg_types)
-  if not fn.return_type.IsVoid():
+  if fn.type.arg_types:
+    result += ', %s' % ArgsCommaSep(fn.type.arg_types)
+  if not fn.type.return_type.is_void:
     result += ', result, command->ret_handle'
   result += ');'
   return result

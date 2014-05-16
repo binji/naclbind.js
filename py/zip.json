@@ -33,7 +33,6 @@
     {"name": "_zipFile", "kind": "struct", "size": 0, "fields": []},
     {"name": "_zipFile$", "kind": "pointer", "base": "_zipFile"},
     {"name": "zipFile", "kind": "alias", "alias": "_zipFile$", "str": "zipFile"},
-    {"name": "char$", "kind": "alias", "alias": "uint8$", "str": "char*"},
     {"name": "stat",
      "kind": "struct",
      "size": 104,
@@ -60,23 +59,23 @@
   "functions": [
     {"name": "zipOpen",
      "result": "zipFile",
-     "args": ["char$", "int32"]
+     "args": ["char$", "int"]
     },
     {"name": "zipOpenNewFileInZip",
-     "result": "int32",
-     "args": ["zipFile", "char$", "zip_fileinfo$", "void$", "uint32",
-              "void$", "uint32", "char$", "int32", "int32"]
+     "result": "int",
+     "args": ["zipFile", "char$", "zip_fileinfo$", "void$", "uint",
+              "void$", "uint", "char$", "int", "int"]
     },
     {"name": "zipWriteInFileInZip",
-     "result": "int32",
-     "args": ["zipFile", "void$", "uint32"]
+     "result": "int",
+     "args": ["zipFile", "void$", "uint"]
     },
     {"name": "zipCloseFileInZip",
-     "result": "int32",
+     "result": "int",
      "args": ["zipFile"]
     },
     {"name": "zipClose",
-     "result": "int32",
+     "result": "int",
      "args": ["zipFile", "char$"]
     },
     {"name": "fopen",
@@ -84,15 +83,15 @@
      "args": ["char$", "char$"]
     },
     {"name": "fread",
-     "result": "int32",
-     "args": ["void$", "uint32", "uint32", "FILE$"]
+     "result": "size_t",
+     "args": ["void$", "size_t", "size_t", "FILE$"]
     },
     {"name": "fclose",
-     "result": "int32",
+     "result": "int",
      "args": ["FILE$"]
     },
     {"name": "stat",
-     "result": "int32",
+     "result": "int",
      "args": ["char$", "stat$"]
     }
   ]

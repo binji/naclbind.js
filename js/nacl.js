@@ -215,98 +215,123 @@ define(['promise'], function(promise) {
     var t = this.types;
 
     this.typeBuilder_.makeVoidType(1);
-    this.typeBuilder_.makePrimitiveType(2, 'int8', 1, true, true);
-    this.typeBuilder_.makePrimitiveType(3, 'uint8', 1, false, true);
-    this.typeBuilder_.makePrimitiveType(4, 'int16', 2, true, true);
-    this.typeBuilder_.makePrimitiveType(5, 'uint16', 2, false, true);
-    this.typeBuilder_.makePrimitiveType(6, 'int32', 4, true, true);
-    this.typeBuilder_.makePrimitiveType(7, 'uint32', 4, false, true);
-    this.typeBuilder_.makePrimitiveType(8, 'int64', 8, true, true);
-    this.typeBuilder_.makePrimitiveType(9, 'uint64', 8, false, true);
-    this.typeBuilder_.makePrimitiveType(10, 'float32', 4, false, false);
-    this.typeBuilder_.makePrimitiveType(11, 'float64', 8, false, false);
+    this.typeBuilder_.makePrimitiveType(2, 'char', 1, true, true);
+    this.typeBuilder_.makePrimitiveType(3, 'int8', 1, true, true);
+    this.typeBuilder_.makePrimitiveType(4, 'uint8', 1, false, true);
+    this.typeBuilder_.makePrimitiveType(5, 'int16', 2, true, true);
+    this.typeBuilder_.makePrimitiveType(6, 'uint16', 2, false, true);
+    this.typeBuilder_.makePrimitiveType(7, 'int32', 4, true, true);
+    this.typeBuilder_.makePrimitiveType(8, 'uint32', 4, false, true);
+    this.typeBuilder_.makePrimitiveType(9, 'long', 4, true, true);
+    this.typeBuilder_.makePrimitiveType(10, 'ulong', 4, false, true);
+    this.typeBuilder_.makePrimitiveType(11, 'int64', 8, true, true);
+    this.typeBuilder_.makePrimitiveType(12, 'uint64', 8, false, true);
+    this.typeBuilder_.makePrimitiveType(13, 'float32', 4, false, false);
+    this.typeBuilder_.makePrimitiveType(14, 'float64', 8, false, false);
 
-    this.makePointerType(12, t.void);
-    this.makePointerType(13, t.int8);
-    this.makePointerType(14, t.uint8);
-    this.makePointerType(15, t.int16);
-    this.makePointerType(16, t.uint16);
-    this.makePointerType(17, t.int32);
-    this.makePointerType(18, t.uint32);
-    this.makePointerType(19, t.int64);
-    this.makePointerType(20, t.uint64);
-    this.makePointerType(21, t.float32);
-    this.makePointerType(22, t.float64);
-    this.makePointerType(23, t.void$);
+    this.makeAliasType('uchar', t.uint8);
+    this.makeAliasType('short', t.int16);
+    this.makeAliasType('ushort', t.uint16);
+    this.makeAliasType('int', t.int32);
+    this.makeAliasType('uint', t.uint32);
+    this.makeAliasType('longlong', t.int64);
+    this.makeAliasType('ulonglong', t.uint64);
+    this.makeAliasType('float', t.float32);
+    this.makeAliasType('double', t.double);
+    this.makeAliasType('size_t', t.uint32);
+    this.makeAliasType('ssize_t', t.int32);
+    this.makeAliasType('off_t', t.int64);
 
-    this.typeBuilder_.makePepperType(24, 'Var', undefined);
-    this.typeBuilder_.makePepperType(25, 'ArrayBuffer', ArrayBuffer);
-    this.typeBuilder_.makePepperType(26, 'Array', Array);
-    this.typeBuilder_.makePepperType(27, 'Dictionary', Object);
-    this.typeBuilder_.makePepperType(28, 'String', String);
+    this.makePointerType(15, t.void);
+    this.makePointerType(16, t.char);
+    this.makePointerType(17, t.int8);
+    this.makePointerType(18, t.uint8);
+    this.makePointerType(19, t.int16);
+    this.makePointerType(20, t.uint16);
+    this.makePointerType(21, t.int32);
+    this.makePointerType(22, t.uint32);
+    this.makePointerType(23, t.long);
+    this.makePointerType(24, t.ulong);
+    this.makePointerType(25, t.int64);
+    this.makePointerType(26, t.uint64);
+    this.makePointerType(27, t.float32);
+    this.makePointerType(28, t.float64);
+    this.makePointerType(29, t.void$);
+
+    this.typeBuilder_.makePepperType(30, 'Var', undefined);
+    this.typeBuilder_.makePepperType(31, 'ArrayBuffer', ArrayBuffer);
+    this.typeBuilder_.makePepperType(32, 'Array', Array);
+    this.typeBuilder_.makePepperType(33, 'Dictionary', Object);
+    this.typeBuilder_.makePepperType(34, 'String', String);
 
     var getTypes = [
-      this.makeFunctionType(29, t.void$, t.void$$),
-      this.makeFunctionType(30, t.int8, t.int8$),
-      this.makeFunctionType(31, t.uint8, t.uint8$),
-      this.makeFunctionType(32, t.int16, t.int16$),
-      this.makeFunctionType(33, t.uint16, t.uint16$),
-      this.makeFunctionType(34, t.int32, t.int32$),
-      this.makeFunctionType(35, t.uint32, t.uint32$),
-      this.makeFunctionType(36, t.int64, t.int64$),
-      this.makeFunctionType(37, t.uint64, t.uint64$),
-      this.makeFunctionType(38, t.float32, t.float32$),
-      this.makeFunctionType(39, t.float64, t.float64$),
+      this.makeFunctionType(35, t.void$, t.void$$),
+      this.makeFunctionType(36, t.char, t.char$),
+      this.makeFunctionType(37, t.int8, t.int8$),
+      this.makeFunctionType(38, t.uint8, t.uint8$),
+      this.makeFunctionType(39, t.int16, t.int16$),
+      this.makeFunctionType(40, t.uint16, t.uint16$),
+      this.makeFunctionType(41, t.int32, t.int32$),
+      this.makeFunctionType(42, t.uint32, t.uint32$),
+      this.makeFunctionType(43, t.long, t.long$),
+      this.makeFunctionType(44, t.ulong, t.ulong$),
+      this.makeFunctionType(45, t.int64, t.int64$),
+      this.makeFunctionType(46, t.uint64, t.uint64$),
+      this.makeFunctionType(47, t.float32, t.float32$),
+      this.makeFunctionType(48, t.float64, t.float64$),
     ];
 
     var setTypes = [
-      this.makeFunctionType(40, t.void, t.void$$, t.void$),
-      this.makeFunctionType(41, t.void, t.int8$, t.int8),
-      this.makeFunctionType(42, t.void, t.uint8$, t.uint8),
-      this.makeFunctionType(43, t.void, t.int16$, t.int16),
-      this.makeFunctionType(44, t.void, t.uint16$, t.uint16),
-      this.makeFunctionType(45, t.void, t.int32$, t.int32),
-      this.makeFunctionType(46, t.void, t.uint32$, t.uint32),
-      this.makeFunctionType(47, t.void, t.int64$, t.int64),
-      this.makeFunctionType(48, t.void, t.uint64$, t.uint64),
-      this.makeFunctionType(49, t.void, t.float32$, t.float32),
-      this.makeFunctionType(50, t.void, t.float64$, t.float64),
+      this.makeFunctionType(49, t.void, t.void$$, t.void$),
+      this.makeFunctionType(50, t.void, t.char$, t.char),
+      this.makeFunctionType(51, t.void, t.int8$, t.int8),
+      this.makeFunctionType(52, t.void, t.uint8$, t.uint8),
+      this.makeFunctionType(53, t.void, t.int16$, t.int16),
+      this.makeFunctionType(54, t.void, t.uint16$, t.uint16),
+      this.makeFunctionType(55, t.void, t.int32$, t.int32),
+      this.makeFunctionType(56, t.void, t.uint32$, t.uint32),
+      this.makeFunctionType(57, t.void, t.long$, t.long),
+      this.makeFunctionType(58, t.void, t.ulong$, t.ulong),
+      this.makeFunctionType(59, t.void, t.int64$, t.int64),
+      this.makeFunctionType(60, t.void, t.uint64$, t.uint64),
+      this.makeFunctionType(61, t.void, t.float32$, t.float32),
+      this.makeFunctionType(62, t.void, t.float64$, t.float64),
     ];
 
-    var freeType = this.makeFunctionType(51, t.void, t.void$);
-    var mallocType = this.makeFunctionType(52, t.void$, t.uint32);
-    var memsetType = this.makeFunctionType(53, t.void, t.void$, t.int32, t.uint32);
-    var memcpyType = this.makeFunctionType(54, t.void, t.void$, t.void$, t.uint32);
-    var strlenType = this.makeFunctionType(55, t.uint32, t.uint8$);
+    var freeType = this.makeFunctionType(63, t.void, t.void$);
+    var mallocType = this.makeFunctionType(64, t.void$, t.size_t);
+    var memsetType = this.makeFunctionType(65, t.void$, t.void$, t.int, t.size_t);
+    var memcpyType = this.makeFunctionType(66, t.void$, t.void$, t.void$, t.size_t);
+    var strlenType = this.makeFunctionType(67, t.size_t, t.char$);
 
-    var varAddRefReleaseType = this.makeFunctionType(56, t.void, t.Var);
-    var varFromUtf8Type = this.makeFunctionType(57, t.String, t.uint8$, t.uint32);
-    var varToUtf8Type = this.makeFunctionType(58, t.uint8$, t.String, t.uint32$);
+    var varAddRefReleaseType = this.makeFunctionType(68, t.void, t.Var);
+    var varFromUtf8Type = this.makeFunctionType(69, t.String, t.char$, t.uint32);
+    var varToUtf8Type = this.makeFunctionType(70, t.char$, t.String, t.uint32$);
 
-    var arrayCreateType = this.makeFunctionType(59, t.Array);
-    var arrayGetType = this.makeFunctionType(60, t.Var, t.Array, t.uint32);
-    var arraySetType = this.makeFunctionType(61, t.int32, t.Array, t.uint32, t.Var);
-    var arrayGetLengthType = this.makeFunctionType(62, t.uint32, t.Array);
-    var arraySetLengthType = this.makeFunctionType(63, t.int32, t.Array, t.uint32);
+    var arrayCreateType = this.makeFunctionType(71, t.Array);
+    var arrayGetType = this.makeFunctionType(72, t.Var, t.Array, t.uint32);
+    var arraySetType = this.makeFunctionType(73, t.int32, t.Array, t.uint32, t.Var);
+    var arrayGetLengthType = this.makeFunctionType(74, t.uint32, t.Array);
+    var arraySetLengthType = this.makeFunctionType(75, t.int32, t.Array, t.uint32);
 
-    var arrayBufferCreateType = this.makeFunctionType(64, t.ArrayBuffer, t.uint32);
-    var arrayBufferByteLengthType = this.makeFunctionType(65, t.int32, t.ArrayBuffer, t.uint32$);
-    var arrayBufferMapType = this.makeFunctionType(66, t.void$, t.ArrayBuffer);
-    var arrayBufferUnmapType = this.makeFunctionType(67, t.void, t.ArrayBuffer);
+    var arrayBufferCreateType = this.makeFunctionType(76, t.ArrayBuffer, t.uint32);
+    var arrayBufferByteLengthType = this.makeFunctionType(77, t.int32, t.ArrayBuffer, t.uint32$);
+    var arrayBufferMapType = this.makeFunctionType(78, t.void$, t.ArrayBuffer);
+    var arrayBufferUnmapType = this.makeFunctionType(79, t.void, t.ArrayBuffer);
 
-    var dictCreateType = this.makeFunctionType(68, t.Dictionary);
-    var dictGetType = this.makeFunctionType(69, t.Var, t.Dictionary, t.Var);
-    var dictSetType = this.makeFunctionType(70, t.int32, t.Dictionary, t.Var, t.Var);
-    var dictDeleteType = this.makeFunctionType(71, t.void, t.Dictionary, t.Var);
-    var dictHasKeyType = this.makeFunctionType(72, t.int32, t.Dictionary, t.Var);
+    var dictCreateType = this.makeFunctionType(80, t.Dictionary);
+    var dictGetType = this.makeFunctionType(81, t.Var, t.Dictionary, t.Var);
+    var dictSetType = this.makeFunctionType(82, t.int32, t.Dictionary, t.Var, t.Var);
+    var dictDeleteType = this.makeFunctionType(83, t.void, t.Dictionary, t.Var);
+    var dictHasKeyType = this.makeFunctionType(84, t.int32, t.Dictionary, t.Var);
 
-    var binopVoid$IntType = this.makeFunctionType(73, t.void$, t.void$, t.int32);
-    var binopInt32Type = this.makeFunctionType(74, t.int32, t.int32, t.int32);
-    var binopUint32Type = this.makeFunctionType(75, t.uint32, t.uint32, t.uint32);
-    var binopInt64Type = this.makeFunctionType(76, t.int64, t.int64, t.int64);
-    var binopUint64Type = this.makeFunctionType(77, t.uint64, t.uint64, t.uint64);
-    var binopFloatType = this.makeFunctionType(78, t.float32, t.float32, t.float32);
-    var binopDoubleType = this.makeFunctionType(79, t.float64, t.float64, t.float64);
+    var binopVoid$IntType = this.makeFunctionType(85, t.void$, t.void$, t.int32);
+    var binopInt32Type = this.makeFunctionType(86, t.int32, t.int32, t.int32);
+    var binopUint32Type = this.makeFunctionType(87, t.uint32, t.uint32, t.uint32);
+    var binopInt64Type = this.makeFunctionType(88, t.int64, t.int64, t.int64);
+    var binopUint64Type = this.makeFunctionType(89, t.uint64, t.uint64, t.uint64);
+    var binopFloatType = this.makeFunctionType(90, t.float32, t.float32, t.float32);
+    var binopDoubleType = this.makeFunctionType(91, t.float64, t.float64, t.float64);
 
     var addSubTypes = [
       binopVoid$IntType, binopInt32Type, binopUint32Type, binopInt64Type,

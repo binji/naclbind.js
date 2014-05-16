@@ -17,7 +17,7 @@
 from helper import *
 from commands import *
 
-types = FixTypes(types, functions)
+types, functions = FixTypes(types, functions)
 ]]]
 
 #include "{{name}}_commands.h"
@@ -42,7 +42,7 @@ types = FixTypes(types, functions)
 #include "{{name}}_type.h"
 
 [[for fn in functions:]]
-static void Handle_{{fn.name}}(Command* command);
+static void Handle_{{fn.c_ident}}(Command* command);
 [[]]
 
 typedef void (*HandleFunc)(Command*);
@@ -53,8 +53,8 @@ typedef struct {
 
 // TODO(binji): hashmap
 static NameFunc g_FuncMap[] = {
-[[for function in functions:]]
-  {"{{function.name}}", Handle_{{function.name}}},
+[[for fn in functions:]]
+  {"{{fn.c_ident}}", Handle_{{fn.c_ident}}},
 [[]]
   {NULL, NULL},
 };
@@ -70,15 +70,15 @@ bool Handle{{Titlecase(name)}}Command(Command* command) {
   return FALSE;
 }
 
-[[for _, function in types.function_types.iteritems():]]
-void Handle_{{function.name}}(Command* command) {
-  TYPE_CHECK(TYPE_FUNC_{{CamelToMacro(function.name)}});
-[[  for arg_ix, arg_type in enumerate(function.arg_types):]]
+[[for fn in functions:]]
+void Handle_{{fn.c_ident}}(Command* command) {
+  TYPE_CHECK(TYPE_FUNC_{{CamelToMacro(fn.c_ident)}});
+[[  for arg_ix, arg_type in enumerate(fn.type.arg_types):]]
   {{ArgInit(arg_ix, arg_type)}}
 [[  ]]
-  {{function.return_type}} result = ({{function.return_type}}){{function.name}}({{ArgsCommaSep(function.arg_types)}});
-  {{RegisterHandle(function.return_type)}}
-  {{PrintFunction(function)}}
+  {{fn.type.return_type}} result = ({{fn.type.return_type}}){{fn.c_ident}}({{ArgsCommaSep(fn.type.arg_types)}});
+  {{RegisterHandle(fn.type.return_type)}}
+  {{PrintFunction(fn)}}
 }
 
 [[]]
