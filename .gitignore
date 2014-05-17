@@ -1,3 +1,6 @@
+/.ninja_deps
+/.ninja_log
+/out
 /user-data-dir
 /pnacl
 *.pyc
@@ -6,6 +9,8 @@
 # TODO(binji): move to out folder?
 js/zip_gen.js
 js/zlib_gen.js
+
+# Only used by Makefile build
 zip/zip_commands.c
 zip/zip_commands.h
 zip/zip_type.c
