@@ -28,13 +28,15 @@
 
 #include "nacl_io/nacl_io.h"
 
+#include "bool.h"
 #include "commands.h"
 #include "error.h"
 #include "interfaces.h"
 #include "message.h"
 #include "queue.h"
 #include "var.h"
-#include "zlib_commands.h"
+
+extern bool HandleZlibCommand(Command* command);
 
 static PPB_GetInterface get_browser_interface = NULL;
 static pthread_t g_handle_message_thread;

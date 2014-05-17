@@ -14,8 +14,8 @@
 
 "use strict";
 
-define(['promise', 'nacl', 'zip_gen'], function(promise, nacl, zip_gen) {
-  var m = zip_gen;
+define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
+  var m = zip_glue;
   var t = m.types;
   var f = m.functions;
 

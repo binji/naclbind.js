@@ -14,7 +14,7 @@
 
 "use strict";
 
-define(['promise', 'nacl', 'zlib_gen'], function(promise, nacl, zlib_gen) {
+define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
 
   function sliceArrayBuffer(ab, begin, end) {
     var oldLength = ab.byteLength;
@@ -85,7 +85,7 @@ define(['promise', 'nacl', 'zlib_gen'], function(promise, nacl, zlib_gen) {
   var Z_BUF_ERROR = -5;
   var Z_VERSION_ERROR = -6;
 
-  var m = zlib_gen;
+  var m = zlib_glue;
   var t = m.types;
   var f = m.functions;
 

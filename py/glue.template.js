@@ -23,7 +23,7 @@ types, functions = FixTypes(types, functions)
 
 define(['nacl'], function(nacl) {
   var m = nacl.makeModule(
-      '{{name}}-nacl', 'pnacl/Release/{{name}}.nmf', 'application/x-pnacl');
+      '{{name}}-nacl', '{{name}}.nmf', 'application/x-pnacl');
   var t = m.types;
   var f = m.functions;
 

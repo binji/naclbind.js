@@ -35,7 +35,8 @@
 #include "message.h"
 #include "queue.h"
 #include "var.h"
-#include "zip_commands.h"
+
+extern bool HandleZipCommand(Command* command);
 
 static PPB_GetInterface get_browser_interface = NULL;
 static pthread_t g_handle_message_thread;

@@ -20,8 +20,6 @@ from commands import *
 types, functions = FixTypes(types, functions)
 ]]]
 
-#include "{{name}}_commands.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,9 +35,43 @@ types, functions = FixTypes(types, functions)
 #include "commands.h"
 #include "error.h"
 #include "interfaces.h"
+#include "message.h"
 #include "type.h"
 #include "var.h"
-#include "{{name}}_type.h"
+
+enum {
+  TYPE_{{name.upper()}}_FIRST = NUM_BUILTIN_TYPES - 1,
+[[for type in types.no_builtins.itervalues():]]
+[[  if not type.is_alias:]]
+  /* {{type.id}} */ TYPE_{{CamelToMacro(type.c_ident)}},
+[[for type in types.function_types.itervalues():]]
+[[  if type.is_alias:]]
+  /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.c_ident)}} = TYPE_FUNC_{{CamelToMacro(type.alias_of.c_ident)}},
+[[  else:]]
+  /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.c_ident)}},
+[[]]
+  NUM_TYPES
+};
+
+static const char* kTypeString[] = {
+[[for _, type in types.no_builtins.iteritems():]]
+[[  if not type.is_alias:]]
+  /* {{type.id}} */ "{{type}}",
+[[for _, type in types.function_types.iteritems():]]
+[[  if not type.is_alias:]]
+  /* {{type.id}} */ "{{type}}",
+[[]]
+};
+
+const char* TypeToString(Type id) {
+  if (id < NUM_BUILTIN_TYPES) {
+    return BuiltinTypeToString(id);
+  } else if (id >= NUM_TYPES) {
+    return "<unknown>";
+  } else {
+    return kTypeString[id - NUM_BUILTIN_TYPES];
+  }
+}
 
 [[for fn in functions:]]
 static void Handle_{{fn.c_ident}}(Command* command);

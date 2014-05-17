@@ -40,11 +40,8 @@ ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
 easy-template = py/easy_template.py
 helper-py = py/helper.py
 commands-py = py/commands.py
-commands-h-template = py/commands.h.template
-commands-c-template = py/commands.c.template
-type-h-template = py/type.h.template
-type-c-template = py/type.c.template
-gen-js-template = py/gen.js.template
+glue-template-c = py/glue.template.c
+glue-template-js = py/glue.template.js
 
 
 rule cp
@@ -111,15 +108,9 @@ build out/2nacl/lib2nacl.a: ar out/2nacl/obj/commands.o $
 # zip
 zip-json = examples/zip/zip.json
 
-build out/zip/gen/zip_commands.h: template $commands-h-template | $easy-template $helper-py $commands-py
+build out/zip/gen/zip_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py
   json = $zip-json
-build out/zip/gen/zip_commands.c: template $commands-c-template | $easy-template $helper-py $commands-py
-  json = $zip-json
-build out/zip/gen/zip_type.h: template $type-h-template | $easy-template $helper-py
-  json = $zip-json
-build out/zip/gen/zip_type.c: template $type-c-template | $easy-template $helper-py
-  json = $zip-json
-build out/zip/zip_gen.js: template $gen-js-template | $easy-template $helper-py
+build out/zip/zip_glue.js: template $glue-template-js | $easy-template $helper-py
   json = $zip-json
 
 build out/zip/obj/ioapi.o: cc examples/zip/ioapi.c
@@ -128,32 +119,16 @@ build out/zip/obj/ioapi.o: cc examples/zip/ioapi.c
 build out/zip/obj/zip.o: cc examples/zip/zip.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/zip/obj/zip_app.o: cc examples/zip/zip_app.c || $
-    out/zip/gen/zip_commands.h $
-    out/zip/gen/zip_commands.c $
-    out/zip/gen/zip_type.h $
-    out/zip/gen/zip_type.c
+build out/zip/obj/zip_app.o: cc examples/zip/zip_app.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/zip/obj/zip_commands.o: cc out/zip/gen/zip_commands.c || $
-    out/zip/gen/zip_commands.h $
-    out/zip/gen/zip_commands.c $
-    out/zip/gen/zip_type.h $
-    out/zip/gen/zip_type.c
-  cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/zip/obj/zip_type.o: cc out/zip/gen/zip_type.c || $
-    out/zip/gen/zip_commands.h $
-    out/zip/gen/zip_commands.c $
-    out/zip/gen/zip_type.h $
-    out/zip/gen/zip_type.c
+build out/zip/obj/zip_glue.o: cc out/zip/gen/zip_glue.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
 build out/zip/zip.bc: link out/zip/obj/ioapi.o $
                            out/zip/obj/zip_app.o $
                            out/zip/obj/zip.o $
-                           out/zip/obj/zip_commands.o $
-                           out/zip/obj/zip_type.o $
+                           out/zip/obj/zip_glue.o $
                            out/2nacl/lib2nacl.a
   cc = $pnacl-cxx
   ldflags = $ldflags-default $ldflags-release -l2nacl
@@ -175,7 +150,7 @@ build zip: phony out/zip/index.html $
                  out/zip/promise.js $
                  out/zip/require.js $
                  out/zip/zip_example.js $
-                 out/zip/zip_gen.js $
+                 out/zip/zip_glue.js $
                  out/zip/zip.js $
                  out/zip/zip.nmf
 default zip
@@ -184,41 +159,19 @@ default zip
 # zlib
 zlib-json = examples/zlib/zlib.json
 
-build out/zlib/gen/zlib_commands.h: template $commands-h-template | $easy-template $helper-py $commands-py
+build out/zlib/gen/zlib_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py
   json = $zlib-json
-build out/zlib/gen/zlib_commands.c: template $commands-c-template | $easy-template $helper-py $commands-py
-  json = $zlib-json
-build out/zlib/gen/zlib_type.h: template $type-h-template | $easy-template $helper-py
-  json = $zlib-json
-build out/zlib/gen/zlib_type.c: template $type-c-template | $easy-template $helper-py
-  json = $zlib-json
-build out/zlib/zlib_gen.js: template $gen-js-template | $easy-template $helper-py
+build out/zlib/zlib_glue.js: template $glue-template-js | $easy-template $helper-py
   json = $zlib-json
 
-build out/zlib/obj/zlib_app.o: cc examples/zlib/zlib_app.c || $
-    out/zlib/gen/zlib_commands.h $
-    out/zlib/gen/zlib_commands.c $
-    out/zlib/gen/zlib_type.h $
-    out/zlib/gen/zlib_type.c
+build out/zlib/obj/zlib_app.o: cc examples/zlib/zlib_app.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zlib
-build out/zlib/obj/zlib_commands.o: cc out/zlib/gen/zlib_commands.c || $
-    out/zlib/gen/zlib_commands.h $
-    out/zlib/gen/zlib_commands.c $
-    out/zlib/gen/zlib_type.h $
-    out/zlib/gen/zlib_type.c
-  cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zlib
-build out/zlib/obj/zlib_type.o: cc out/zlib/gen/zlib_type.c || $
-    out/zlib/gen/zlib_commands.h $
-    out/zlib/gen/zlib_commands.c $
-    out/zlib/gen/zlib_type.h $
-    out/zlib/gen/zlib_type.c
+build out/zlib/obj/zlib_glue.o: cc out/zlib/gen/zlib_glue.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zlib
 build out/zlib/zlib.bc: link out/zlib/obj/zlib_app.o $
-                             out/zlib/obj/zlib_commands.o $
-                             out/zlib/obj/zlib_type.o $
+                             out/zlib/obj/zlib_glue.o $
                              out/2nacl/lib2nacl.a
   cc = $pnacl-cxx
   ldflags = $ldflags-default $ldflags-release -l2nacl
@@ -236,7 +189,7 @@ build zlib: phony out/zlib/index.html $
                   out/zlib/promise.js $
                   out/zlib/require.js $
                   out/zlib/zlib_example.js $
-                  out/zlib/zlib_gen.js $
+                  out/zlib/zlib_glue.js $
                   out/zlib/zlib.js $
                   out/zlib/zlib.nmf
 default zlib
