@@ -17,10 +17,26 @@
   -->
 <head>
   <title>nacl.js</title>
-  <link rel="stylesheet" href="css/main.css">
-  <script data-main="js/zlib_example.js" src="third_party/requirejs/require.js">
+  <link rel="stylesheet" href="main.css">
+  <script data-main="zip_example.js" src="require.js">
   </script>
 </head>
 <body>
+  <div id="dropTarget" class="fullscreen">
+    <div>
+      <div id="dropLabel">Drop!</div>
+    </div>
+  </div>
+
+  <div id="uncompressedLabel" class="label left gone">uncompressed</div>
+  <div id="size" class="counter"></div>
+
+  <div id="compressedLabel" class="label gone">compressed</div>
+  <div id="compressed" class="counter gone"></div>
+
+  <div id="percentLabel" class="label right gone">percent</div>
+  <div id="percent" class="counter right gone green"></div>
+  <a id="downloadLink" hidden></a>
+  <input type="file" hidden>
 </body>
 </html>

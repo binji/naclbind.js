@@ -28,12 +28,12 @@ run-py = $nacl_sdk_root/tools/run.py
 ccflags-default = -Wall -Wno-unused-value -Wno-long-long -Werror -pthread
 ccflags-debug = -g -O0
 ccflags-release = -g -O2 -DNDEBUG
-ccflags-zlib = -DUSE_FILE32API -DNOCRYPT -Izlib -Iout/gen/zlib
-ccflags-zip = -DUSE_FILE32API -DNOCRYPT -Izip -Iout/gen/zip
+ccflags-zlib = -DUSE_FILE32API -DNOCRYPT -Iexamples/zlib -Iout/zlib/gen
+ccflags-zip = -DUSE_FILE32API -DNOCRYPT -Iexamples/zip -Iout/zip/gen
 ccflags-include = -I$nacl_sdk_root/include -I$nacl_sdk_root/include/pnacl $
-                  -I2nacl
+                  -Isrc/c
 
-ldflags-default = -lnacl_io -lz -lppapi_cpp -lppapi -Lout
+ldflags-default = -lnacl_io -lz -lppapi_cpp -lppapi -Lout/2nacl
 ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug
 ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
 
@@ -45,8 +45,6 @@ commands-c-template = py/commands.c.template
 type-h-template = py/type.h.template
 type-c-template = py/type.c.template
 gen-js-template = py/gen.js.template
-zip-json = py/zip.json
-zlib-json = py/zlib.json
 
 
 rule cp
@@ -76,152 +74,180 @@ rule template
   command = $easy-template -j $json $in > $out
   description = TEMPLATE $out
 rule run
-  command = $run-py -P $page -- $chrome --no-first-run --user-data-dir=user-data-dir
+  command = $run-py -C $dir -P $page -- $chrome --no-first-run --user-data-dir=user-data-dir
   description = RUN $page
 
 # 2nacl
-build out/obj/2nacl/commands.o: cc 2nacl/commands.c
+build out/2nacl/obj/commands.o: cc src/c/commands.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/obj/2nacl/handle.o: cc 2nacl/handle.c
+build out/2nacl/obj/handle.o: cc src/c/handle.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/obj/2nacl/interfaces.o: cc 2nacl/interfaces.c
+build out/2nacl/obj/interfaces.o: cc src/c/interfaces.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/obj/2nacl/message.o: cc 2nacl/message.c
+build out/2nacl/obj/message.o: cc src/c/message.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/obj/2nacl/queue.o: cc 2nacl/queue.c
+build out/2nacl/obj/queue.o: cc src/c/queue.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/obj/2nacl/type.o: cc 2nacl/type.c
+build out/2nacl/obj/type.o: cc src/c/type.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/obj/2nacl/var.o: cc 2nacl/var.c
+build out/2nacl/obj/var.o: cc src/c/var.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/lib2nacl.a: ar out/obj/2nacl/commands.o $
-                         out/obj/2nacl/handle.o $
-                         out/obj/2nacl/interfaces.o $
-                         out/obj/2nacl/message.o $
-                         out/obj/2nacl/queue.o $
-                         out/obj/2nacl/type.o $
-                         out/obj/2nacl/var.o
+build out/2nacl/lib2nacl.a: ar out/2nacl/obj/commands.o $
+                               out/2nacl/obj/handle.o $
+                               out/2nacl/obj/interfaces.o $
+                               out/2nacl/obj/message.o $
+                               out/2nacl/obj/queue.o $
+                               out/2nacl/obj/type.o $
+                               out/2nacl/obj/var.o
   ar = $pnacl-ar
 
 # zip
-build out/gen/zip/zip_commands.h: template $commands-h-template | $
-    $easy-template $helper-py $commands-py
+zip-json = examples/zip/zip.json
+
+build out/zip/gen/zip_commands.h: template $commands-h-template | $easy-template $helper-py $commands-py
   json = $zip-json
-build out/gen/zip/zip_commands.c: template $commands-c-template | $
-    $easy-template $helper-py $commands-py
+build out/zip/gen/zip_commands.c: template $commands-c-template | $easy-template $helper-py $commands-py
   json = $zip-json
-build out/gen/zip/zip_type.h: template $type-h-template | $
-    $easy-template $helper-py
+build out/zip/gen/zip_type.h: template $type-h-template | $easy-template $helper-py
   json = $zip-json
-build out/gen/zip/zip_type.c: template $type-c-template | $
-    $easy-template $helper-py
+build out/zip/gen/zip_type.c: template $type-c-template | $easy-template $helper-py
   json = $zip-json
-build js/zip_gen.js: template $gen-js-template | $
-    $easy-template $helper-py
+build out/zip/zip_gen.js: template $gen-js-template | $easy-template $helper-py
   json = $zip-json
 
-build out/obj/zip/ioapi.o: cc zip/ioapi.c
+build out/zip/obj/ioapi.o: cc examples/zip/ioapi.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/obj/zip/zip.o: cc zip/zip.c
+build out/zip/obj/zip.o: cc examples/zip/zip.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/obj/zip/zip_app.o: cc zip/zip_app.c || $
-    out/gen/zip/zip_commands.h $
-    out/gen/zip/zip_commands.c $
-    out/gen/zip/zip_type.c $
-    out/gen/zip/zip_type.c
+build out/zip/obj/zip_app.o: cc examples/zip/zip_app.c || $
+    out/zip/gen/zip_commands.h $
+    out/zip/gen/zip_commands.c $
+    out/zip/gen/zip_type.h $
+    out/zip/gen/zip_type.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/obj/zip/zip_commands.o: cc out/gen/zip/zip_commands.c || $
-    out/gen/zip/zip_commands.h $
-    out/gen/zip/zip_commands.c $
-    out/gen/zip/zip_type.c $
-    out/gen/zip/zip_type.c
+build out/zip/obj/zip_commands.o: cc out/zip/gen/zip_commands.c || $
+    out/zip/gen/zip_commands.h $
+    out/zip/gen/zip_commands.c $
+    out/zip/gen/zip_type.h $
+    out/zip/gen/zip_type.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/obj/zip/zip_type.o: cc out/gen/zip/zip_type.c || $
-    out/gen/zip/zip_commands.h $
-    out/gen/zip/zip_commands.c $
-    out/gen/zip/zip_type.c $
-    out/gen/zip/zip_type.c
+build out/zip/obj/zip_type.o: cc out/zip/gen/zip_type.c || $
+    out/zip/gen/zip_commands.h $
+    out/zip/gen/zip_commands.c $
+    out/zip/gen/zip_type.h $
+    out/zip/gen/zip_type.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/zip.bc: link out/obj/zip/ioapi.o $
-                       out/obj/zip/zip_app.o $
-                       out/obj/zip/zip.o $
-                       out/obj/zip/zip_commands.o $
-                       out/obj/zip/zip_type.o $
-                       out/lib2nacl.a
+build out/zip/zip.bc: link out/zip/obj/ioapi.o $
+                           out/zip/obj/zip_app.o $
+                           out/zip/obj/zip.o $
+                           out/zip/obj/zip_commands.o $
+                           out/zip/obj/zip_type.o $
+                           out/2nacl/lib2nacl.a
   cc = $pnacl-cxx
   ldflags = $ldflags-default $ldflags-release -l2nacl
-build out/zip.pexe: finalize out/zip.bc
-build out/zip.nmf: nmf out/zip.pexe
+build out/zip/zip.pexe: finalize out/zip/zip.bc
+build out/zip/zip.nmf: nmf out/zip/zip.pexe
+build out/zip/demo.jpg: cp examples/zip/demo.jpg
+build out/zip/main.css: cp examples/zip/css/main.css
+build out/zip/index.html: cp examples/zip/index.html
+build out/zip/nacl.js: cp src/js/nacl.js
+build out/zip/promise.js: cp src/js/promise.js
+build out/zip/require.js: cp third_party/requirejs/require.js
+build out/zip/zip_example.js: cp examples/zip/zip_example.js
+build out/zip/zip.js: cp examples/zip/zip.js
 
-default out/zip.nmf js/zip_gen.js
+build zip: phony out/zip/index.html $
+                 out/zip/demo.jpg $
+                 out/zip/main.css $
+                 out/zip/nacl.js $
+                 out/zip/promise.js $
+                 out/zip/require.js $
+                 out/zip/zip_example.js $
+                 out/zip/zip_gen.js $
+                 out/zip/zip.js $
+                 out/zip/zip.nmf
+default zip
 
 
 # zlib
-build out/gen/zlib/zlib_commands.h: template $commands-h-template | $
-    $easy-template $helper-py $commands-py
+zlib-json = examples/zlib/zlib.json
+
+build out/zlib/gen/zlib_commands.h: template $commands-h-template | $easy-template $helper-py $commands-py
   json = $zlib-json
-build out/gen/zlib/zlib_commands.c: template $commands-c-template | $
-    $easy-template $helper-py $commands-py
+build out/zlib/gen/zlib_commands.c: template $commands-c-template | $easy-template $helper-py $commands-py
   json = $zlib-json
-build out/gen/zlib/zlib_type.h: template $type-h-template | $
-    $easy-template $helper-py
+build out/zlib/gen/zlib_type.h: template $type-h-template | $easy-template $helper-py
   json = $zlib-json
-build out/gen/zlib/zlib_type.c: template $type-c-template | $
-    $easy-template $helper-py
+build out/zlib/gen/zlib_type.c: template $type-c-template | $easy-template $helper-py
   json = $zlib-json
-build js/zlib_gen.js: template $gen-js-template | $
-    $easy-template $helper-py
+build out/zlib/zlib_gen.js: template $gen-js-template | $easy-template $helper-py
   json = $zlib-json
 
-build out/obj/zlib/zlib_app.o: cc zlib/zlib_app.c || $
-    out/gen/zlib/zlib_commands.h $
-    out/gen/zlib/zlib_commands.c $
-    out/gen/zlib/zlib_type.c $
-    out/gen/zlib/zlib_type.c
+build out/zlib/obj/zlib_app.o: cc examples/zlib/zlib_app.c || $
+    out/zlib/gen/zlib_commands.h $
+    out/zlib/gen/zlib_commands.c $
+    out/zlib/gen/zlib_type.h $
+    out/zlib/gen/zlib_type.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zlib
-build out/obj/zlib/zlib_commands.o: cc out/gen/zlib/zlib_commands.c || $
-    out/gen/zlib/zlib_commands.h $
-    out/gen/zlib/zlib_commands.c $
-    out/gen/zlib/zlib_type.c $
-    out/gen/zlib/zlib_type.c
+build out/zlib/obj/zlib_commands.o: cc out/zlib/gen/zlib_commands.c || $
+    out/zlib/gen/zlib_commands.h $
+    out/zlib/gen/zlib_commands.c $
+    out/zlib/gen/zlib_type.h $
+    out/zlib/gen/zlib_type.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zlib
-build out/obj/zlib/zlib_type.o: cc out/gen/zlib/zlib_type.c || $
-    out/gen/zlib/zlib_commands.h $
-    out/gen/zlib/zlib_commands.c $
-    out/gen/zlib/zlib_type.c $
-    out/gen/zlib/zlib_type.c
+build out/zlib/obj/zlib_type.o: cc out/zlib/gen/zlib_type.c || $
+    out/zlib/gen/zlib_commands.h $
+    out/zlib/gen/zlib_commands.c $
+    out/zlib/gen/zlib_type.h $
+    out/zlib/gen/zlib_type.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zlib
-build out/zlib.bc: link out/obj/zlib/zlib_app.o $
-                       out/obj/zlib/zlib_commands.o $
-                       out/obj/zlib/zlib_type.o $
-                       out/lib2nacl.a
+build out/zlib/zlib.bc: link out/zlib/obj/zlib_app.o $
+                             out/zlib/obj/zlib_commands.o $
+                             out/zlib/obj/zlib_type.o $
+                             out/2nacl/lib2nacl.a
   cc = $pnacl-cxx
   ldflags = $ldflags-default $ldflags-release -l2nacl
-build out/zlib.pexe: finalize out/zlib.bc
-build out/zlib.nmf: nmf out/zlib.pexe
+build out/zlib/zlib.pexe: finalize out/zlib/zlib.bc
+build out/zlib/zlib.nmf: nmf out/zlib/zlib.pexe
+build out/zlib/nacl.js: cp src/js/nacl.js
+build out/zlib/promise.js: cp src/js/promise.js
+build out/zlib/index.html: cp examples/zlib/index.html
+build out/zlib/zlib.js: cp examples/zlib/zlib.js
+build out/zlib/zlib_example.js: cp examples/zlib/zlib_example.js
+build out/zlib/require.js: cp third_party/requirejs/require.js
 
-default out/zlib.nmf js/zlib_gen.js
+build zlib: phony out/zlib/index.html $
+                  out/zlib/nacl.js $
+                  out/zlib/promise.js $
+                  out/zlib/require.js $
+                  out/zlib/zlib_example.js $
+                  out/zlib/zlib_gen.js $
+                  out/zlib/zlib.js $
+                  out/zlib/zlib.nmf
+default zlib
 
 # Running
-build run_zip: run || out/zip.nmf js/zip_gen.js
+build run_zip: run || zip
+  dir = out/zip
   page = index.html
 
-build run_zlib: run || out/zlib.nmf js/zlib_gen.js
-  page = zlib.html
+build run_zlib: run || zlib
+  dir = out/zlib
+  page = index.html
 
 build run: phony run_zip
