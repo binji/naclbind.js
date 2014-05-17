@@ -985,7 +985,7 @@ define(['promise'], function(promise) {
       return true;
     }
 
-    return this.constructor === other.constructor ||
+    return this.constructor === other.constructor &&
            this.name === other.name;
   };
 
