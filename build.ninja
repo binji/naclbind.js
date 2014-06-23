@@ -13,7 +13,7 @@
 # limitations under the License.
 
 chrome = /opt/google/chrome-beta/google-chrome-beta
-nacl_sdk_root = /home/binji/dev/chromium/src/out/pepper_36
+nacl_sdk_root = out/nacl_sdk/pepper_35
 toolchain_dir = $nacl_sdk_root/toolchain
 toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
 pnacl-ar = $toolchain_dir_pnacl/bin/pnacl-ar
@@ -30,8 +30,7 @@ ccflags-debug = -g -O0
 ccflags-release = -g -O2 -DNDEBUG
 ccflags-zlib = -DUSE_FILE32API -DNOCRYPT -Iexamples/zlib -Iout/zlib/gen
 ccflags-zip = -DUSE_FILE32API -DNOCRYPT -Iexamples/zip -Iout/zip/gen
-ccflags-include = -I$nacl_sdk_root/include -I$nacl_sdk_root/include/pnacl $
-                  -Isrc/c
+ccflags-include = -I$nacl_sdk_root/include -Isrc/c
 
 ldflags-default = -lnacl_io -lz -lppapi_cpp -lppapi -Lout/2nacl
 ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug

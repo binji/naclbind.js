@@ -13,15 +13,29 @@
 # limitations under the License.
 
 ## Rules to build zlib from naclports ##########################################
+TOOLCHAIN = pnacl
 PORTS = zlib
+NACL_SDK_ROOT = $(CURDIR)/out/nacl_sdk/pepper_35
 
 .PHONY: ports
 ports:
 ifeq (newlib,$(TOOLCHAIN))
-	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=i686 FORCE=1
-	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=x86_64 FORCE=1
-	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=arm FORCE=1
+	NACL_SDK_ROOT=$(NACL_SDK_ROOT) $(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=i686 FORCE=1
+	NACL_SDK_ROOT=$(NACL_SDK_ROOT) $(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=x86_64 FORCE=1
+	NACL_SDK_ROOT=$(NACL_SDK_ROOT) $(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=arm FORCE=1
 endif
 ifeq (pnacl,$(TOOLCHAIN))
-	$(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=pnacl FORCE=1
+	NACL_SDK_ROOT=$(NACL_SDK_ROOT) $(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=pnacl FORCE=1
 endif
+
+out/nacl_sdk.zip:
+	cd out && \
+	wget http://storage.googleapis.com/nativeclient-mirror/nacl/nacl_sdk/nacl_sdk.zip
+
+out/nacl_sdk: out/nacl_sdk.zip
+	cd out && \
+	unzip nacl_sdk.zip
+
+.PHONY: sdk
+sdk: | out/nacl_sdk
+	out/nacl_sdk/naclsdk update pepper_35 --force
