@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-chrome = /opt/google/chrome-beta/google-chrome-beta
+chrome = /opt/google/chrome-unstable/google-chrome-unstable
 nacl_sdk_root = out/nacl_sdk/pepper_35
 toolchain_dir = $nacl_sdk_root/toolchain
 toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
@@ -23,7 +23,7 @@ pnacl-strip = $toolchain_dir_pnacl/bin/pnacl-strip
 pnacl-finalize = $toolchain_dir_pnacl/bin/pnacl-finalize
 pnacl-translate = $toolchain_dir_pnacl/bin/pnacl-translate
 nmf = $nacl_sdk_root/tools/create_nmf.py
-run-py = $nacl_sdk_root/tools/run.py
+run-py = py/run.py
 
 ccflags-default = -Wall -Wno-unused-value -Wno-long-long -Werror -pthread
 ccflags-debug = -g -O0
@@ -70,6 +70,7 @@ rule template
   command = $easy-template -j $json $in > $out
   description = TEMPLATE $out
 rule run
+  pool = console
   command = $run-py -C $dir -P $page -- $chrome --no-first-run --user-data-dir=user-data-dir
   description = RUN $page
 
