@@ -13,7 +13,7 @@
 # limitations under the License.
 
 chrome = /opt/google/chrome-unstable/google-chrome-unstable
-nacl_sdk_root = out/nacl_sdk/pepper_35
+nacl_sdk_root = out/nacl_sdk/pepper_canary
 toolchain_dir = $nacl_sdk_root/toolchain
 toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
 pnacl-ar = $toolchain_dir_pnacl/bin/pnacl-ar

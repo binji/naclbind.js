@@ -13,7 +13,7 @@
 # limitations under the License.
 
 SDK_DIR = out/nacl_sdk
-NACL_SDK_ROOT = $(SDK_DIR)/pepper_35
+NACL_SDK_ROOT = $(SDK_DIR)/pepper_canary
 NINJA = out/ninja/ninja
 NINJA_DIR = $(dir $(NINJA))
 STAMP_DIR = out/stamps
@@ -49,7 +49,7 @@ $(SDK_DIR): out/nacl_sdk.zip
 	unzip nacl_sdk.zip
 
 $(NACL_SDK_ROOT): | $(SDK_DIR)
-	$(SDK_DIR)/naclsdk update pepper_35 --force
+	$(SDK_DIR)/naclsdk update pepper_canary --force
 
 .PHONY: sdk
 sdk: $(NACL_SDK_ROOT)
