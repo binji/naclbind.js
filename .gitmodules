@@ -4,3 +4,6 @@
 [submodule "third_party/requirejs"]
 	path = third_party/requirejs
 	url = https://github.com/jrburke/requirejs
+[submodule "third_party/ninja"]
+	path = third_party/ninja
+	url = https://github.com/martine/ninja
