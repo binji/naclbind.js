@@ -59,7 +59,7 @@ sdk: $(NACL_SDK_ROOT)
 PORTS = zlib
 
 $(PORTS_STAMP): $(NACL_SDK_ROOT) | $(STAMP_DIR)
-	NACL_SDK_ROOT=$(NACL_SDK_ROOT) $(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=pnacl FORCE=1
+	NACL_SDK_ROOT=$(abspath $(NACL_SDK_ROOT)) $(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=pnacl FORCE=1
 	touch $@
 
 .PHONY: ports
