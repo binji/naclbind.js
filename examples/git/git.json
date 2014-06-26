@@ -42,7 +42,14 @@
     {"name": "_git_commit", "kind": "struct", "size": 0, "fields": []},
     {"name": "git_commit", "kind": "alias", "alias": "_git_commit"},
     {"name": "git_commit$", "kind": "pointer", "base": "git_commit"},
-    {"name": "git_commit$$", "kind": "pointer", "base": "git_commit$"}
+    {"name": "git_commit$$", "kind": "pointer", "base": "git_commit$"},
+
+    {"name": "_git_error", "kind": "struct", "size": 8, "fields": [
+      {"name": "message", "type": "char$", "offset": 0},
+      {"name": "klass", "type": "int", "offset": 4}
+    ]},
+    {"name": "git_error", "kind": "alias", "alias": "_git_error"},
+    {"name": "git_error$", "kind": "pointer", "base": "git_error"}
   ],
   "functions": [
     {"name": "git_threads_init",
@@ -94,6 +101,14 @@
      "args": ["git_oid$", "git_repository$", "char$", "git_signature$",
               "git_signature$", "char$", "char$", "git_tree$", "int",
               "git_commit$$"]
+    },
+    {"name": "giterr_last",
+     "result": "git_error$",
+     "args": []
+    },
+    {"name": "giterr_clear",
+     "result": "void",
+     "args": []
     }
   ]
 }
