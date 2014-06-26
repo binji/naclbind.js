@@ -306,39 +306,37 @@ define(['promise'], function(promise) {
     var memsetType = this.makeFunctionType(65, t.void$, t.void$, t.int, t.size_t);
     var memcpyType = this.makeFunctionType(66, t.void$, t.void$, t.void$, t.size_t);
     var strlenType = this.makeFunctionType(67, t.size_t, t.char$);
+    var putsType = this.makeFunctionType(68, t.int, t.char$);
 
-    var varAddRefReleaseType = this.makeFunctionType(68, t.void, t.Var);
-    var varFromUtf8Type = this.makeFunctionType(69, t.String, t.char$, t.uint32);
-    var varToUtf8Type = this.makeFunctionType(70, t.char$, t.String, t.uint32$);
+    var varAddRefReleaseType = this.makeFunctionType(69, t.void, t.Var);
+    var varFromUtf8Type = this.makeFunctionType(70, t.String, t.char$, t.uint32);
+    var varToUtf8Type = this.makeFunctionType(71, t.char$, t.String, t.uint32$);
 
-    var arrayCreateType = this.makeFunctionType(71, t.Array);
-    var arrayGetType = this.makeFunctionType(72, t.Var, t.Array, t.uint32);
-    var arraySetType = this.makeFunctionType(73, t.int32, t.Array, t.uint32, t.Var);
-    var arrayGetLengthType = this.makeFunctionType(74, t.uint32, t.Array);
-    var arraySetLengthType = this.makeFunctionType(75, t.int32, t.Array, t.uint32);
+    var arrayCreateType = this.makeFunctionType(72, t.Array);
+    var arrayGetType = this.makeFunctionType(73, t.Var, t.Array, t.uint32);
+    var arraySetType = this.makeFunctionType(74, t.int32, t.Array, t.uint32, t.Var);
+    var arrayGetLengthType = this.makeFunctionType(75, t.uint32, t.Array);
+    var arraySetLengthType = this.makeFunctionType(76, t.int32, t.Array, t.uint32);
 
-    var arrayBufferCreateType = this.makeFunctionType(76, t.ArrayBuffer, t.uint32);
-    var arrayBufferByteLengthType = this.makeFunctionType(77, t.int32, t.ArrayBuffer, t.uint32$);
-    var arrayBufferMapType = this.makeFunctionType(78, t.void$, t.ArrayBuffer);
-    var arrayBufferUnmapType = this.makeFunctionType(79, t.void, t.ArrayBuffer);
+    var arrayBufferCreateType = this.makeFunctionType(77, t.ArrayBuffer, t.uint32);
+    var arrayBufferByteLengthType = this.makeFunctionType(78, t.int32, t.ArrayBuffer, t.uint32$);
+    var arrayBufferMapType = this.makeFunctionType(79, t.void$, t.ArrayBuffer);
+    var arrayBufferUnmapType = this.makeFunctionType(80, t.void, t.ArrayBuffer);
 
-    var dictCreateType = this.makeFunctionType(80, t.Dictionary);
-    var dictGetType = this.makeFunctionType(81, t.Var, t.Dictionary, t.Var);
-    var dictSetType = this.makeFunctionType(82, t.int32, t.Dictionary, t.Var, t.Var);
-    var dictDeleteType = this.makeFunctionType(83, t.void, t.Dictionary, t.Var);
-    var dictHasKeyType = this.makeFunctionType(84, t.int32, t.Dictionary, t.Var);
-
-    var binopVoid$IntType = this.makeFunctionType(85, t.void$, t.void$, t.int32);
-    var binopInt32Type = this.makeFunctionType(86, t.int32, t.int32, t.int32);
-    var binopUint32Type = this.makeFunctionType(87, t.uint32, t.uint32, t.uint32);
-    var binopInt64Type = this.makeFunctionType(88, t.int64, t.int64, t.int64);
-    var binopUint64Type = this.makeFunctionType(89, t.uint64, t.uint64, t.uint64);
-    var binopFloatType = this.makeFunctionType(90, t.float32, t.float32, t.float32);
-    var binopDoubleType = this.makeFunctionType(91, t.float64, t.float64, t.float64);
+    var dictCreateType = this.makeFunctionType(81, t.Dictionary);
+    var dictGetType = this.makeFunctionType(82, t.Var, t.Dictionary, t.Var);
+    var dictSetType = this.makeFunctionType(83, t.int32, t.Dictionary, t.Var, t.Var);
+    var dictDeleteType = this.makeFunctionType(84, t.void, t.Dictionary, t.Var);
+    var dictHasKeyType = this.makeFunctionType(85, t.int32, t.Dictionary, t.Var);
 
     var addSubTypes = [
-      binopVoid$IntType, binopInt32Type, binopUint32Type, binopInt64Type,
-      binopUint64Type, binopFloatType, binopDoubleType,
+      this.makeFunctionType(86, t.void$, t.void$, t.int32),
+      this.makeFunctionType(87, t.int32, t.int32, t.int32),
+      this.makeFunctionType(88, t.uint32, t.uint32, t.uint32),
+      this.makeFunctionType(89, t.int64, t.int64, t.int64),
+      this.makeFunctionType(90, t.uint64, t.uint64, t.uint64),
+      this.makeFunctionType(91, t.float32, t.float32, t.float32),
+      this.makeFunctionType(92, t.float64, t.float64, t.float64),
     ];
 
     // builtin functions
@@ -353,6 +351,7 @@ define(['promise'], function(promise) {
     this.makeFunction('memcpy', memcpyType);
     this.makeFunction('memset', memsetType);
     this.makeFunction('strlen', strlenType);
+    this.makeFunction('puts', putsType);
 
     // PPB_Var
     this.makeFunction('varAddRef', varAddRefReleaseType);

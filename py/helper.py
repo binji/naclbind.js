@@ -21,7 +21,7 @@ class AttrDict(dict):
     self.__dict__ = self
 
 
-FIRST_ID = 92
+FIRST_ID = 1000
 
 BUILTIN_TYPES = [
   {'name': 'void', 'kind': 'void'},

@@ -40,7 +40,7 @@ types, functions = FixTypes(types, functions)
 #include "var.h"
 
 enum {
-  TYPE_{{name.upper()}}_FIRST = NUM_BUILTIN_TYPES - 1,
+  TYPE_{{name.upper()}}_FIRST = {{helper.FIRST_ID}} - 1,
 [[for type in types.no_builtins.itervalues():]]
 [[  if not type.is_alias:]]
   /* {{type.id}} */ TYPE_{{CamelToMacro(type.c_ident)}},

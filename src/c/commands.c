@@ -47,6 +47,7 @@ static void Handle_get(Command* command);
 static void Handle_malloc(Command* command);
 static void Handle_memcpy(Command* command);
 static void Handle_memset(Command* command);
+static void Handle_puts(Command* command);
 static void Handle_set(Command* command);
 static void Handle_strlen(Command* command);
 static void Handle_sub(Command* command);
@@ -84,6 +85,7 @@ static NameFunc g_FuncMap[] = {
   {"malloc", Handle_malloc},
   {"memcpy", Handle_memcpy},
   {"memset", Handle_memset},
+  {"puts", Handle_puts},
   {"set", Handle_set},
   {"strlen", Handle_strlen},
   {"sub", Handle_sub},
@@ -478,6 +480,14 @@ void Handle_memset(Command* command) {
   ARG_UINT(2);
   memset(arg0, arg1, arg2);
   printf("memset(%p, %d, %u)\n", arg0, arg1, arg2);
+}
+
+void Handle_puts(Command* command) {
+  TYPE_CHECK(TYPE_FUNC_PUTS);
+  ARG_VOIDP_CAST(0, char*);
+  int result = puts(arg0);
+  RegisterHandleInt32(command->ret_handle, result);
+  printf("puts(%p)\n", arg0);
 }
 
 void Handle_set(Command* command) {
