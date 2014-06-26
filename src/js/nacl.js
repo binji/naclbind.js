@@ -415,7 +415,7 @@ define(['promise'], function(promise) {
     var ptr = this.functions.add(context, struct_p, structField.offset);
     var pointerType = this.typeBuilder_.getPointerType(structField.type);
     if (structField.type.isPointer()) {
-      return this.functions.get(context, ptr.cast(this.types.void$$)).cast(pointerType);
+      return this.functions.get(context, ptr.cast(this.types.void$$)).cast(structField.type);
     } else {
       return this.functions.get(context, ptr.cast(pointerType));
     }
