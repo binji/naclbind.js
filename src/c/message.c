@@ -24,7 +24,7 @@
 #include "var.h"
 
 Message* CreateMessage(struct PP_Var var) {
-  Message* message = (Message*)malloc(sizeof(Message));
+  Message* message = calloc(1, sizeof(Message));
   message->var = var;
   AddRefVar(&message->var);
 
@@ -78,8 +78,12 @@ Command* GetMessageCommand(Message* message, int32_t index) {
     return NULL;
   }
 
-  command = (Command*)malloc(sizeof(Command));
-  memset(command, 0, sizeof(Command));
+  command = calloc(1, sizeof(Command));
+  if (command == NULL) {
+    ERROR("Failed to calloc Command.");
+    goto fail;
+  }
+
   command->var = var;
 
   AddRefVar(&command->var);
@@ -104,22 +108,42 @@ Command* GetMessageCommand(Message* message, int32_t index) {
   }
   command->type = (Type)type_int;
 
-  command->args = GetDictVar(&var, "args");
-  if (command->args.type != PP_VARTYPE_ARRAY) {
+  struct PP_Var args = GetDictVar(&var, "args");
+  if (args.type != PP_VARTYPE_ARRAY) {
     ERROR("args is not of type array.");
     goto fail;
   }
 
-  command->arg_is_handle = GetDictVar(&var, "argIsHandle");
-  if (command->arg_is_handle.type != PP_VARTYPE_ARRAY) {
+  struct PP_Var arg_is_handle = GetDictVar(&var, "argIsHandle");
+  if (arg_is_handle.type != PP_VARTYPE_ARRAY) {
     ERROR("arg_is_handle is not of type array.");
     goto fail;
   }
 
-  if (GetArrayVarLength(&command->args) !=
-      GetArrayVarLength(&command->arg_is_handle)) {
+  if (GetArrayVarLength(&args) != GetArrayVarLength(&arg_is_handle)) {
     ERROR("arg.length != arg_is_handle.length");
     goto fail;
+  }
+
+  command->num_args = GetArrayVarLength(&args);
+  command->args = calloc(command->num_args, sizeof(Arg));
+  if (command->args == NULL) {
+    ERROR("Failed to calloc Args.");
+    goto fail;
+  }
+
+  for (uint32_t arg_ix = 0; arg_ix < command->num_args; ++arg_ix) {
+    Arg* arg = &command->args[arg_ix];
+    arg->var = GetArrayVar(&args, arg_ix);
+
+    struct PP_Var is_handle_var = GetArrayVar(&arg_is_handle, arg_ix);
+    if (is_handle_var.type != PP_VARTYPE_BOOL) {
+      VERROR("arg_is_handle element %d has non-bool type: %d.",
+             arg_ix, is_handle_var.type);
+      goto fail;
+    }
+
+    arg->is_handle = is_handle_var.value.as_bool;
   }
 
   ret_handle_var = GetDictVar(&var, "ret");
@@ -131,8 +155,9 @@ Command* GetMessageCommand(Message* message, int32_t index) {
   return command;
 
 fail:
-  printf("Command failed...\n");
+  fprintf(stderr, "Command failed...\n");
   if (command) {
+    free(command->args);
     free((void*)command->command);
     ReleaseVar(&command->var);
   }
@@ -153,25 +178,172 @@ bool GetMessageRetHandle(Message* message, int32_t index, Handle* out_handle) {
 
 void DestroyCommand(Command* command) {
   assert(command != NULL);
+  for (uint32_t i = 0; i < command->num_args; ++i) {
+    free(command->args[i].string);
+  }
   free((void*)command->command);
   ReleaseVar(&command->var);
   free(command);
 }
 
 int32_t GetCommandArgCount(Command* command) {
-  return GetArrayVarLength(&command->args);
+  return command->num_args;
 }
 
-bool GetCommandArg(Command* command, int32_t index,
-                   struct PP_Var* out_var, bool* out_is_handle) {
-  assert(index < GetCommandArgCount(command));
+bool GetCommandArg(Command* command, int32_t index, Arg** out_arg) {
+  assert(index < command->num_args);
 
-  struct PP_Var is_handle_var = GetArrayVar(&command->arg_is_handle, index);
-  if (is_handle_var.type != PP_VARTYPE_BOOL) {
+  *out_arg = &command->args[index];
+  return TRUE;
+}
+
+bool GetArgVoidp(Command* command, int32_t index, void** out_value) {
+  Arg* arg;
+  if (!GetCommandArg(command, index, &arg)) {
+    CMD_VERROR("Can't get arg %d", index);
+    return FALSE;
+  }
+  if (arg->var.type == PP_VARTYPE_NULL) {
+    *out_value = NULL;
+    return TRUE;
+  }
+  if (!arg->is_handle) {
+    CMD_VERROR("Expected arg %d to be handle", index);
+    return FALSE;
+  }
+  int32_t arg_handle_int;
+  if (!GetVarInt32(&arg->var, &arg_handle_int)) {
+    CMD_VERROR("Expected handle arg %d to be int32_t", index);
     return FALSE;
   }
 
-  *out_is_handle = is_handle_var.value.as_bool;
-  *out_var = GetArrayVar(&command->args, index);
+  Handle handle = arg_handle_int;
+  if (!GetHandleVoidp(handle, out_value)) {
+    CMD_VERROR("Expected arg %d handle's value to be void*", index);
+    return FALSE;
+  }
+
   return TRUE;
 }
+
+bool GetArgCharp(Command* command, int32_t index, char** out_value) {
+  Arg* arg;
+  if (!GetCommandArg(command, index, &arg)) {
+    CMD_VERROR("Can't get arg %d", index);
+    return FALSE;
+  }
+  if (arg->var.type == PP_VARTYPE_NULL) {
+    *out_value = NULL;
+    return TRUE;
+  }
+  if (arg->is_handle) {
+    int32_t arg_handle_int;
+    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
+      CMD_VERROR("Expected handle arg %d to be int32_t", index);
+      return FALSE;
+    }
+
+    Handle handle = arg_handle_int;
+    if (!GetHandleCharp(handle, out_value)) {
+      CMD_VERROR("Expected arg %d handle's value to be char*", index);
+      return FALSE;
+    }
+  } else {
+    if (arg->var.type != PP_VARTYPE_STRING) {
+      CMD_VERROR("Expected arg %d to be char*", index);
+      return FALSE;
+    }
+
+    if (!arg->string) {
+      uint32_t len;
+      const char* str = g_ppb_var->VarToUtf8(arg->var, &len);
+      arg->string = strndup(str, len);
+    }
+
+    *out_value = arg->string;
+  }
+
+  return TRUE;
+}
+
+bool GetArgInt32(Command* command, int32_t index, int32_t* out_value) {
+  Arg* arg;
+  if (!GetCommandArg(command, index, &arg)) {
+    CMD_VERROR("Can't get arg %d", index);
+    return FALSE;
+  }
+  if (arg->is_handle) {
+    int32_t arg_handle_int;
+    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
+      CMD_VERROR("Expected handle arg %d to be int32_t", index);
+      return FALSE;
+    }
+
+    Handle handle = arg_handle_int;
+    if (!GetHandleInt32(handle, out_value)) {
+      CMD_VERROR("Expected arg %d handle's value to be int32_t", index);
+      return FALSE;
+    }
+  } else {
+    if (!GetVarInt32(&arg->var, out_value)) {
+      CMD_VERROR("Expected arg %d to be int32_t", index);
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
+  Arg* arg;
+  if (!GetCommandArg(command, index, &arg)) {
+    CMD_VERROR("Can't get arg %d", index);
+    return FALSE;
+  }
+  if (arg->is_handle) {
+    int32_t arg_handle_int;
+    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
+      CMD_VERROR("Expected handle arg %d to be int32_t", index);
+      return FALSE;
+    }
+
+    Handle handle = arg_handle_int;
+    if (!GetHandleUint32(handle, out_value)) {
+      CMD_VERROR("Expected arg %d handle's value to be uint32_t", index);
+      return FALSE;
+    }
+  } else {
+    if (!GetVarUint32(&arg->var, out_value)) {
+      CMD_VERROR("Expected arg %d to be uint32_t", index);
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value) {
+  Arg* arg;
+  if (!GetCommandArg(command, index, &arg)) {
+    CMD_VERROR("Can't get arg %d", index);
+    return FALSE;
+  }
+  if (arg->is_handle) {
+    int32_t arg_handle_int;
+    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
+      CMD_VERROR("Expected handle arg %d to be int32_t", index);
+      return FALSE;
+    }
+
+    Handle handle = arg_handle_int;
+    if (!GetHandleVar(handle, out_value)) {
+      CMD_VERROR("Expected arg %d handle's value to be uint32_t", index);
+      return FALSE;
+    }
+  } else {
+    *out_value = arg->var;
+  }
+
+  return TRUE;
+}
+

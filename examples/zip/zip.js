@@ -38,12 +38,7 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
     var that = this;
     this.c = m.makeContext();
     this.p = promise.resolve().then(function() {
-      // TODO(binji): properly handle PP_Var strings. They are not necessarily
-      // NULL-terminated (anywhere we call varToUtf8).
-      var lenPtr = m.mallocType(that.c, t.uint32);
-      var filenameCstr = f.varToUtf8(that.c, that.filename, lenPtr);
-      that.zipFile = f.zipOpen(that.c, filenameCstr, 0);  // 0 = append
-      f.free(that.c, lenPtr);
+      that.zipFile = f.zipOpen(that.c, that.filename, 0);  // 0 = append
       return m.commitPromise();
     });
   }
@@ -65,14 +60,11 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
     var that = this;
     var c = m.makeContext();
     this.p = this.p.then(function() {
-      var lenPtr = m.mallocType(c, t.uint32);
       // TODO(binji): Stack allocation of handles...?
-      var nameCstr = f.varToUtf8(c, name, lenPtr);
       // TODO(binji): If error occurs, debugging info...?
       var result = f.zipOpenNewFileInZip(c,
-        that.zipFile, nameCstr, null, null, 0, null, 0, null, Z_DEFLATED,
+        that.zipFile, name, null, null, 0, null, 0, null, Z_DEFLATED,
         Z_DEFAULT_COMPRESSION);
-      f.free(c, lenPtr);
       return m.commitPromise(result);
     }).then(function(result) {
       if (result != ZIP_OK) {
@@ -104,12 +96,10 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
       f.zipClose(that.c, that.zipFile, null);
 
       // Get the zip filename.
-      var lenPtr = m.mallocType(that.c, t.uint32);
-      var filenameCstr = f.varToUtf8(that.c, that.filename, lenPtr);
 
       // Get its size.
       var statbuf = m.mallocType(that.c, t.stat);
-      f.stat(that.c, filenameCstr, statbuf);
+      f.stat(that.c, that.filename, statbuf);
       var size = m.getField(that.c, t.stat.fields.st_size, statbuf);
 
       // Create an ArrayBuffer of that size.
@@ -117,9 +107,7 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
       var abPtr = f.arrayBufferMap(that.c, ab);
 
       // Open the zip file.
-      var modeCstr = f.varToUtf8(that.c, "r", lenPtr);
-      var file = f.fopen(that.c, filenameCstr, modeCstr);
-      f.free(that.c, lenPtr);
+      var file = f.fopen(that.c, that.filename, "r");
 
       // Read the data into the ArrayBuffer.
       f.fread(that.c, abPtr, 1, size, file);

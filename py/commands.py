@@ -16,8 +16,10 @@ import helper
 
 def ArgInit(ix, type_):
   if type_.is_pointer:
-    # TODO(binji): better way to detect void*?
-    if type_.c_ident != 'void_p':
+    # TODO(binji): better way to detect types?
+    if type_.c_ident == 'char_p':
+      return 'ARG_CHARP(%s)' % ix
+    elif type_.c_ident != 'void_p':
       return 'ARG_VOIDP_CAST(%s, %s);' % (ix, str(type_))
     else:
       return 'ARG_VOIDP(%s);' % ix

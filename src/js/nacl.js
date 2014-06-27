@@ -519,13 +519,21 @@ define(['promise'], function(promise) {
       return true;
     }
 
+    // Implicit cast from pointer to pointer.
     if (fromType.isPointer() && toType.isPointer() &&
         this.canCoercePointer_(fromValue, fromType, toType)) {
       return true;
     }
 
+    // Implicit cast from primitive to primitive.
     if (fromType.isPrimitive() && toType.isPrimitive() &&
         this.canCoercePrimitive_(fromValue, fromType, toType)) {
+      return true;
+    }
+
+    // Implicit cast from String to char*.
+    if (fromType.isPepper() && fromType.getJsPrototype() === String &&
+        toType.isPointer() && toType.data.equals(this.types.char$.data)) {
       return true;
     }
 
@@ -831,6 +839,14 @@ define(['promise'], function(promise) {
     return this.cStr || this.data.toString();
   }
 
+  Type.prototype.equals = function(otherType) {
+    if (!(otherType instanceof Type)) {
+      console.log("Attempting to compare Type with non-Type.");
+      return false;
+    }
+    return this.data.equals(other.data);
+  };
+
   //// TypeData ////////////////////////////////////////////////////////////////
   function TypeData() {}
 
@@ -847,6 +863,7 @@ define(['promise'], function(promise) {
   TypeData.prototype.isPepper = function() { return this.kind == TypeData.KIND_PEPPER; }
   TypeData.prototype.isStruct = function() { return this.kind == TypeData.KIND_STRUCT; }
   TypeData.prototype.isFunction = function() { return this.kind == TypeData.KIND_FUNCTION; }
+  TypeData.prototype.getJsPrototype = function() { return null; }
 
   TypeData.prototype.equals = function(other) { return false; }
 
@@ -1078,6 +1095,7 @@ define(['promise'], function(promise) {
 
   PepperTypeData.prototype.sizeof = function() { return 20;  /* sizeof(PP_Var) */ };
   PepperTypeData.prototype.toString = function() { return this.name; };
+  PepperTypeData.prototype.getJsPrototype = function() { return this.jsPrototype; }
 
   PepperTypeData.prototype.equals = function(other) {
     if (this === other) {

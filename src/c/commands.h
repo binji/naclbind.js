@@ -20,10 +20,6 @@
 
 
 bool HandleBuiltinCommand(Command* command);
-bool GetArgVoidp(Command* command, int32_t index, void** out_value);
-bool GetArgInt32(Command* command, int32_t index, int32_t* out_value);
-bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value);
-bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value);
 
 
 #define TYPE_CHECK(expected) \
@@ -35,12 +31,6 @@ bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value);
 #define TYPE_FAIL \
   VERROR("Type didn't match any types. Got %s.", TypeToString(command->type))
 
-#define CMD_VERROR(fmt, ...) \
-  VERROR("%s: " fmt, command->command, __VA_ARGS__)
-
-#define CMD_ERROR(msg) \
-  VERROR("%s: " msg, command->command)
-
 #define ARG_VOIDP(index) \
   void* arg##index; \
   if (!GetArgVoidp(command, index, &arg##index)) return
@@ -49,6 +39,10 @@ bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value);
   void* arg##index##_voidp; \
   if (!GetArgVoidp(command, index, &arg##index##_voidp)) return; \
   type arg##index = (type)arg##index##_voidp
+
+#define ARG_CHARP(index) \
+  char* arg##index; \
+  if (!GetArgCharp(command, index, &arg##index)) return;
 
 #define ARG_INT(index) \
   int32_t arg##index; \

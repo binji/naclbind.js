@@ -25,19 +25,25 @@
 
 typedef struct {
   struct PP_Var var;
-  int32_t id;
-  struct PP_Var commands;
-  struct PP_Var ret_handles;
-} Message;
+  bool is_handle;
+  char* string;
+} Arg;
 
 typedef struct {
   struct PP_Var var;
   const char* command;
   Type type;
-  struct PP_Var args;
-  struct PP_Var arg_is_handle;
+  Arg* args;
+  uint32_t num_args;
   int32_t ret_handle;
 } Command;
+
+typedef struct {
+  struct PP_Var var;
+  int32_t id;
+  struct PP_Var commands;
+  struct PP_Var ret_handles;
+} Message;
 
 Message* CreateMessage(struct PP_Var);
 void DestroyMessage(Message*);
@@ -48,7 +54,18 @@ bool GetMessageRetHandle(Message*, int32_t index, Handle* out_handle);
 
 void DestroyCommand(Command*);
 int32_t GetCommandArgCount(Command*);
-bool GetCommandArg(Command*, int32_t index,
-                   struct PP_Var* out_var, bool* out_is_handle);
+bool GetCommandArg(Command*, int32_t index, Arg** out_arg);
+
+bool GetArgVoidp(Command* command, int32_t index, void** out_value);
+bool GetArgCharp(Command* command, int32_t index, char** out_value);
+bool GetArgInt32(Command* command, int32_t index, int32_t* out_value);
+bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value);
+bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value);
+
+#define CMD_VERROR(fmt, ...) \
+  VERROR("%s: " fmt, command->command, __VA_ARGS__)
+
+#define CMD_ERROR(msg) \
+  VERROR("%s: " msg, command->command)
 
 #endif  // MESSAGE_H_

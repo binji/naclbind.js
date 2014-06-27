@@ -22,6 +22,7 @@
 #include <ppapi/c/pp_var.h>
 
 #include "error.h"
+#include "interfaces.h"
 #include "var.h"
 
 #define HANDLE_MAP_INITIAL_CAPACITY 16
@@ -99,6 +100,7 @@ bool RegisterHandle(Handle handle, Type type, HandleValue value) {
   pair->handle = handle;
   pair->object.type = type;
   pair->object.value = value;
+  pair->object.string_value = NULL;
   s_handle_map_size++;
   return TRUE;
 }
@@ -608,6 +610,30 @@ bool GetHandleVoidp(Handle handle, void** out_value) {
   return TRUE;
 }
 
+bool GetHandleCharp(Handle handle, char** out_value) {
+  HandleObject hobj;
+  if (!GetHandle(handle, &hobj)) {
+    return FALSE;
+  }
+
+  if (hobj.type == TYPE_STRING) {
+    uint32_t len;
+    const char* str = g_ppb_var->VarToUtf8(hobj.value.var, &len);
+    hobj.string_value = strndup(str, len);
+    *out_value = hobj.string_value;
+  } else if (hobj.type == TYPE_CHAR_P &&
+             hobj.type == TYPE_INT8_P &&
+             hobj.type == TYPE_UINT8_P) {
+    *out_value = (char*)hobj.value.voidp;
+  } else {
+    VERROR("handle %d is of type %s. Expected %s.", handle,
+          TypeToString(hobj.type), TypeToString(TYPE_CHAR_P));
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 bool GetHandleVar(Handle handle, struct PP_Var* out_value) {
   HandleObject hobj;
   if (!GetHandle(handle, &hobj)) {
@@ -664,6 +690,8 @@ void DestroyHandle(Handle handle) {
     default:
       break;
   }
+
+  free(pair->object.string_value);
 
   size_t remove_ix = mid_ix;
   if (remove_ix + 1 < s_handle_map_size) {

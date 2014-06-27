@@ -107,140 +107,25 @@ bool HandleBuiltinCommand(Command* command) {
   return FALSE;
 }
 
-bool GetArgVoidp(Command* command, int32_t index, void** out_value) {
-  struct PP_Var arg_var;
-  bool arg_handle;
-  if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
-  }
-  if (arg_var.type == PP_VARTYPE_NULL) {
-    *out_value = NULL;
-    return TRUE;
-  }
-  if (!arg_handle) {
-    CMD_VERROR("Expected arg %d to be handle", index);
-    return FALSE;
-  }
-  int32_t arg_handle_int;
-  if (!GetVarInt32(&arg_var, &arg_handle_int)) {
-    CMD_VERROR("Expected handle arg %d to be int32_t", index);
-    return FALSE;
-  }
-
-  Handle handle = arg_handle_int;
-  if (!GetHandleVoidp(handle, out_value)) {
-    CMD_VERROR("Expected arg %d handle's value to be void*", index);
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-bool GetArgInt32(Command* command, int32_t index, int32_t* out_value) {
-  struct PP_Var arg_var;
-  bool arg_handle;
-  if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
-  }
-  if (arg_handle) {
-    int32_t arg_handle_int;
-    if (!GetVarInt32(&arg_var, &arg_handle_int)) {
-      CMD_VERROR("Expected handle arg %d to be int32_t", index);
-      return FALSE;
-    }
-
-    Handle handle = arg_handle_int;
-    if (!GetHandleInt32(handle, out_value)) {
-      CMD_VERROR("Expected arg %d handle's value to be int32_t", index);
-      return FALSE;
-    }
-  } else {
-    if (!GetVarInt32(&arg_var, out_value)) {
-      CMD_VERROR("Expected arg %d to be int32_t", index);
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
-  struct PP_Var arg_var;
-  bool arg_handle;
-  if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
-  }
-  if (arg_handle) {
-    int32_t arg_handle_int;
-    if (!GetVarInt32(&arg_var, &arg_handle_int)) {
-      CMD_VERROR("Expected handle arg %d to be int32_t", index);
-      return FALSE;
-    }
-
-    Handle handle = arg_handle_int;
-    if (!GetHandleUint32(handle, out_value)) {
-      CMD_VERROR("Expected arg %d handle's value to be uint32_t", index);
-      return FALSE;
-    }
-  } else {
-    if (!GetVarUint32(&arg_var, out_value)) {
-      CMD_VERROR("Expected arg %d to be uint32_t", index);
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value) {
-  struct PP_Var arg_var;
-  bool arg_handle;
-  if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
-  }
-  if (arg_handle) {
-    int32_t arg_handle_int;
-    if (!GetVarInt32(&arg_var, &arg_handle_int)) {
-      CMD_VERROR("Expected handle arg %d to be int32_t", index);
-      return FALSE;
-    }
-
-    Handle handle = arg_handle_int;
-    if (!GetHandleVar(handle, out_value)) {
-      CMD_VERROR("Expected arg %d handle's value to be uint32_t", index);
-      return FALSE;
-    }
-  } else {
-    *out_value = arg_var;
-  }
-
-  return TRUE;
-}
-
 void Handle_destroyHandles(Command* command) {
   int32_t index;
   int32_t handle_count = GetCommandArgCount(command);
   // TODO(binji): use malloc if handle_count is large?
   Handle* handles = alloca(handle_count * sizeof(Handle));
   for (index = 0; index < handle_count; ++index) {
-    struct PP_Var arg_var;
-    bool arg_handle;
-    if (!GetCommandArg(command, index, &arg_var, &arg_handle)) {
+    Arg* arg;
+    if (!GetCommandArg(command, index, &arg)) {
       CMD_VERROR("Can't get arg %d", index);
       return;
     }
 
-    if (!arg_handle) {
+    if (!arg->is_handle) {
       CMD_VERROR("Expected arg %d to be a Handle", index);
       return;
     }
 
     int32_t arg_handle_int;
-    if (!GetVarInt32(&arg_var, &arg_handle_int)) {
+    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
       CMD_VERROR("Expected handle arg %d to be int32_t", index);
       return;
     }
@@ -484,7 +369,7 @@ void Handle_memset(Command* command) {
 
 void Handle_puts(Command* command) {
   TYPE_CHECK(TYPE_FUNC_PUTS);
-  ARG_VOIDP_CAST(0, char*);
+  ARG_CHARP(0);
   int result = puts(arg0);
   RegisterHandleInt32(command->ret_handle, result);
   printf("puts(%p)\n", arg0);
@@ -521,7 +406,7 @@ void Handle_set(Command* command) {
 
 void Handle_strlen(Command* command) {
   TYPE_CHECK(TYPE_FUNC_STRLEN);
-  ARG_VOIDP_CAST(0, const char*);
+  ARG_CHARP(0);
   uint32_t result = (uint32_t)strlen(arg0);
   RegisterHandleUint32(command->ret_handle, result);
   printf("strlen(\"%s\") => %u (%d)\n", arg0, result, command->ret_handle);
@@ -562,7 +447,7 @@ void Handle_varAddRef(Command* command) {
 
 void Handle_varFromUtf8(Command* command) {
   TYPE_CHECK(TYPE_FUNC_VAR_FROM_UTF8);
-  ARG_VOIDP_CAST(0, const char*);
+  ARG_CHARP(0);
   ARG_UINT(1);
   struct PP_Var result = g_ppb_var->VarFromUtf8(arg0, arg1);
   RegisterHandleVar(command->ret_handle, result);

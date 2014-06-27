@@ -40,6 +40,13 @@ typedef union {
 typedef struct {
   Type type;
   HandleValue value;
+  // PP_Var strings are not guaranteed to be NULL-terminated, so if we want to
+  // use it as a C string, we have to allocate space for a NULL and remember to
+  // free it later.
+  //
+  // This field will be non-NULL when type == TYPE_STRING and GetHandleCharp()
+  // has been called. The memory will be free'd in DestroyHandle.
+  char* string_value;
 } HandleObject;
 
 typedef int32_t Handle;
@@ -69,6 +76,7 @@ bool GetHandleUint64(Handle, uint64_t*);
 bool GetHandleFloat(Handle, float*);
 bool GetHandleDouble(Handle, double*);
 bool GetHandleVoidp(Handle, void**);
+bool GetHandleCharp(Handle, char**);
 bool GetHandleVar(Handle, struct PP_Var*);
 void DestroyHandle(Handle);
 void DestroyHandles(Handle*, int32_t handle_count);
