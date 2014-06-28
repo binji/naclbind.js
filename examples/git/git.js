@@ -30,10 +30,8 @@ require(['promise', 'nacl', 'git_glue'], function(promise, nacl, git_glue) {
   function dostuff() {
     promise.resolve().then(function() {
       f.git_threads_init(c);
-      var lenPtr = m.mallocType(c, t.uint32);
-      var dirnameCstr = f.varToUtf8(c, dirname, lenPtr);
       repo = m.mallocType(c, t.git_repository$);
-      var result = f.git_repository_init(c, repo, dirnameCstr, 0);
+      var result = f.git_repository_init(c, repo, dirname, 0);
       return m.commitPromise(result);
     }).then(function(result) {
       console.log('git_repository_init returned ' + result);

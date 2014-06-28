@@ -89,8 +89,6 @@ static void HandleMessage(struct PP_Var var) {
         VERROR("Unknown command: %s", command->command);
       }
     }
-
-    DestroyCommand(command);
   }
 
   int32_t ret_handle_count = GetMessageRetHandleCount(message);
