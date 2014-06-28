@@ -65,13 +65,25 @@ $(PORTS_STAMP): $(NACL_SDK_ROOT) | $(STAMP_DIR)
 .PHONY: ports
 ports: $(PORTS_STAMP)
 
+EXAMPLE_DEPS = $(NINJA) $(NACL_SDK_ROOT) $(PORTS_STAMP)
 
 # examples
-.PHONY: examples
-examples: $(NINJA) $(NACL_SDK_ROOT) $(PORTS_STAMP)
-	@$(NINJA)
+.PHONY: example-git example-zip example-zlib
+git: $(EXAMPLE_DEPS)
+	@$(NINJA) git
 
+zip: $(EXAMPLE_DEPS)
+	@$(NINJA) zip
 
-.PHONY: run
-run: examples
-	@$(NINJA) run
+zlib: $(EXAMPLE_DEPS)
+	@$(NINJA) zlib
+
+.PHONY: run-git run-zip run-zlib
+run-git: $(EXAMPLE_DEPS)
+	@$(NINJA) run-git
+
+run-zip: $(EXAMPLE_DEPS)
+	@$(NINJA) run-zip
+
+run-zlib: $(EXAMPLE_DEPS)
+	@$(NINJA) run-zlib

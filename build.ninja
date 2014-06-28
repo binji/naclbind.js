@@ -37,7 +37,7 @@ ldflags-default = -Lout/2nacl
 ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug
 ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
 ldflags-git = -Lexamples/git/payload/lib
-libs-default = -lnacl_io -lz -lppapi_cpp -lppapi 
+libs-default = -lnacl_io -lz -lppapi_cpp -lppapi
 
 easy-template = py/easy_template.py
 helper-py = py/helper.py
@@ -217,7 +217,7 @@ build out/git/git.bc: link out/git/obj/git_app.o $
                            out/git/obj/git_glue.o $
                            out/2nacl/lib2nacl.a
   cc = $pnacl-cxx
-  ldflags = $ldflags-default $ldflags-release $ldflags-git 
+  ldflags = $ldflags-default $ldflags-release $ldflags-git
   libs = -l2nacl -lgit2 -lssl -lcrypto $libs-default -lglibc-compat
 build out/git/git.pexe: finalize out/git/git.bc
 build out/git/git.nmf: nmf out/git/git.pexe
@@ -238,16 +238,14 @@ default git
 
 
 # Running
-build run_zip: run || zip
+build run-zip: run || zip
   dir = out/zip
   page = index.html
 
-build run_zlib: run || zlib
+build run-zlib: run || zlib
   dir = out/zlib
   page = index.html
 
-build run_git: run || git
+build run-git: run || git
   dir = out/git
   page = index.html
-
-build run: phony run_zip
