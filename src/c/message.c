@@ -20,73 +20,110 @@
 #include <string.h>
 
 #include "error.h"
-#include "interfaces.h"
 #include "var.h"
+
+static void DestroyMessageCommands(Message* message);
+static bool InitCommand(Command* command, struct PP_Var var);
+static void DestroyCommand(Command* command);
 
 Message* CreateMessage(struct PP_Var var) {
   Message* message = calloc(1, sizeof(Message));
-  message->var = var;
-  AddRefVar(&message->var);
+  if (message == NULL) {
+    ERROR("Failed to calloc Message.");
+    goto fail;
+  }
 
   struct PP_Var id_var = GetDictVar(&var, "id");
   if (!GetVarInt32(&id_var, &message->id)) {
     goto fail;
   }
 
-  message->commands = GetDictVar(&var, "commands");
-  if (message->commands.type != PP_VARTYPE_ARRAY) {
+  struct PP_Var commands_var = GetDictVar(&var, "commands");
+  if (commands_var.type != PP_VARTYPE_ARRAY) {
+    ERROR("commands is not of array type.");
     goto fail;
   }
 
-  message->ret_handles = GetDictVar(&var, "handles");
-  if (message->ret_handles.type != PP_VARTYPE_ARRAY) {
+  message->num_commands = GetArrayVarLength(&commands_var);
+  message->commands = calloc(message->num_commands, sizeof(Command));
+  if (message->commands == NULL) {
+    ERROR("Failed to calloc Command array.");
     goto fail;
+  }
+
+  for (uint32_t i = 0; i < message->num_commands; ++i) {
+    struct PP_Var command_var = GetArrayVar(&commands_var, i);
+    if (!InitCommand(&message->commands[i], command_var)) {
+      goto fail;
+    }
+  }
+
+  struct PP_Var ret_handles = GetDictVar(&var, "handles");
+  if (ret_handles.type != PP_VARTYPE_ARRAY) {
+    ERROR("handles is not of array type.");
+    goto fail;
+  }
+
+  message->num_ret_handles = GetArrayVarLength(&ret_handles);
+  message->ret_handles = calloc(message->num_ret_handles, sizeof(Handle));
+  if (message->ret_handles == NULL) {
+    ERROR("Failed to calloc return handle array.");
+    goto fail;
+  }
+
+  for (uint32_t i = 0; i < message->num_ret_handles; ++i) {
+    struct PP_Var handle_var = GetArrayVar(&ret_handles, i);
+    Handle handle;
+    if (!GetVarInt32(&handle_var, &handle)) {
+      VERROR("return handle %d is not integer type.", i);
+      goto fail;
+    }
+
+    message->ret_handles[i] = handle;
   }
 
   return message;
 
 fail:
-  free(message);
+  DestroyMessage(message);
   return NULL;
 }
 
 void DestroyMessage(Message* message) {
   assert(message != NULL);
-
-  ReleaseVar(&message->var);
+  DestroyMessageCommands(message);
+  free(message->ret_handles);
+  free(message->commands);
   free(message);
 }
 
+void DestroyMessageCommands(Message* message) {
+  for (uint32_t i = 0; i < message->num_commands; ++i) {
+    DestroyCommand(&message->commands[i]);
+  }
+}
+
 int32_t GetMessageCommandCount(Message* message) {
-  return GetArrayVarLength(&message->commands);
+  return message->num_commands;
 }
 
 Command* GetMessageCommand(Message* message, int32_t index) {
   assert(index < GetMessageCommandCount(message));
 
-  Command* command;
-  struct PP_Var var;
+  return &message->commands[index];
+}
+
+bool InitCommand(Command* command, struct PP_Var var) {
   struct PP_Var cmd_var;
   struct PP_Var type_var;
   struct PP_Var ret_handle_var;
   uint32_t cmd_length;
   const char* cmd;
 
-  var = GetArrayVar(&message->commands, index);
   if (var.type != PP_VARTYPE_DICTIONARY) {
-    VERROR("command %d is not a dictionary.", index);
-    return NULL;
-  }
-
-  command = calloc(1, sizeof(Command));
-  if (command == NULL) {
-    ERROR("Failed to calloc Command.");
+    ERROR("command is not a dictionary.");
     goto fail;
   }
-
-  command->var = var;
-
-  AddRefVar(&command->var);
 
   cmd_var = GetDictVar(&var, "cmd");
   if (cmd_var.type != PP_VARTYPE_STRING) {
@@ -152,28 +189,27 @@ Command* GetMessageCommand(Message* message, int32_t index) {
     goto fail;
   }
 
-  return command;
+  return TRUE;
 
 fail:
   fprintf(stderr, "Command failed...\n");
   if (command) {
     free(command->args);
     free((void*)command->command);
-    ReleaseVar(&command->var);
   }
   free(command);
-  return NULL;
+  return FALSE;
 }
 
 int32_t GetMessageRetHandleCount(Message* message) {
-  return GetArrayVarLength(&message->ret_handles);
+  return message->num_ret_handles;
 }
 
 bool GetMessageRetHandle(Message* message, int32_t index, Handle* out_handle) {
   assert(index < GetMessageRetHandleCount(message));
 
-  struct PP_Var handle_var = GetArrayVar(&message->ret_handles, index);
-  return GetVarInt32(&handle_var, out_handle);
+  *out_handle = message->ret_handles[index];
+  return TRUE;
 }
 
 void DestroyCommand(Command* command) {
@@ -182,8 +218,6 @@ void DestroyCommand(Command* command) {
     free(command->args[i].string);
   }
   free((void*)command->command);
-  ReleaseVar(&command->var);
-  free(command);
 }
 
 int32_t GetCommandArgCount(Command* command) {
@@ -255,8 +289,12 @@ bool GetArgCharp(Command* command, int32_t index, char** out_value) {
     }
 
     if (!arg->string) {
+      const char* str;
       uint32_t len;
-      const char* str = g_ppb_var->VarToUtf8(arg->var, &len);
+      if (!GetVarString(&arg->var, &str, &len)) {
+        ERROR("Failed to get string value of arg.");
+        return FALSE;
+      }
       arg->string = strndup(str, len);
     }
 

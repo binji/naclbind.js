@@ -30,7 +30,6 @@ typedef struct {
 } Arg;
 
 typedef struct {
-  struct PP_Var var;
   const char* command;
   Type type;
   Arg* args;
@@ -39,10 +38,11 @@ typedef struct {
 } Command;
 
 typedef struct {
-  struct PP_Var var;
   int32_t id;
-  struct PP_Var commands;
-  struct PP_Var ret_handles;
+  Command* commands;
+  uint32_t num_commands;
+  Handle* ret_handles;
+  uint32_t num_ret_handles;
 } Message;
 
 Message* CreateMessage(struct PP_Var);
@@ -52,7 +52,6 @@ Command* GetMessageCommand(Message*, int32_t index);
 int32_t GetMessageRetHandleCount(Message*);
 bool GetMessageRetHandle(Message*, int32_t index, Handle* out_handle);
 
-void DestroyCommand(Command*);
 int32_t GetCommandArgCount(Command*);
 bool GetCommandArg(Command*, int32_t index, Arg** out_arg);
 
