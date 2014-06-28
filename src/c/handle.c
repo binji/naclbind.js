@@ -621,13 +621,11 @@ bool GetHandleCharp(Handle handle, char** out_value) {
     const char* str = g_ppb_var->VarToUtf8(hobj.value.var, &len);
     hobj.string_value = strndup(str, len);
     *out_value = hobj.string_value;
-  } else if (hobj.type == TYPE_CHAR_P &&
-             hobj.type == TYPE_INT8_P &&
-             hobj.type == TYPE_UINT8_P) {
+  } else if (hobj.type == TYPE_VOID_P) {
     *out_value = (char*)hobj.value.voidp;
   } else {
     VERROR("handle %d is of type %s. Expected %s.", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_CHAR_P));
+          TypeToString(hobj.type), TypeToString(TYPE_VOID_P));
     return FALSE;
   }
 
