@@ -56,7 +56,7 @@ sdk: $(NACL_SDK_ROOT)
 
 
 # ports
-PORTS = zlib
+PORTS = zlib libgit2
 
 $(PORTS_STAMP): $(NACL_SDK_ROOT) | $(STAMP_DIR)
 	NACL_SDK_ROOT=$(abspath $(NACL_SDK_ROOT)) $(MAKE) -C third_party/naclports $(PORTS) NACL_ARCH=pnacl FORCE=1
@@ -73,5 +73,5 @@ examples: $(NINJA) $(NACL_SDK_ROOT) $(PORTS_STAMP)
 
 
 .PHONY: run
-run:
+run: examples
 	@$(NINJA) run

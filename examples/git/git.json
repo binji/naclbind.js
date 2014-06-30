@@ -1,0 +1,99 @@
+{
+  "name": "git",
+  "system_headers": [
+    "git2.h"
+  ],
+  "headers": [],
+  "types": [
+    {"name": "_git_repository", "kind": "struct", "size": 0, "fields": []},
+    {"name": "git_repository", "kind": "alias", "alias": "_git_repository"},
+    {"name": "git_repository$", "kind": "pointer", "base": "git_repository"},
+    {"name": "git_repository$$", "kind": "pointer", "base": "git_repository$"},
+
+    {"name": "_git_time", "kind": "struct", "size": 12, "fields": [
+      {"name": "time", "type": "int64", "offset": 0},
+      {"name": "offset", "type": "int", "offset": 8}
+    ]},
+    {"name": "git_time", "kind": "alias", "alias": "_git_time"},
+
+    {"name": "_git_signature", "kind": "struct", "size": 20, "fields": [
+      {"name": "name", "type": "char$", "offset": 0},
+      {"name": "email", "type": "char$", "offset": 4},
+      {"name": "when", "type": "git_time", "offset": 4}
+    ]},
+    {"name": "git_signature", "kind": "alias", "alias": "_git_signature"},
+    {"name": "git_signature$", "kind": "pointer", "base": "git_signature"},
+    {"name": "git_signature$$", "kind": "pointer", "base": "git_signature$"},
+
+    {"name": "_git_index", "kind": "struct", "size": 0, "fields": []},
+    {"name": "git_index", "kind": "alias", "alias": "_git_index"},
+    {"name": "git_index$", "kind": "pointer", "base": "git_index"},
+    {"name": "git_index$$", "kind": "pointer", "base": "git_index$"},
+
+    {"name": "_git_oid", "kind": "struct", "size": 20, "fields": []},
+    {"name": "git_oid", "kind": "alias", "alias": "_git_oid"},
+    {"name": "git_oid$", "kind": "pointer", "base": "git_oid"},
+
+    {"name": "_git_tree", "kind": "struct", "size": 0, "fields": []},
+    {"name": "git_tree", "kind": "alias", "alias": "_git_tree"},
+    {"name": "git_tree$", "kind": "pointer", "base": "git_tree"},
+    {"name": "git_tree$$", "kind": "pointer", "base": "git_tree$"},
+
+    {"name": "_git_commit", "kind": "struct", "size": 0, "fields": []},
+    {"name": "git_commit", "kind": "alias", "alias": "_git_commit"},
+    {"name": "git_commit$", "kind": "pointer", "base": "git_commit"},
+    {"name": "git_commit$$", "kind": "pointer", "base": "git_commit$"}
+  ],
+  "functions": [
+    {"name": "git_threads_init",
+     "result": "int",
+     "args": []
+    },
+    {"name": "git_threads_shutdown",
+     "result": "void",
+     "args": []
+    },
+    {"name": "git_repository_init",
+     "result": "int",
+     "args": ["git_repository$$", "char$", "uint"]
+    },
+    {"name": "git_repository_free",
+     "result": "void",
+     "args": ["git_repository$"]
+    },
+    {"name": "git_repository_index",
+     "result": "int",
+     "args": ["git_index$$", "git_repository$"]
+    },
+    {"name": "git_signature_default",
+     "result": "int",
+     "args": ["git_signature$$", "git_repository$"]
+    },
+    {"name": "git_signature_free",
+     "result": "void",
+     "args": ["git_signature$"]
+    },
+    {"name": "git_index_write_tree",
+     "result": "int",
+     "args": ["git_oid$", "git_index$"]
+    },
+    {"name": "git_index_free",
+     "result": "void",
+     "args": ["git_index$"]
+    },
+    {"name": "git_tree_lookup",
+     "result": "int",
+     "args": ["git_tree$$", "git_repository$", "git_oid$"]
+    },
+    {"name": "git_tree_free",
+     "result": "void",
+     "args": ["git_tree$"]
+    },
+    {"name": "git_commit_create",
+     "result": "void",
+     "args": ["git_oid$", "git_repository$", "char$", "git_signature$",
+              "git_signature$", "char$", "char$", "git_tree$", "int",
+              "git_commit$$"]
+    }
+  ]
+}

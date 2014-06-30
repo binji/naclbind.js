@@ -30,11 +30,14 @@ ccflags-debug = -g -O0
 ccflags-release = -g -O2 -DNDEBUG
 ccflags-zlib = -DUSE_FILE32API -DNOCRYPT -Iexamples/zlib -Iout/zlib/gen
 ccflags-zip = -DUSE_FILE32API -DNOCRYPT -Iexamples/zip -Iout/zip/gen
+ccflags-git = -Iexamples/git -Iexamples/git/payload/include -Iout/git/gen -Wno-incompatible-pointer-types-discards-qualifiers
 ccflags-include = -I$nacl_sdk_root/include -Isrc/c
 
-ldflags-default = -lnacl_io -lz -lppapi_cpp -lppapi -Lout/2nacl
+ldflags-default = -Lout/2nacl
 ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug
 ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
+ldflags-git = -Lexamples/git/payload/lib
+libs-default = -lnacl_io -lz -lppapi_cpp -lppapi 
 
 easy-template = py/easy_template.py
 helper-py = py/helper.py
@@ -54,7 +57,7 @@ rule ar
   command = rm -f $out && $ar rcs $out $in
   description = AR $out
 rule link
-  command = $cc $in $ldflags -o $out
+  command = $cc $in $ldflags $libs -o $out
   description = LINK $out
 rule finalize
   command = $pnacl-finalize $in -o $out
@@ -71,7 +74,7 @@ rule template
   description = TEMPLATE $out
 rule run
   pool = console
-  command = $run-py -C $dir -P $page -- $chrome --no-first-run --user-data-dir=user-data-dir
+  command = $run-py -C $dir -P $page -p 0 -- $chrome --no-first-run --user-data-dir=user-data-dir
   description = RUN $page
 
 # 2nacl
@@ -132,6 +135,7 @@ build out/zip/zip.bc: link out/zip/obj/ioapi.o $
                            out/2nacl/lib2nacl.a
   cc = $pnacl-cxx
   ldflags = $ldflags-default $ldflags-release -l2nacl
+  libs = $libs-default
 build out/zip/zip.pexe: finalize out/zip/zip.bc
 build out/zip/zip.nmf: nmf out/zip/zip.pexe
 build out/zip/demo.jpg: cp examples/zip/demo.jpg
@@ -175,6 +179,7 @@ build out/zlib/zlib.bc: link out/zlib/obj/zlib_app.o $
                              out/2nacl/lib2nacl.a
   cc = $pnacl-cxx
   ldflags = $ldflags-default $ldflags-release -l2nacl
+  libs = $libs-default
 build out/zlib/zlib.pexe: finalize out/zlib/zlib.bc
 build out/zlib/zlib.nmf: nmf out/zlib/zlib.pexe
 build out/zlib/nacl.js: cp src/js/nacl.js
@@ -194,6 +199,44 @@ build zlib: phony out/zlib/index.html $
                   out/zlib/zlib.nmf
 default zlib
 
+# git
+git-json = examples/git/git.json
+
+build out/git/gen/git_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py
+  json = $git-json
+build out/git/git_glue.js: template $glue-template-js | $easy-template $helper-py
+  json = $git-json
+
+build out/git/obj/git_app.o: cc examples/git/git_app.c
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-git
+build out/git/obj/git_glue.o: cc out/git/gen/git_glue.c
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-git
+build out/git/git.bc: link out/git/obj/git_app.o $
+                           out/git/obj/git_glue.o $
+                           out/2nacl/lib2nacl.a
+  cc = $pnacl-cxx
+  ldflags = $ldflags-default $ldflags-release $ldflags-git 
+  libs = -l2nacl -lgit2 -lssl -lcrypto $libs-default -lglibc-compat
+build out/git/git.pexe: finalize out/git/git.bc
+build out/git/git.nmf: nmf out/git/git.pexe
+build out/git/git.js: cp examples/git/git.js
+build out/git/index.html: cp examples/git/index.html
+build out/git/nacl.js: cp src/js/nacl.js
+build out/git/promise.js: cp src/js/promise.js
+build out/git/require.js: cp third_party/requirejs/require.js
+
+build git: phony out/git/index.html $
+                 out/git/nacl.js $
+                 out/git/promise.js $
+                 out/git/require.js $
+                 out/git/git.js $
+                 out/git/git_glue.js $
+                 out/git/git.nmf
+default git
+
+
 # Running
 build run_zip: run || zip
   dir = out/zip
@@ -201,6 +244,10 @@ build run_zip: run || zip
 
 build run_zlib: run || zlib
   dir = out/zlib
+  page = index.html
+
+build run_git: run || git
+  dir = out/git
   page = index.html
 
 build run: phony run_zip
