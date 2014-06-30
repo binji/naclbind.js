@@ -111,9 +111,9 @@ build out/2nacl/lib2nacl.a: ar out/2nacl/obj/commands.o $
 # zip
 zip-json = examples/zip/zip.json
 
-build out/zip/gen/zip_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py
+build out/zip/gen/zip_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py $zip-json
   json = $zip-json
-build out/zip/zip_glue.js: template $glue-template-js | $easy-template $helper-py
+build out/zip/zip_glue.js: template $glue-template-js | $easy-template $helper-py $zip-json
   json = $zip-json
 
 build out/zip/obj/ioapi.o: cc examples/zip/ioapi.c
@@ -163,9 +163,9 @@ default zip
 # zlib
 zlib-json = examples/zlib/zlib.json
 
-build out/zlib/gen/zlib_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py
+build out/zlib/gen/zlib_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py $zlib-json
   json = $zlib-json
-build out/zlib/zlib_glue.js: template $glue-template-js | $easy-template $helper-py
+build out/zlib/zlib_glue.js: template $glue-template-js | $easy-template $helper-py $zlib-json
   json = $zlib-json
 
 build out/zlib/obj/zlib_app.o: cc examples/zlib/zlib_app.c
@@ -202,9 +202,9 @@ default zlib
 # git
 git-json = examples/git/git.json
 
-build out/git/gen/git_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py
+build out/git/gen/git_glue.c: template $glue-template-c | $easy-template $helper-py $commands-py $git-json
   json = $git-json
-build out/git/git_glue.js: template $glue-template-js | $easy-template $helper-py
+build out/git/git_glue.js: template $glue-template-js | $easy-template $helper-py $git-json
   json = $git-json
 
 build out/git/obj/git_app.o: cc examples/git/git_app.c
