@@ -1117,6 +1117,7 @@ define(['promise'], function(promise) {
 
     var cfunc = new CFunction(name, overloads);
     var func = function(context) {
+      assert(context instanceof Context);
       var args = Array.prototype.slice.call(arguments, 1);
       return context.callFunction(cfunc, args);
     };
