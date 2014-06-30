@@ -108,8 +108,12 @@ void Handle_{{fn.c_ident}}(Command* command) {
 [[  for arg_ix, arg_type in enumerate(fn.type.arg_types):]]
   {{ArgInit(arg_ix, arg_type)}}
 [[  ]]
+[[  if fn.type.return_type.is_void:]]
+  {{fn.c_ident}}({{ArgsCommaSep(fn.type.arg_types)}});
+[[  else:]]
   {{fn.type.return_type}} result = ({{fn.type.return_type}}){{fn.c_ident}}({{ArgsCommaSep(fn.type.arg_types)}});
   {{RegisterHandle(fn.type.return_type)}}
+[[  ]]
   {{PrintFunction(fn)}}
 }
 

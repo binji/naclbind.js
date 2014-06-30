@@ -47,9 +47,7 @@ def ArgTypesString(fn_type):
   return ''
 
 def ReturnTypeString(fn_type):
-  if not fn_type.return_type.is_void:
-    return ', t.' + fn_type.return_type.js_ident
-  return ''
+  return ', t.' + fn_type.return_type.js_ident
 ]]]
 [[for fn_type in types.function_types.itervalues():]]
 [[  if fn_type.is_alias:]]
