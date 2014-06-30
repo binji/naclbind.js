@@ -76,6 +76,10 @@
      "result": "int",
      "args": ["git_signature$$", "git_repository$"]
     },
+    {"name": "git_signature_now",
+     "result": "int",
+     "args": ["git_signature$$", "char$", "char$"]
+    },
     {"name": "git_signature_free",
      "result": "void",
      "args": ["git_signature$"]
@@ -97,7 +101,7 @@
      "args": ["git_tree$"]
     },
     {"name": "git_commit_create",
-     "result": "void",
+     "result": "int",
      "args": ["git_oid$", "git_repository$", "char$", "git_signature$",
               "git_signature$", "char$", "char$", "git_tree$", "int",
               "git_commit$$"]
