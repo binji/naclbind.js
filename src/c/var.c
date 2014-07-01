@@ -20,6 +20,23 @@
 #include "error.h"
 #include "interfaces.h"
 
+const char* VarTypeToString(struct PP_Var* var) {
+  switch (var->type) {
+    case PP_VARTYPE_UNDEFINED: return "<undefined>";
+    case PP_VARTYPE_NULL: return "<null>";
+    case PP_VARTYPE_BOOL: return "<bool>";
+    case PP_VARTYPE_INT32: return "<int32>";
+    case PP_VARTYPE_DOUBLE: return "<double>";
+    case PP_VARTYPE_STRING: return "<string>";
+    case PP_VARTYPE_ARRAY: return "<array>";
+    case PP_VARTYPE_DICTIONARY: return "<dictionary>";
+    case PP_VARTYPE_ARRAY_BUFFER: return "<array buffer>";
+    case PP_VARTYPE_RESOURCE: return "<resource>";
+    default:
+      return "<unknown>";
+  }
+}
+
 void AddRefVar(struct PP_Var* var) {
   g_ppb_var->AddRef(*var);
 }

@@ -129,11 +129,11 @@ class TypeData(object):
   def GetFormat(self):
     return None
 
-  def GetFormatArg(self, ix):
+  def GetFormatArg(self, name):
     return None
 
-  def _GetDefaultFormatArg(self, ix):
-    return 'arg%d' % ix
+  def GetArgString(self, name):
+    return self.GetFormatArg(name)
 
   @property
   def is_void(self):
@@ -202,15 +202,22 @@ class PrimitiveTypeData(TypeData):
     self.size = size
     self.is_int = is_int
     self.c_str = self.TO_STR[js_ident]
+    self.is_long = 'long' in self.js_ident
 
   def GetFormat(self):
-    if self.size <= 4:
-      return '%d' if self.is_signed else '%u'
+    if self.is_int:
+      if self.size <= 4:
+        if self.size == 4 and self.is_long:
+          return '%ld' if self.is_signed else '%lu'
+        else:
+          return '%d' if self.is_signed else '%u'
+      else:
+        return '%lld' if self.is_signed else '%llu'
     else:
-      return '%lld' if self.is_signed else '%llu'
+      return '%g'
 
-  def GetFormatArg(self, ix):
-    return self._GetDefaultFormatArg(ix)
+  def GetFormatArg(self, name):
+    return name
 
   def __str__(self):
     return self.c_str
@@ -263,28 +270,30 @@ class PepperTypeData(TypeData):
   TYPE_ARRAY = 2
   TYPE_ARRAY_BUFFER = 3
   TYPE_DICTIONARY = 4
-  TO_STR = {
-    TYPE_VAR: "Var",
+  TO_JS_PROTOTYPE = {
+    TYPE_VAR: "undefined",
     TYPE_STRING: "String",
     TYPE_ARRAY: "Array",
     TYPE_ARRAY_BUFFER: "ArrayBuffer",
-    TYPE_DICTIONARY: "Dictionary"
+    TYPE_DICTIONARY: "Object"
   }
 
   def __init__(self, pepper_type):
     TypeData.__init__(self)
     self.pepper_type = pepper_type
-    self.c_str = self.TO_STR[pepper_type]
+    self.js_prototype = self.TO_JS_PROTOTYPE[pepper_type]
 
   def GetFormat(self):
-    # TODO(binji): better output here.
-    return '<Var>'
+    return '%s'
 
-  def GetFormatArg(self, ix):
-    return None
+  def GetFormatArg(self, name):
+    return 'VarTypeToString(&%s)' % name
+
+  def GetArgString(self, name):
+    return name
 
   def __str__(self):
-    return self.c_str
+    return 'struct PP_Var'
 
   def __eq__(self, other):
     return (isinstance(other, TypeData) and
@@ -306,8 +315,8 @@ class PointerTypeData(TypeData):
   def GetFormat(self):
     return '%p'
 
-  def GetFormatArg(self, ix):
-    return self._GetDefaultFormatArg(ix)
+  def GetFormatArg(self, name):
+    return name
 
   def __str__(self):
     return self.c_str
@@ -397,11 +406,12 @@ class Types(object):
 
 
 class TypesBuilder(object):
-  def __init__(self):
+  def __init__(self, add_builtin_types):
     self.types = Types()
     self.id_gen = IdGenerator()
-    self.AddTypeDicts(BUILTIN_TYPES, is_builtin=True)
-    self.id_gen.Set(FIRST_ID)
+    if add_builtin_types:
+      self.AddTypeDicts(BUILTIN_TYPES, is_builtin=True)
+      self.id_gen.Set(FIRST_ID)
 
   def AddTypeDicts(self, type_dicts, is_builtin=False):
     for type_dict in type_dicts:
@@ -413,9 +423,17 @@ class TypesBuilder(object):
     return type_
 
   def AddFunctionDict(self, fn_dict, is_builtin):
-    type_ = self._FunctionDictToType(fn_dict, is_builtin)
-    self.types.AddType(type_)
-    return type_
+    if fn_dict.get('overloads', False):
+      fn_dicts = fn_dict.overloads
+    else:
+      fn_dicts = [fn_dict]
+
+    types = []
+    for fn_dict in fn_dicts:
+      type_ = self._FunctionDictToType(fn_dict, is_builtin)
+      self.types.AddType(type_)
+      types.append(type_)
+    return types
 
   def _TypeDictToType(self, type_dict, is_builtin):
     type_data = self._TypeDictToTypeData(type_dict)
@@ -496,10 +514,10 @@ class TypesBuilder(object):
 
 
 class Function(object):
-  def __init__(self, js_ident, type_):
+  def __init__(self, js_ident, types):
     self.js_ident = js_ident
     self.c_ident = MakeCIdent(js_ident)
-    self.type = type_
+    self.types = types
 
 
 class FunctionsBuilder(object):
@@ -512,9 +530,9 @@ class FunctionsBuilder(object):
       self.AddFunctionDict(fn_dict, is_builtin)
 
   def AddFunctionDict(self, fn_dict, is_builtin=False):
-    type_ = self.types_builder.AddFunctionDict(fn_dict, is_builtin)
+    types = self.types_builder.AddFunctionDict(fn_dict, is_builtin)
     js_ident = fn_dict.name
-    function = Function(js_ident, type_)
+    function = Function(js_ident, types)
     self.function_ident_dict[js_ident] =  function
 
   @property
@@ -522,8 +540,8 @@ class FunctionsBuilder(object):
     return self.function_ident_dict.values()
 
 
-def FixTypes(type_dicts, fn_dicts):
-  types_builder = TypesBuilder()
+def FixTypes(type_dicts, fn_dicts, add_builtin_types=True):
+  types_builder = TypesBuilder(add_builtin_types)
   fn_builder = FunctionsBuilder(types_builder)
   types_builder.AddTypeDicts(type_dicts)
   fn_builder.AddFunctionDicts(fn_dicts)

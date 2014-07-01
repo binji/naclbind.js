@@ -12,27 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 #include <stdlib.h>
 
 #include "type.h"
 
 static const char* kTypeString[] = {
-  /*  0 */ "(null)",
-  /*  1 */ "void",
-  /*  2 */ "char",
-  /*  3 */ "int8_t",
-  /*  4 */ "uint8_t",
-  /*  5 */ "int16_t",
-  /*  6 */ "uint16_t",
-  /*  7 */ "int32_t",
-  /*  8 */ "uint32_t",
-  /*  9 */ "long",
+  "(null)",
+  /* 1 */ "void",
+  /* 2 */ "char",
+  /* 3 */ "int8_t",
+  /* 4 */ "uint8_t",
+  /* 5 */ "int16_t",
+  /* 6 */ "uint16_t",
+  /* 7 */ "int32_t",
+  /* 8 */ "uint32_t",
+  /* 9 */ "long",
   /* 10 */ "unsigned long",
   /* 11 */ "int64_t",
   /* 12 */ "uint64_t",
   /* 13 */ "float",
   /* 14 */ "double",
-
   /* 15 */ "void*",
   /* 16 */ "char*",
   /* 17 */ "int8_t*",
@@ -48,14 +48,11 @@ static const char* kTypeString[] = {
   /* 27 */ "float*",
   /* 28 */ "double*",
   /* 29 */ "void**",
-
-  /* 30 */ "PP_Var",
-  /* 31 */ "PP_VarArrayBuffer",
-  /* 32 */ "PP_VarArray",
-  /* 33 */ "PP_VarDictionary",
-  /* 34 */ "PP_VarString",
-
-  // get
+  /* 30 */ "struct PP_Var",
+  /* 31 */ "struct PP_Var",
+  /* 32 */ "struct PP_Var",
+  /* 33 */ "struct PP_Var",
+  /* 34 */ "struct PP_Var",
   /* 35 */ "void* (*)(void**)",
   /* 36 */ "char (*)(char*)",
   /* 37 */ "int8_t (*)(int8_t*)",
@@ -70,8 +67,6 @@ static const char* kTypeString[] = {
   /* 46 */ "uint64_t (*)(uint64_t*)",
   /* 47 */ "float (*)(float*)",
   /* 48 */ "double (*)(double*)",
-
-  // set
   /* 49 */ "void (*)(void**, void*)",
   /* 50 */ "void (*)(char*, char)",
   /* 51 */ "void (*)(int8_t*, int8_t)",
@@ -86,43 +81,36 @@ static const char* kTypeString[] = {
   /* 60 */ "void (*)(uint64_t*, uint64_t)",
   /* 61 */ "void (*)(float*, float)",
   /* 62 */ "void (*)(double*, double)",
-
-  /* 63 */ "void (*)(void*)",  // free
-  /* 64 */ "void* (*)(size_t)",  // malloc
-  /* 65 */ "void (*)(void*, int, size_t)",  // memset
-  /* 66 */ "void (*)(void*, void*, size_t)",  // memcpy
-  /* 67 */ "size_t (*)(const char*)",  // strlen
-
-  /* 68 */ "void (*)(PP_Var)",  // PPB_Var.AddRef / PPB_Var.Release
-  /* 69 */ "PP_Var (*)(const char*, uint32_t)",  // PPB_Var.VarFromUtf8
-  /* 70 */ "const char* (*)(PP_Var, uint32_t*)",  // PPB_Var.VarToUtf8
-
-  /* 71 */ "PP_VarArray (*)()",  // PPB_VarArray.Create
-  /* 72 */ "PP_Var (*)(PP_VarArray, uint32_t)",  // PPB_VarArray.Get
-  /* 73 */ "PP_Bool (*)(PP_VarArray, uint32_t, PP_Var)",  // PPB_VarArray.Set
-  /* 74 */ "uint32_t (*)(PP_VarArray)",  // PPB_VarArray.GetLength
-  /* 75 */ "PP_Bool (*)(PP_VarArray, uint32_t)",  // PPB_VarArray.SetLength
-
-  /* 76 */ "PP_VarArrayBuffer (*)(uint32_t)",  // PPB_VarArrayBuffer.Create
-  /* 77 */ "PP_Bool (*)(PP_VarArrayBuffer, uint32_t*)",  // PPB_VarArrayBuffer.ByteLength
-  /* 78 */ "void* (*)(PP_VarArrayBuffer)",  // PPB_VarArrayBuffer.Map
-  /* 79 */ "void (*)(PP_VarArrayBuffer)",  // PPB_VarArrayBuffer.Unmap
-
-  /* 80 */ "PP_VarDictionary (*)()",  // PPB_VarDictionary.Create
-  /* 81 */ "PP_Var (*)(PP_VarDictionary, PP_Var)",  // PPB_VarDictionary.Get
-  /* 82 */ "PP_Bool (*)(PP_VarDictionary, PP_Var, PP_Var)",  // PPB_VarDictionary.Set
-  /* 83 */ "void (*)(PP_VarDictionary, PP_Var)",  // PPB_VarDictionary.Delete
-  /* 84 */ "PP_Bool (*)(PP_VarDictionary, PP_Var)",  // PPB_VarDictionary.HasKey
-
-  // binary operators: add, sub, etc.
-  /* 85 */ "void* (*)(void*, int32_t)",
-
-  /* 86 */ "int32_t (*)(int32_t, int32_t)",
-  /* 87 */ "uint32_t (*)(uint32_t, uint32_t)",
-  /* 88 */ "int64_t (*)(int64_t, int64_t)",
-  /* 89 */ "uint64_t (*)(uint64_t, uint64_t)",
-  /* 90 */ "float (*)(float, float)",
-  /* 91 */ "double (*)(double, double)",
+  /* 63 */ "void* (*)(void*, int32_t)",
+  /* 64 */ "int32_t (*)(int32_t, int32_t)",
+  /* 65 */ "uint32_t (*)(uint32_t, uint32_t)",
+  /* 66 */ "int64_t (*)(int64_t, int64_t)",
+  /* 67 */ "uint64_t (*)(uint64_t, uint64_t)",
+  /* 68 */ "float (*)(float, float)",
+  /* 69 */ "double (*)(double, double)",
+  /* 70 */ "void (*)(void*)",
+  /* 71 */ "void* (*)(size_t)",
+  /* 72 */ "void* (*)(void*, int, size_t)",
+  /* 73 */ "void* (*)(void*, void*, size_t)",
+  /* 74 */ "size_t (*)(char*)",
+  /* 75 */ "int (*)(char*)",
+  /* 76 */ "void (*)(struct PP_Var)",
+  /* 77 */ "struct PP_Var (*)(char*, uint32_t)",
+  /* 78 */ "char* (*)(struct PP_Var, uint32_t*)",
+  /* 79 */ "struct PP_Var (*)()",
+  /* 80 */ "struct PP_Var (*)(struct PP_Var, uint32_t)",
+  /* 81 */ "int32_t (*)(struct PP_Var, uint32_t, struct PP_Var)",
+  /* 82 */ "uint32_t (*)(struct PP_Var)",
+  /* 83 */ "int32_t (*)(struct PP_Var, uint32_t)",
+  /* 84 */ "struct PP_Var (*)(uint32_t)",
+  /* 85 */ "int32_t (*)(struct PP_Var, uint32_t*)",
+  /* 86 */ "void* (*)(struct PP_Var)",
+  /* 87 */ "void (*)(struct PP_Var)",
+  /* 88 */ "struct PP_Var (*)()",
+  /* 89 */ "struct PP_Var (*)(struct PP_Var, struct PP_Var)",
+  /* 90 */ "int32_t (*)(struct PP_Var, struct PP_Var, struct PP_Var)",
+  /* 91 */ "void (*)(struct PP_Var, struct PP_Var)",
+  /* 92 */ "int32_t (*)(struct PP_Var, struct PP_Var)",
 };
 
 const char* BuiltinTypeToString(Type id) {
@@ -131,3 +119,4 @@ const char* BuiltinTypeToString(Type id) {
   }
   return kTypeString[id];
 }
+

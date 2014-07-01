@@ -43,12 +43,12 @@ enum {
   TYPE_{{name.upper()}}_FIRST = {{helper.FIRST_ID}} - 1,
 [[for type in types.no_builtins.itervalues():]]
 [[  if not type.is_alias:]]
-  /* {{type.id}} */ TYPE_{{CamelToMacro(type.c_ident)}},
+  TYPE_{{CamelToMacro(type.c_ident)}} = {{type.id}},
 [[for type in types.function_types.itervalues():]]
 [[  if type.is_alias:]]
-  /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.c_ident)}} = TYPE_FUNC_{{CamelToMacro(type.alias_of.c_ident)}},
+  TYPE_FUNC_{{CamelToMacro(type.c_ident)}} = TYPE_FUNC_{{CamelToMacro(type.alias_of.c_ident)}},
 [[  else:]]
-  /* {{type.id}} */ TYPE_FUNC_{{CamelToMacro(type.c_ident)}},
+  TYPE_FUNC_{{CamelToMacro(type.c_ident)}} = {{type.id}},
 [[]]
   NUM_TYPES
 };
@@ -104,17 +104,40 @@ bool Handle{{Titlecase(name)}}Command(Command* command) {
 
 [[for fn in functions:]]
 void Handle_{{fn.c_ident}}(Command* command) {
+[[  if len(fn.types) == 1:]]
   TYPE_CHECK(TYPE_FUNC_{{CamelToMacro(fn.c_ident)}});
-[[  for arg_ix, arg_type in enumerate(fn.type.arg_types):]]
+[[    for arg_ix, arg_type in enumerate(fn.types[0].arg_types):]]
   {{ArgInit(arg_ix, arg_type)}}
-[[  ]]
-[[  if fn.type.return_type.is_void:]]
-  {{fn.c_ident}}({{ArgsCommaSep(fn.type.arg_types)}});
+[[    ]]
+[[    if fn.types[0].return_type.is_void:]]
+  {{fn.c_ident}}({{ArgsCommaSep(fn.types[0].arg_types)}});
+[[    else:]]
+  {{fn.types[0].return_type}} result = ({{fn.types[0].return_type}}){{fn.c_ident}}({{ArgsCommaSep(fn.types[0].arg_types)}});
+  {{RegisterHandle(fn.types[0].return_type)}}
+[[    ]]
+  {{PrintFunction(fn.c_ident, fn.types[0])}}
 [[  else:]]
-  {{fn.type.return_type}} result = ({{fn.type.return_type}}){{fn.c_ident}}({{ArgsCommaSep(fn.type.arg_types)}});
-  {{RegisterHandle(fn.type.return_type)}}
+  switch (command->type) {
+[[    for fn_type in fn.types:]]
+    case TYPE_FUNC_{{CamelToMacro(fn_type.c_ident)}}: {
+[[      for arg_ix, arg_type in enumerate(fn_type.arg_types):]]
+      {{ArgInit(arg_ix, arg_type)}}
+[[      ]]
+[[      if fn_type.return_type.is_void:]]
+      {{fn.c_ident}}({{ArgsCommaSep(fn_type.arg_types)}});
+[[      else:]]
+      {{fn_type.return_type}} result = ({{fn_type.return_type}}){{fn.c_ident}}({{ArgsCommaSep(fn_type.arg_types)}});
+      {{RegisterHandle(fn_type.return_type)}}
+[[      ]]
+      {{PrintFunction(fn.c_ident, fn_type)}}
+      break;
+    }
+[[    ]]
+    default:
+      TYPE_FAIL;
+      break;
+  }
 [[  ]]
-  {{PrintFunction(fn)}}
 }
 
 [[]]

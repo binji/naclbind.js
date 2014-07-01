@@ -360,6 +360,30 @@ bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
   return TRUE;
 }
 
+bool GetArgInt64(Command* command, int32_t index, int64_t* out_value) {
+  CMD_ERROR("GetArgInt64 not implemented.");
+  // TODO(binji): implement
+  return FALSE;
+}
+
+bool GetArgUint64(Command* command, int32_t index, uint64_t* out_value) {
+  CMD_ERROR("GetArgUint64 not implemented.");
+  // TODO(binji): implement
+  return FALSE;
+}
+
+bool GetArgFloat32(Command* command, int32_t index, float* out_value) {
+  CMD_ERROR("GetArgFloat32 not implemented.");
+  // TODO(binji): implement
+  return FALSE;
+}
+
+bool GetArgFloat64(Command* command, int32_t index, double* out_value) {
+  CMD_ERROR("GetArgFloat64 not implemented.");
+  // TODO(binji): implement
+  return FALSE;
+}
+
 bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value) {
   Arg* arg;
   if (!GetCommandArg(command, index, &arg)) {

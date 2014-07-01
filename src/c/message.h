@@ -59,6 +59,10 @@ bool GetArgVoidp(Command* command, int32_t index, void** out_value);
 bool GetArgCharp(Command* command, int32_t index, char** out_value);
 bool GetArgInt32(Command* command, int32_t index, int32_t* out_value);
 bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value);
+bool GetArgInt64(Command* command, int32_t index, int64_t* out_value);
+bool GetArgUint64(Command* command, int32_t index, uint64_t* out_value);
+bool GetArgFloat32(Command* command, int32_t index, float* out_value);
+bool GetArgFloat64(Command* command, int32_t index, double* out_value);
 bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value);
 
 #define CMD_VERROR(fmt, ...) \

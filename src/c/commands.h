@@ -53,6 +53,10 @@ bool HandleBuiltinCommand(Command* command);
   if (!GetArgInt32(command, index, &arg##index##_int)) return; \
   type arg##index = (type)arg##index##_int
 
+#define ARG_INT64(index) \
+  int64_t arg##index; \
+  if (!GetArgInt64(command, index, &arg##index)) return
+
 #define ARG_UINT(index) \
   uint32_t arg##index; \
   if (!GetArgUint32(command, index, &arg##index)) return
@@ -62,9 +66,20 @@ bool HandleBuiltinCommand(Command* command);
   if (!GetArgUint32(command, index, &arg##index##_uint)) return; \
   type arg##index = (type)arg##index##_uint
 
+#define ARG_UINT64(index) \
+  uint64_t arg##index; \
+  if (!GetArgUint64(command, index, &arg##index)) return
+
 #define ARG_VAR(index) \
   struct PP_Var arg##index; \
   if (!GetArgVar(command, index, &arg##index)) return
 
+#define ARG_FLOAT32(index) \
+  float arg##index; \
+  if (!GetArgFloat32(command, index, &arg##index)) return
+
+#define ARG_FLOAT64(index) \
+  double arg##index; \
+  if (!GetArgFloat64(command, index, &arg##index)) return
 
 #endif  // COMMANDS_H_

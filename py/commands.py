@@ -24,10 +24,30 @@ def ArgInit(ix, type_):
     else:
       return 'ARG_VOIDP(%s);' % ix
   elif type_.is_primitive:
-    if type_.is_signed:
-      return 'ARG_INT(%s);' % ix
+    if type_.is_int:
+      if type_.is_long:
+        if type_.is_signed:
+          return 'ARG_INT_CAST(%s, long);' % ix
+        else:
+          return 'ARG_UINT_CAST(%s, unsigned long);' % ix
+      else:
+        if type_.size > 4:
+          if type_.is_signed:
+            return 'ARG_INT64(%s);' % ix
+          else:
+            return 'ARG_UINT64(%s);' % ix
+        else:
+          if type_.is_signed:
+            return 'ARG_INT(%s);' % ix
+          else:
+            return 'ARG_UINT(%s);' % ix
     else:
-      return 'ARG_UINT(%s);' % ix
+      if type_.size > 4:
+        return 'ARG_FLOAT64(%s);' % ix
+      else:
+        return 'ARG_FLOAT32(%s);' % ix
+  elif type_.is_pepper:
+    return 'ARG_VAR(%s);' % ix
   else:
     raise Exception('Unknown type \"%s\" w/ class %s' % (
         type_, type_.__class__))
@@ -41,6 +61,8 @@ def RegisterHandle(type_):
       return 'RegisterHandleInt32(command->ret_handle, result);'
     else:
       return 'RegisterHandleUint32(command->ret_handle, result);'
+  elif type_.is_pepper:
+    return 'RegisterHandleVar(command->ret_handle, result);'
   else:
     raise Exception('Unknown type \"%s\" w/ class %s' % (
         type_, type_.__class__))
@@ -51,18 +73,25 @@ def FmtArgs(types):
   return ', '.join(type_.GetFormat() for i, type_ in enumerate(types))
 
 
+def FmtArgsCommaSep(args):
+  fmt_args = [type_.GetFormatArg('arg%d' % i) for i, type_ in enumerate(args)]
+  return ', '.join(arg for arg in fmt_args if arg is not None)
+
+
 def ArgsCommaSep(args):
-  return ', '.join(type_.GetFormatArg(i) for i, type_ in enumerate(args))
+  args = [type_.GetArgString('arg%d' % i) for i, type_ in enumerate(args)]
+  return ', '.join(arg for arg in args if arg is not None)
 
 
-def PrintFunction(fn):
-  result = 'printf("%s(%s)' % (fn.c_ident, FmtArgs(fn.type.arg_types))
-  if not fn.type.return_type.is_void:
-    result += ' => %s (%%d)' % fn.type.return_type.GetFormat()
+def PrintFunction(c_ident, fn_type):
+  result = 'printf("%s(%s)' % (c_ident, FmtArgs(fn_type.arg_types))
+  if not fn_type.return_type.is_void:
+    result += ' => %s (%%d)' % fn_type.return_type.GetFormat()
   result += '\\n"'
-  if fn.type.arg_types:
-    result += ', %s' % ArgsCommaSep(fn.type.arg_types)
-  if not fn.type.return_type.is_void:
-    result += ', result, command->ret_handle'
+  if fn_type.arg_types:
+    result += ', %s' % FmtArgsCommaSep(fn_type.arg_types)
+  if not fn_type.return_type.is_void:
+    result += ', %s' % fn_type.return_type.GetFormatArg('result')
+    result += ', command->ret_handle'
   result += ');'
   return result

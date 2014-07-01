@@ -1,16 +1,18 @@
-// Copyright 2014 Ben Smith. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* Copyright 2014 Ben Smith. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 
 #ifndef TYPE_H_
 #define TYPE_H_
@@ -29,9 +31,8 @@ enum {
   TYPE_ULONG = 10,
   TYPE_INT64 = 11,
   TYPE_UINT64 = 12,
-  TYPE_FLOAT = 13,
-  TYPE_DOUBLE = 14,
-
+  TYPE_FLOAT32 = 13,
+  TYPE_FLOAT64 = 14,
   TYPE_VOID_P = 15,
   TYPE_CHAR_P = 16,
   TYPE_INT8_P = 17,
@@ -44,16 +45,14 @@ enum {
   TYPE_ULONG_P = 24,
   TYPE_INT64_P = 25,
   TYPE_UINT64_P = 26,
-  TYPE_FLOAT_P = 27,
-  TYPE_DOUBLE_P = 28,
-  TYPE_VOID_PP = 29,
-
+  TYPE_FLOAT32_P = 27,
+  TYPE_FLOAT64_P = 28,
+  TYPE_VOID_P_P = 29,
   TYPE_VAR = 30,
   TYPE_ARRAY_BUFFER = 31,
   TYPE_ARRAY = 32,
   TYPE_DICTIONARY = 33,
   TYPE_STRING = 34,
-
   TYPE_FUNC_GET_VOID_P = 35,
   TYPE_FUNC_GET_CHAR = 36,
   TYPE_FUNC_GET_INT8 = 37,
@@ -66,9 +65,8 @@ enum {
   TYPE_FUNC_GET_ULONG = 44,
   TYPE_FUNC_GET_INT64 = 45,
   TYPE_FUNC_GET_UINT64 = 46,
-  TYPE_FUNC_GET_FLOAT = 47,
-  TYPE_FUNC_GET_DOUBLE = 48,
-
+  TYPE_FUNC_GET_FLOAT32 = 47,
+  TYPE_FUNC_GET_FLOAT64 = 48,
   TYPE_FUNC_SET_VOID_P = 49,
   TYPE_FUNC_SET_CHAR = 50,
   TYPE_FUNC_SET_INT8 = 51,
@@ -81,45 +79,46 @@ enum {
   TYPE_FUNC_SET_ULONG = 58,
   TYPE_FUNC_SET_INT64 = 59,
   TYPE_FUNC_SET_UINT64 = 60,
-  TYPE_FUNC_SET_FLOAT = 61,
-  TYPE_FUNC_SET_DOUBLE = 62,
-
-  TYPE_FUNC_FREE = 63,
-  TYPE_FUNC_MALLOC = 64,
-  TYPE_FUNC_MEMSET = 65,
-  TYPE_FUNC_MEMCPY = 66,
-  TYPE_FUNC_STRLEN = 67,
-  TYPE_FUNC_PUTS = 68,
-
-  TYPE_FUNC_VAR_ADDREF_RELEASE = 69,
-  TYPE_FUNC_VAR_FROM_UTF8 = 70,
-  TYPE_FUNC_VAR_TO_UTF8 = 71,
-
-  TYPE_FUNC_ARRAY_CREATE = 72,
-  TYPE_FUNC_ARRAY_GET = 73,
-  TYPE_FUNC_ARRAY_SET = 74,
-  TYPE_FUNC_ARRAY_GET_LENGTH = 75,
-  TYPE_FUNC_ARRAY_SET_LENGTH = 76,
-
-  TYPE_FUNC_ARRAY_BUFFER_CREATE = 77,
-  TYPE_FUNC_ARRAY_BUFFER_BYTE_LENGTH = 78,
-  TYPE_FUNC_ARRAY_BUFFER_MAP = 79,
-  TYPE_FUNC_ARRAY_BUFFER_UNMAP = 80,
-
-  TYPE_FUNC_DICT_CREATE = 81,
-  TYPE_FUNC_DICT_GET = 82,
-  TYPE_FUNC_DICT_SET = 83,
-  TYPE_FUNC_DICT_DELETE = 84,
-  TYPE_FUNC_DICT_HAS_KEY = 85,
-
-  TYPE_FUNC_BINOP_VOID_P_INT32 = 86,
-  TYPE_FUNC_BINOP_INT32 = 87,
-  TYPE_FUNC_BINOP_UINT32 = 88,
-  TYPE_FUNC_BINOP_INT64 = 89,
-  TYPE_FUNC_BINOP_UINT64 = 90,
-  TYPE_FUNC_BINOP_FLOAT = 91,
-  TYPE_FUNC_BINOP_DOUBLE = 92,
-
+  TYPE_FUNC_SET_FLOAT32 = 61,
+  TYPE_FUNC_SET_FLOAT64 = 62,
+  TYPE_FUNC_ADD_VOID_P = 63,
+  TYPE_FUNC_ADD_INT32 = 64,
+  TYPE_FUNC_ADD_UINT32 = 65,
+  TYPE_FUNC_ADD_INT64 = 66,
+  TYPE_FUNC_ADD_UINT64 = 67,
+  TYPE_FUNC_ADD_FLOAT32 = 68,
+  TYPE_FUNC_ADD_FLOAT64 = 69,
+  TYPE_FUNC_SUB_VOID_P = TYPE_FUNC_ADD_VOID_P,
+  TYPE_FUNC_SUB_INT32 = TYPE_FUNC_ADD_INT32,
+  TYPE_FUNC_SUB_UINT32 = TYPE_FUNC_ADD_UINT32,
+  TYPE_FUNC_SUB_INT64 = TYPE_FUNC_ADD_INT64,
+  TYPE_FUNC_SUB_UINT64 = TYPE_FUNC_ADD_UINT64,
+  TYPE_FUNC_SUB_FLOAT32 = TYPE_FUNC_ADD_FLOAT32,
+  TYPE_FUNC_SUB_FLOAT64 = TYPE_FUNC_ADD_FLOAT64,
+  TYPE_FUNC_FREE = 70,
+  TYPE_FUNC_MALLOC = 71,
+  TYPE_FUNC_MEMSET = 72,
+  TYPE_FUNC_MEMCPY = 73,
+  TYPE_FUNC_STRLEN = 74,
+  TYPE_FUNC_PUTS = 75,
+  TYPE_FUNC_VAR_ADD_REF = 76,
+  TYPE_FUNC_VAR_RELEASE = TYPE_FUNC_VAR_ADD_REF,
+  TYPE_FUNC_VAR_FROM_UTF8 = 77,
+  TYPE_FUNC_VAR_TO_UTF8 = 78,
+  TYPE_FUNC_ARRAY_CREATE = 79,
+  TYPE_FUNC_ARRAY_GET = 80,
+  TYPE_FUNC_ARRAY_SET = 81,
+  TYPE_FUNC_ARRAY_GET_LENGTH = 82,
+  TYPE_FUNC_ARRAY_SET_LENGTH = 83,
+  TYPE_FUNC_ARRAY_BUFFER_CREATE = 84,
+  TYPE_FUNC_ARRAY_BUFFER_BYTE_LENGTH = 85,
+  TYPE_FUNC_ARRAY_BUFFER_MAP = 86,
+  TYPE_FUNC_ARRAY_BUFFER_UNMAP = 87,
+  TYPE_FUNC_DICT_CREATE = 88,
+  TYPE_FUNC_DICT_GET = 89,
+  TYPE_FUNC_DICT_SET = 90,
+  TYPE_FUNC_DICT_DELETE = 91,
+  TYPE_FUNC_DICT_HAS_KEY = 92,
   NUM_BUILTIN_TYPES
 };
 typedef int32_t Type;
@@ -128,3 +127,4 @@ const char* BuiltinTypeToString(Type);
 const char* TypeToString(Type);  // Defined in module.
 
 #endif  // TYPE_H_
+

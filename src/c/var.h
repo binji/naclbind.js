@@ -19,6 +19,8 @@
 
 #include "bool.h"
 
+const char* VarTypeToString(struct PP_Var*);
+
 void AddRefVar(struct PP_Var*);
 void ReleaseVar(struct PP_Var*);
 
