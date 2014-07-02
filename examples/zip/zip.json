@@ -22,13 +22,14 @@
     {"name": "_zip_fileinfo",
      "kind": "struct",
      "size": 36,
+     "anonymous": true,
      "fields": [
        {"name": "tmz_date", "type": "tm_zip_s", "offset": 0},
        {"name": "dosDate", "type": "uint32", "offset": 24},
        {"name": "internal_fa", "type": "uint32", "offset": 28},
        {"name": "external_fa", "type": "uint32", "offset": 32}
     ]},
-    {"name": "zip_fileinfo", "kind": "alias", "alias": "_zip_fileinfo", "str": "zip_fileinfo"},
+    {"name": "zip_fileinfo", "kind": "alias", "alias": "_zip_fileinfo"},
     {"name": "zip_fileinfo$", "kind": "pointer", "base": "zip_fileinfo"},
     {"name": "_zipFile", "kind": "struct", "size": 0, "fields": []},
     {"name": "_zipFile$", "kind": "pointer", "base": "_zipFile"},

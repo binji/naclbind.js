@@ -35,6 +35,7 @@ types, functions = FixTypes(types, functions)
 #include "commands.h"
 #include "error.h"
 #include "interfaces.h"
+#include "macros.h"
 #include "message.h"
 #include "type.h"
 #include "var.h"
@@ -90,6 +91,21 @@ static NameFunc g_FuncMap[] = {
 [[]]
   {NULL, NULL},
 };
+
+// Static assert for struct sizes and field offsets.
+[[for type in types.no_builtins.itervalues():]]
+[[  if type.is_struct and (not type.is_alias and not type.anonymous):]]
+[[    if type.size != 0:]]
+COMPILE_ASSERT(sizeof(struct {{type.c_ident}}) == {{type.size}});
+[[    for field in type.fields:]]
+COMPILE_ASSERT(offsetof(struct {{type.c_ident}}, {{field.name}}) == {{field.offset}});
+[[  elif type.is_struct and (type.is_alias and type.alias_of.anonymous):]]
+[[    if type.size != 0:]]
+COMPILE_ASSERT(sizeof({{type.c_ident}}) == {{type.size}});
+[[    for field in type.fields:]]
+COMPILE_ASSERT(offsetof({{type.c_ident}}, {{field.name}}) == {{field.offset}});
+[[]]
+
 
 bool Handle{{Titlecase(name)}}Command(Command* command) {
   NameFunc* name_func = &g_FuncMap[0];

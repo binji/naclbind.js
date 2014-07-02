@@ -27,7 +27,7 @@ define(['nacl'], function(nacl) {
   var t = m.types;
   var f = m.functions;
 
-[[for _, type in types.no_builtins.iteritems():]]
+[[for type in types.no_builtins.itervalues():]]
 [[  if type.is_alias:]]
   m.makeAliasType('{{type.js_ident}}', t.{{type.alias_of.js_ident}});
 [[  elif type.is_struct:]]

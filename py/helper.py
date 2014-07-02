@@ -245,11 +245,12 @@ class StructField(object):
 class StructTypeData(TypeData):
   kind = TypeData.KIND_STRUCT
 
-  def __init__(self, name, size, fields):
+  def __init__(self, name, size, fields, anonymous):
     TypeData.__init__(self)
     self.name = name
     self.size = size
     self.fields = fields
+    self.anonymous = anonymous
 
   def __str__(self):
     return 'struct %s' % self.name
@@ -453,10 +454,11 @@ class TypesBuilder(object):
                                type_dict.is_int)
     elif type_dict.kind == 'struct':
       fields = []
+      anonymous = type_dict.get('anonymous', False)
       for field in type_dict.fields:
         field_type = self.types.type_ident_dict[field.type]
         fields.append(StructField(field.name, field_type, field.offset))
-      return StructTypeData(type_dict.name, type_dict.size, fields)
+      return StructTypeData(type_dict.name, type_dict.size, fields, anonymous)
     elif type_dict.kind == 'pepper':
       if type_dict.pepper_type == 'Var':
         pepper_type = PepperTypeData.TYPE_VAR
