@@ -110,30 +110,114 @@ define([], function() {
     var fnType_subUint64 = fnType_addUint64;
     var fnType_subFloat32 = fnType_addFloat32;
     var fnType_subFloat64 = fnType_addFloat64;
-    var fnType_free = m.makeFunctionType(70, t.void, t.void$);
-    var fnType_malloc = m.makeFunctionType(71, t.void$, t.size_t);
-    var fnType_memset = m.makeFunctionType(72, t.void$, t.void$, t.int, t.size_t);
-    var fnType_memcpy = m.makeFunctionType(73, t.void$, t.void$, t.void$, t.size_t);
-    var fnType_strlen = m.makeFunctionType(74, t.size_t, t.char$);
-    var fnType_puts = m.makeFunctionType(75, t.int, t.char$);
-    var fnType_varAddRef = m.makeFunctionType(76, t.void, t.Var);
+    var fnType_ltVoidP = m.makeFunctionType(70, t.int, t.void$, t.void$);
+    var fnType_ltChar = m.makeFunctionType(71, t.int, t.char, t.char);
+    var fnType_ltInt8 = m.makeFunctionType(72, t.int, t.int8, t.int8);
+    var fnType_ltUint8 = m.makeFunctionType(73, t.int, t.uint8, t.uint8);
+    var fnType_ltInt16 = m.makeFunctionType(74, t.int, t.int16, t.int16);
+    var fnType_ltUint16 = m.makeFunctionType(75, t.int, t.uint16, t.uint16);
+    var fnType_ltInt32 = fnType_addInt32;
+    var fnType_ltUint32 = m.makeFunctionType(76, t.int, t.uint32, t.uint32);
+    var fnType_ltLong = m.makeFunctionType(77, t.int, t.long, t.long);
+    var fnType_ltUlong = m.makeFunctionType(78, t.int, t.ulong, t.ulong);
+    var fnType_ltInt64 = m.makeFunctionType(79, t.int, t.int64, t.int64);
+    var fnType_ltUint64 = m.makeFunctionType(80, t.int, t.uint64, t.uint64);
+    var fnType_ltFloat32 = m.makeFunctionType(81, t.int, t.float32, t.float32);
+    var fnType_ltFloat64 = m.makeFunctionType(82, t.int, t.float64, t.float64);
+    var fnType_lteVoidP = fnType_ltVoidP;
+    var fnType_lteChar = fnType_ltChar;
+    var fnType_lteInt8 = fnType_ltInt8;
+    var fnType_lteUint8 = fnType_ltUint8;
+    var fnType_lteInt16 = fnType_ltInt16;
+    var fnType_lteUint16 = fnType_ltUint16;
+    var fnType_lteInt32 = fnType_addInt32;
+    var fnType_lteUint32 = fnType_ltUint32;
+    var fnType_lteLong = fnType_ltLong;
+    var fnType_lteUlong = fnType_ltUlong;
+    var fnType_lteInt64 = fnType_ltInt64;
+    var fnType_lteUint64 = fnType_ltUint64;
+    var fnType_lteFloat32 = fnType_ltFloat32;
+    var fnType_lteFloat64 = fnType_ltFloat64;
+    var fnType_gtVoidP = fnType_ltVoidP;
+    var fnType_gtChar = fnType_ltChar;
+    var fnType_gtInt8 = fnType_ltInt8;
+    var fnType_gtUint8 = fnType_ltUint8;
+    var fnType_gtInt16 = fnType_ltInt16;
+    var fnType_gtUint16 = fnType_ltUint16;
+    var fnType_gtInt32 = fnType_addInt32;
+    var fnType_gtUint32 = fnType_ltUint32;
+    var fnType_gtLong = fnType_ltLong;
+    var fnType_gtUlong = fnType_ltUlong;
+    var fnType_gtInt64 = fnType_ltInt64;
+    var fnType_gtUint64 = fnType_ltUint64;
+    var fnType_gtFloat32 = fnType_ltFloat32;
+    var fnType_gtFloat64 = fnType_ltFloat64;
+    var fnType_gteVoidP = fnType_ltVoidP;
+    var fnType_gteChar = fnType_ltChar;
+    var fnType_gteInt8 = fnType_ltInt8;
+    var fnType_gteUint8 = fnType_ltUint8;
+    var fnType_gteInt16 = fnType_ltInt16;
+    var fnType_gteUint16 = fnType_ltUint16;
+    var fnType_gteInt32 = fnType_addInt32;
+    var fnType_gteUint32 = fnType_ltUint32;
+    var fnType_gteLong = fnType_ltLong;
+    var fnType_gteUlong = fnType_ltUlong;
+    var fnType_gteInt64 = fnType_ltInt64;
+    var fnType_gteUint64 = fnType_ltUint64;
+    var fnType_gteFloat32 = fnType_ltFloat32;
+    var fnType_gteFloat64 = fnType_ltFloat64;
+    var fnType_eqVoidP = fnType_ltVoidP;
+    var fnType_eqChar = fnType_ltChar;
+    var fnType_eqInt8 = fnType_ltInt8;
+    var fnType_eqUint8 = fnType_ltUint8;
+    var fnType_eqInt16 = fnType_ltInt16;
+    var fnType_eqUint16 = fnType_ltUint16;
+    var fnType_eqInt32 = fnType_addInt32;
+    var fnType_eqUint32 = fnType_ltUint32;
+    var fnType_eqLong = fnType_ltLong;
+    var fnType_eqUlong = fnType_ltUlong;
+    var fnType_eqInt64 = fnType_ltInt64;
+    var fnType_eqUint64 = fnType_ltUint64;
+    var fnType_eqFloat32 = fnType_ltFloat32;
+    var fnType_eqFloat64 = fnType_ltFloat64;
+    var fnType_neVoidP = fnType_ltVoidP;
+    var fnType_neChar = fnType_ltChar;
+    var fnType_neInt8 = fnType_ltInt8;
+    var fnType_neUint8 = fnType_ltUint8;
+    var fnType_neInt16 = fnType_ltInt16;
+    var fnType_neUint16 = fnType_ltUint16;
+    var fnType_neInt32 = fnType_addInt32;
+    var fnType_neUint32 = fnType_ltUint32;
+    var fnType_neLong = fnType_ltLong;
+    var fnType_neUlong = fnType_ltUlong;
+    var fnType_neInt64 = fnType_ltInt64;
+    var fnType_neUint64 = fnType_ltUint64;
+    var fnType_neFloat32 = fnType_ltFloat32;
+    var fnType_neFloat64 = fnType_ltFloat64;
+    var fnType_free = m.makeFunctionType(83, t.void, t.void$);
+    var fnType_malloc = m.makeFunctionType(84, t.void$, t.size_t);
+    var fnType_memset = m.makeFunctionType(85, t.void$, t.void$, t.int, t.size_t);
+    var fnType_memcpy = m.makeFunctionType(86, t.void$, t.void$, t.void$, t.size_t);
+    var fnType_strlen = m.makeFunctionType(87, t.size_t, t.char$);
+    var fnType_puts = m.makeFunctionType(88, t.int, t.char$);
+    var fnType_varAddRef = m.makeFunctionType(89, t.void, t.Var);
     var fnType_varRelease = fnType_varAddRef;
-    var fnType_varFromUtf8 = m.makeFunctionType(77, t.String, t.char$, t.uint32);
-    var fnType_varToUtf8 = m.makeFunctionType(78, t.char$, t.String, t.uint32$);
-    var fnType_arrayCreate = m.makeFunctionType(79, t.Array);
-    var fnType_arrayGet = m.makeFunctionType(80, t.Var, t.Array, t.uint32);
-    var fnType_arraySet = m.makeFunctionType(81, t.int32, t.Array, t.uint32, t.Var);
-    var fnType_arrayGetLength = m.makeFunctionType(82, t.uint32, t.Array);
-    var fnType_arraySetLength = m.makeFunctionType(83, t.int32, t.Array, t.uint32);
-    var fnType_arrayBufferCreate = m.makeFunctionType(84, t.ArrayBuffer, t.uint32);
-    var fnType_arrayBufferByteLength = m.makeFunctionType(85, t.int32, t.ArrayBuffer, t.uint32$);
-    var fnType_arrayBufferMap = m.makeFunctionType(86, t.void$, t.ArrayBuffer);
-    var fnType_arrayBufferUnmap = m.makeFunctionType(87, t.void, t.ArrayBuffer);
-    var fnType_dictCreate = m.makeFunctionType(88, t.Dictionary);
-    var fnType_dictGet = m.makeFunctionType(89, t.Var, t.Dictionary, t.Var);
-    var fnType_dictSet = m.makeFunctionType(90, t.int32, t.Dictionary, t.Var, t.Var);
-    var fnType_dictDelete = m.makeFunctionType(91, t.void, t.Dictionary, t.Var);
-    var fnType_dictHasKey = m.makeFunctionType(92, t.int32, t.Dictionary, t.Var);
+    var fnType_varFromUtf8 = m.makeFunctionType(90, t.String, t.char$, t.uint32);
+    var fnType_varToUtf8 = m.makeFunctionType(91, t.char$, t.String, t.uint32$);
+    var fnType_arrayCreate = m.makeFunctionType(92, t.Array);
+    var fnType_arrayGet = m.makeFunctionType(93, t.Var, t.Array, t.uint32);
+    var fnType_arraySet = m.makeFunctionType(94, t.int32, t.Array, t.uint32, t.Var);
+    var fnType_arrayGetLength = m.makeFunctionType(95, t.uint32, t.Array);
+    var fnType_arraySetLength = m.makeFunctionType(96, t.int32, t.Array, t.uint32);
+    var fnType_arrayBufferCreate = m.makeFunctionType(97, t.ArrayBuffer, t.uint32);
+    var fnType_arrayBufferByteLength = m.makeFunctionType(98, t.int32, t.ArrayBuffer, t.uint32$);
+    var fnType_arrayBufferMap = m.makeFunctionType(99, t.void$, t.ArrayBuffer);
+    var fnType_arrayBufferUnmap = m.makeFunctionType(100, t.void, t.ArrayBuffer);
+    var fnType_dictCreate = m.makeFunctionType(101, t.Dictionary);
+    var fnType_dictGet = m.makeFunctionType(102, t.Var, t.Dictionary, t.Var);
+    var fnType_dictSet = m.makeFunctionType(103, t.int32, t.Dictionary, t.Var, t.Var);
+    var fnType_dictDelete = m.makeFunctionType(104, t.void, t.Dictionary, t.Var);
+    var fnType_dictHasKey = m.makeFunctionType(105, t.int32, t.Dictionary, t.Var);
 
     m.makeFunction('get', [
       fnType_getVoidP,
@@ -184,6 +268,102 @@ define([], function() {
       fnType_subUint64,
       fnType_subFloat32,
       fnType_subFloat64,
+    ]);
+    m.makeFunction('lt', [
+      fnType_ltVoidP,
+      fnType_ltChar,
+      fnType_ltInt8,
+      fnType_ltUint8,
+      fnType_ltInt16,
+      fnType_ltUint16,
+      fnType_ltInt32,
+      fnType_ltUint32,
+      fnType_ltLong,
+      fnType_ltUlong,
+      fnType_ltInt64,
+      fnType_ltUint64,
+      fnType_ltFloat32,
+      fnType_ltFloat64,
+    ]);
+    m.makeFunction('lte', [
+      fnType_lteVoidP,
+      fnType_lteChar,
+      fnType_lteInt8,
+      fnType_lteUint8,
+      fnType_lteInt16,
+      fnType_lteUint16,
+      fnType_lteInt32,
+      fnType_lteUint32,
+      fnType_lteLong,
+      fnType_lteUlong,
+      fnType_lteInt64,
+      fnType_lteUint64,
+      fnType_lteFloat32,
+      fnType_lteFloat64,
+    ]);
+    m.makeFunction('gt', [
+      fnType_gtVoidP,
+      fnType_gtChar,
+      fnType_gtInt8,
+      fnType_gtUint8,
+      fnType_gtInt16,
+      fnType_gtUint16,
+      fnType_gtInt32,
+      fnType_gtUint32,
+      fnType_gtLong,
+      fnType_gtUlong,
+      fnType_gtInt64,
+      fnType_gtUint64,
+      fnType_gtFloat32,
+      fnType_gtFloat64,
+    ]);
+    m.makeFunction('gte', [
+      fnType_gteVoidP,
+      fnType_gteChar,
+      fnType_gteInt8,
+      fnType_gteUint8,
+      fnType_gteInt16,
+      fnType_gteUint16,
+      fnType_gteInt32,
+      fnType_gteUint32,
+      fnType_gteLong,
+      fnType_gteUlong,
+      fnType_gteInt64,
+      fnType_gteUint64,
+      fnType_gteFloat32,
+      fnType_gteFloat64,
+    ]);
+    m.makeFunction('eq', [
+      fnType_eqVoidP,
+      fnType_eqChar,
+      fnType_eqInt8,
+      fnType_eqUint8,
+      fnType_eqInt16,
+      fnType_eqUint16,
+      fnType_eqInt32,
+      fnType_eqUint32,
+      fnType_eqLong,
+      fnType_eqUlong,
+      fnType_eqInt64,
+      fnType_eqUint64,
+      fnType_eqFloat32,
+      fnType_eqFloat64,
+    ]);
+    m.makeFunction('ne', [
+      fnType_neVoidP,
+      fnType_neChar,
+      fnType_neInt8,
+      fnType_neUint8,
+      fnType_neInt16,
+      fnType_neUint16,
+      fnType_neInt32,
+      fnType_neUint32,
+      fnType_neLong,
+      fnType_neUlong,
+      fnType_neInt64,
+      fnType_neUint64,
+      fnType_neFloat32,
+      fnType_neFloat64,
     ]);
     m.makeFunction('free', fnType_free);
     m.makeFunction('malloc', fnType_malloc);

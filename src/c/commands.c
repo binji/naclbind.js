@@ -32,6 +32,12 @@ static void Handle_get(Command* command);
 static void Handle_set(Command* command);
 static void Handle_add(Command* command);
 static void Handle_sub(Command* command);
+static void Handle_lt(Command* command);
+static void Handle_lte(Command* command);
+static void Handle_gt(Command* command);
+static void Handle_gte(Command* command);
+static void Handle_eq(Command* command);
+static void Handle_ne(Command* command);
 static void Handle_free(Command* command);
 static void Handle_malloc(Command* command);
 static void Handle_memset(Command* command);
@@ -70,6 +76,12 @@ static NameFunc g_FuncMap[] = {
   {"set", Handle_set},
   {"add", Handle_add},
   {"sub", Handle_sub},
+  {"lt", Handle_lt},
+  {"lte", Handle_lte},
+  {"gt", Handle_gt},
+  {"gte", Handle_gte},
+  {"eq", Handle_eq},
+  {"ne", Handle_ne},
   {"free", Handle_free},
   {"malloc", Handle_malloc},
   {"memset", Handle_memset},
@@ -471,6 +483,726 @@ void Handle_sub(Command* command) {
       double result = (double)subFloat64(arg0, arg1);
       RegisterHandleUint32(command->ret_handle, result);
       printf("sub(%g, %g) => %g (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    default:
+      TYPE_FAIL;
+      break;
+  }
+}
+
+void Handle_lt(Command* command) {
+  switch (command->type) {
+    case TYPE_FUNC_LT_VOID_P: {
+      ARG_VOIDP(0);
+      ARG_VOIDP(1);
+      int result = (int)ltVoidP(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%p, %p) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_CHAR: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)ltChar(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_INT8: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)ltInt8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_UINT8: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)ltUint8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_INT16: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)ltInt16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_UINT16: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)ltUint16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_INT32: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int32_t result = (int32_t)ltInt32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_UINT32: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)ltUint32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_LONG: {
+      ARG_INT_CAST(0, long);
+      ARG_INT_CAST(1, long);
+      int result = (int)ltLong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%ld, %ld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_ULONG: {
+      ARG_UINT_CAST(0, unsigned long);
+      ARG_UINT_CAST(1, unsigned long);
+      int result = (int)ltUlong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%lu, %lu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_INT64: {
+      ARG_INT64(0);
+      ARG_INT64(1);
+      int result = (int)ltInt64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%lld, %lld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_UINT64: {
+      ARG_UINT64(0);
+      ARG_UINT64(1);
+      int result = (int)ltUint64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%llu, %llu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_FLOAT32: {
+      ARG_FLOAT32(0);
+      ARG_FLOAT32(1);
+      int result = (int)ltFloat32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LT_FLOAT64: {
+      ARG_FLOAT64(0);
+      ARG_FLOAT64(1);
+      int result = (int)ltFloat64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lt(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    default:
+      TYPE_FAIL;
+      break;
+  }
+}
+
+void Handle_lte(Command* command) {
+  switch (command->type) {
+    case TYPE_FUNC_LTE_VOID_P: {
+      ARG_VOIDP(0);
+      ARG_VOIDP(1);
+      int result = (int)lteVoidP(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%p, %p) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_CHAR: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)lteChar(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_INT8: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)lteInt8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_UINT8: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)lteUint8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_INT16: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)lteInt16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_UINT16: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)lteUint16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_INT32: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int32_t result = (int32_t)lteInt32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_UINT32: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)lteUint32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_LONG: {
+      ARG_INT_CAST(0, long);
+      ARG_INT_CAST(1, long);
+      int result = (int)lteLong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%ld, %ld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_ULONG: {
+      ARG_UINT_CAST(0, unsigned long);
+      ARG_UINT_CAST(1, unsigned long);
+      int result = (int)lteUlong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%lu, %lu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_INT64: {
+      ARG_INT64(0);
+      ARG_INT64(1);
+      int result = (int)lteInt64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%lld, %lld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_UINT64: {
+      ARG_UINT64(0);
+      ARG_UINT64(1);
+      int result = (int)lteUint64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%llu, %llu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_FLOAT32: {
+      ARG_FLOAT32(0);
+      ARG_FLOAT32(1);
+      int result = (int)lteFloat32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_LTE_FLOAT64: {
+      ARG_FLOAT64(0);
+      ARG_FLOAT64(1);
+      int result = (int)lteFloat64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("lte(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    default:
+      TYPE_FAIL;
+      break;
+  }
+}
+
+void Handle_gt(Command* command) {
+  switch (command->type) {
+    case TYPE_FUNC_GT_VOID_P: {
+      ARG_VOIDP(0);
+      ARG_VOIDP(1);
+      int result = (int)gtVoidP(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%p, %p) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_CHAR: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)gtChar(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_INT8: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)gtInt8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_UINT8: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)gtUint8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_INT16: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)gtInt16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_UINT16: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)gtUint16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_INT32: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int32_t result = (int32_t)gtInt32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_UINT32: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)gtUint32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_LONG: {
+      ARG_INT_CAST(0, long);
+      ARG_INT_CAST(1, long);
+      int result = (int)gtLong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%ld, %ld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_ULONG: {
+      ARG_UINT_CAST(0, unsigned long);
+      ARG_UINT_CAST(1, unsigned long);
+      int result = (int)gtUlong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%lu, %lu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_INT64: {
+      ARG_INT64(0);
+      ARG_INT64(1);
+      int result = (int)gtInt64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%lld, %lld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_UINT64: {
+      ARG_UINT64(0);
+      ARG_UINT64(1);
+      int result = (int)gtUint64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%llu, %llu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_FLOAT32: {
+      ARG_FLOAT32(0);
+      ARG_FLOAT32(1);
+      int result = (int)gtFloat32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GT_FLOAT64: {
+      ARG_FLOAT64(0);
+      ARG_FLOAT64(1);
+      int result = (int)gtFloat64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gt(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    default:
+      TYPE_FAIL;
+      break;
+  }
+}
+
+void Handle_gte(Command* command) {
+  switch (command->type) {
+    case TYPE_FUNC_GTE_VOID_P: {
+      ARG_VOIDP(0);
+      ARG_VOIDP(1);
+      int result = (int)gteVoidP(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%p, %p) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_CHAR: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)gteChar(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_INT8: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)gteInt8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_UINT8: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)gteUint8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_INT16: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)gteInt16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_UINT16: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)gteUint16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_INT32: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int32_t result = (int32_t)gteInt32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_UINT32: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)gteUint32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_LONG: {
+      ARG_INT_CAST(0, long);
+      ARG_INT_CAST(1, long);
+      int result = (int)gteLong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%ld, %ld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_ULONG: {
+      ARG_UINT_CAST(0, unsigned long);
+      ARG_UINT_CAST(1, unsigned long);
+      int result = (int)gteUlong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%lu, %lu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_INT64: {
+      ARG_INT64(0);
+      ARG_INT64(1);
+      int result = (int)gteInt64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%lld, %lld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_UINT64: {
+      ARG_UINT64(0);
+      ARG_UINT64(1);
+      int result = (int)gteUint64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%llu, %llu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_FLOAT32: {
+      ARG_FLOAT32(0);
+      ARG_FLOAT32(1);
+      int result = (int)gteFloat32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_GTE_FLOAT64: {
+      ARG_FLOAT64(0);
+      ARG_FLOAT64(1);
+      int result = (int)gteFloat64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("gte(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    default:
+      TYPE_FAIL;
+      break;
+  }
+}
+
+void Handle_eq(Command* command) {
+  switch (command->type) {
+    case TYPE_FUNC_EQ_VOID_P: {
+      ARG_VOIDP(0);
+      ARG_VOIDP(1);
+      int result = (int)eqVoidP(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%p, %p) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_CHAR: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)eqChar(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_INT8: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)eqInt8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_UINT8: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)eqUint8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_INT16: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)eqInt16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_UINT16: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)eqUint16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_INT32: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int32_t result = (int32_t)eqInt32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_UINT32: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)eqUint32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_LONG: {
+      ARG_INT_CAST(0, long);
+      ARG_INT_CAST(1, long);
+      int result = (int)eqLong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%ld, %ld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_ULONG: {
+      ARG_UINT_CAST(0, unsigned long);
+      ARG_UINT_CAST(1, unsigned long);
+      int result = (int)eqUlong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%lu, %lu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_INT64: {
+      ARG_INT64(0);
+      ARG_INT64(1);
+      int result = (int)eqInt64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%lld, %lld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_UINT64: {
+      ARG_UINT64(0);
+      ARG_UINT64(1);
+      int result = (int)eqUint64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%llu, %llu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_FLOAT32: {
+      ARG_FLOAT32(0);
+      ARG_FLOAT32(1);
+      int result = (int)eqFloat32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_EQ_FLOAT64: {
+      ARG_FLOAT64(0);
+      ARG_FLOAT64(1);
+      int result = (int)eqFloat64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("eq(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    default:
+      TYPE_FAIL;
+      break;
+  }
+}
+
+void Handle_ne(Command* command) {
+  switch (command->type) {
+    case TYPE_FUNC_NE_VOID_P: {
+      ARG_VOIDP(0);
+      ARG_VOIDP(1);
+      int result = (int)neVoidP(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%p, %p) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_CHAR: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)neChar(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_INT8: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)neInt8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_UINT8: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)neUint8(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_INT16: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int result = (int)neInt16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_UINT16: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)neUint16(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_INT32: {
+      ARG_INT(0);
+      ARG_INT(1);
+      int32_t result = (int32_t)neInt32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%d, %d) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_UINT32: {
+      ARG_UINT(0);
+      ARG_UINT(1);
+      int result = (int)neUint32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%u, %u) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_LONG: {
+      ARG_INT_CAST(0, long);
+      ARG_INT_CAST(1, long);
+      int result = (int)neLong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%ld, %ld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_ULONG: {
+      ARG_UINT_CAST(0, unsigned long);
+      ARG_UINT_CAST(1, unsigned long);
+      int result = (int)neUlong(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%lu, %lu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_INT64: {
+      ARG_INT64(0);
+      ARG_INT64(1);
+      int result = (int)neInt64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%lld, %lld) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_UINT64: {
+      ARG_UINT64(0);
+      ARG_UINT64(1);
+      int result = (int)neUint64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%llu, %llu) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_FLOAT32: {
+      ARG_FLOAT32(0);
+      ARG_FLOAT32(1);
+      int result = (int)neFloat32(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
+      break;
+    }
+    case TYPE_FUNC_NE_FLOAT64: {
+      ARG_FLOAT64(0);
+      ARG_FLOAT64(1);
+      int result = (int)neFloat64(arg0, arg1);
+      RegisterHandleInt32(command->ret_handle, result);
+      printf("ne(%g, %g) => %d (%d)\n", arg0, arg1, result, command->ret_handle);
       break;
     }
     default:

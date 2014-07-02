@@ -19,51 +19,67 @@
 
 #include <ppapi/c/pp_var.h>
 
-void* getVoidP(void**);
-char getChar(char*);
-int8_t getInt8(int8_t*);
-uint8_t getUint8(uint8_t*);
-int16_t getInt16(int16_t*);
-uint16_t getUint16(uint16_t*);
-int32_t getInt32(int32_t*);
-uint32_t getUint32(uint32_t*);
-long getLong(long*);
-unsigned long getUlong(unsigned long*);
-int64_t getInt64(int64_t*);
-uint64_t getUint64(uint64_t*);
-float getFloat32(float*);
-double getFloat64(double*);
+#define FOREACH_PRIMITIVE(x) \
+  x(VoidP, void*); \
+  x(Char, char); \
+  x(Int8, int8_t); \
+  x(Uint8, uint8_t); \
+  x(Int16, int16_t); \
+  x(Uint16, uint16_t); \
+  x(Int32, int32_t); \
+  x(Uint32, uint32_t); \
+  x(Long, long); \
+  x(Ulong, unsigned long); \
+  x(Int64, int64_t); \
+  x(Uint64, uint64_t); \
+  x(Float32, float); \
+  x(Float64, double);
 
-void setVoidP(void**, void*);
-void setChar(char*, char);
-void setInt8(int8_t*, int8_t);
-void setUint8(uint8_t*, uint8_t);
-void setInt16(int16_t*, int16_t);
-void setUint16(uint16_t*, uint16_t);
-void setInt32(int32_t*, int32_t);
-void setUint32(uint32_t*, uint32_t);
-void setLong(long*, long);
-void setUlong(unsigned long*, unsigned long);
-void setInt64(int64_t*, int64_t);
-void setUint64(uint64_t*, uint64_t);
-void setFloat32(float*, float);
-void setFloat64(double*, double);
+#define FOREACH_ADDSUB(x) \
+  x(VoidP, void*, int32_t); \
+  x(Int32, int32_t, int32_t); \
+  x(Uint32, uint32_t, uint32_t); \
+  x(Int64, int64_t, int64_t); \
+  x(Uint64, uint64_t, uint64_t); \
+  x(Float32, float, float); \
+  x(Float64, double, double);
 
-void* addVoidP(void*, int32_t);
-int32_t addInt32(int32_t, int32_t);
-uint32_t addUint32(uint32_t, uint32_t);
-int64_t addInt64(int64_t, int64_t);
-uint64_t addUint64(uint64_t, uint64_t);
-float addFloat32(float, float);
-double addFloat64(double, double);
+#define GET(name, type) inline type get##name(type* p) { return *p; }
+#define SET(name, type) inline void set##name(type* p, type x) { *p = x; }
+#define ADD(name, type1, type2) \
+  inline type1 add##name(type1 a, type2 b) { return a + b; }
+#define SUB(name, type1, type2) \
+  inline type1 sub##name(type1 a, type2 b) { return a - b; }
+#define LT(name, type) inline int lt##name(type a, type b) { return a < b; }
+#define LTE(name, type) inline int lte##name(type a, type b) { return a <= b; }
+#define GT(name, type) inline int gt##name(type a, type b) { return a > b; }
+#define GTE(name, type) inline int gte##name(type a, type b) { return a >= b; }
+#define EQ(name, type) inline int eq##name(type a, type b) { return a == b; }
+#define NE(name, type) inline int ne##name(type a, type b) { return a != b; }
 
-void* subVoidP(void*, int32_t);
-int32_t subInt32(int32_t, int32_t);
-uint32_t subUint32(uint32_t, uint32_t);
-int64_t subInt64(int64_t, int64_t);
-uint64_t subUint64(uint64_t, uint64_t);
-float subFloat32(float, float);
-double subFloat64(double, double);
+FOREACH_PRIMITIVE(GET)
+FOREACH_PRIMITIVE(SET)
+FOREACH_ADDSUB(ADD)
+FOREACH_ADDSUB(SUB)
+FOREACH_PRIMITIVE(LT)
+FOREACH_PRIMITIVE(LTE)
+FOREACH_PRIMITIVE(GT)
+FOREACH_PRIMITIVE(GTE)
+FOREACH_PRIMITIVE(EQ)
+FOREACH_PRIMITIVE(NE)
+
+#undef GET
+#undef SET
+#undef ADD
+#undef SUB
+#undef LT
+#undef LTE
+#undef GT
+#undef GTE
+#undef EQ
+#undef NE
+#undef FOREACH_PRIMITIVE
+#undef FOREACH_ADDSUB
 
 void varAddRef(struct PP_Var);
 void varRelease(struct PP_Var);
