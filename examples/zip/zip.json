@@ -5,9 +5,11 @@
     "zlib.h"
   ],
   "headers": [
-    "zip.h"
+    "zip.h",
+    "unzip.h"
   ],
   "types": [
+    {"name": "int$", "kind": "pointer", "base": "int"},
     {"name": "tm_zip_s",
      "kind": "struct",
      "size": 24,
@@ -34,6 +36,54 @@
     {"name": "_zipFile", "kind": "struct", "size": 0, "fields": []},
     {"name": "_zipFile$", "kind": "pointer", "base": "_zipFile"},
     {"name": "zipFile", "kind": "alias", "alias": "_zipFile$", "str": "zipFile"},
+
+    {"name": "tm_unz_s",
+     "kind": "struct",
+     "size": 24,
+     "fields": [
+       {"name": "tm_sec", "type": "uint32", "offset": 0},
+       {"name": "tm_min", "type": "uint32", "offset": 4},
+       {"name": "tm_hour", "type": "uint32", "offset": 8},
+       {"name": "tm_mday", "type": "uint32", "offset": 12},
+       {"name": "tm_mon", "type": "uint32", "offset": 16},
+       {"name": "tm_year", "type": "uint32", "offset": 20}
+    ]},
+    {"name": "unz_global_info_s",
+     "kind": "struct",
+     "size": 8,
+     "fields": [
+       {"name": "number_entry", "type": "ulong", "offset": 0},
+       {"name": "size_comment", "type": "ulong", "offset": 4}
+    ]},
+    {"name": "unz_global_info", "kind": "alias", "alias": "unz_global_info_s"},
+    {"name": "unz_global_info$", "kind": "pointer", "base": "unz_global_info"},
+    {"name": "unz_file_info_s",
+     "kind": "struct",
+     "size": 80,
+     "fields": [
+       {"name": "version", "type": "ulong", "offset": 0},
+       {"name": "version_needed", "type": "ulong", "offset": 4},
+       {"name": "flag", "type": "ulong", "offset": 8},
+       {"name": "compression_method", "type": "ulong", "offset": 12},
+       {"name": "dosDate", "type": "ulong", "offset": 16},
+       {"name": "crc", "type": "ulong", "offset": 20},
+       {"name": "compressed_size", "type": "ulong", "offset": 24},
+       {"name": "uncompressed_size", "type": "ulong", "offset": 28},
+       {"name": "size_filename", "type": "ulong", "offset": 32},
+       {"name": "size_file_extra", "type": "ulong", "offset": 36},
+       {"name": "size_file_comment", "type": "ulong", "offset": 40},
+       {"name": "disk_num_start", "type": "ulong", "offset": 44},
+       {"name": "internal_fa", "type": "ulong", "offset": 48},
+       {"name": "external_fa", "type": "ulong", "offset": 52},
+       {"name": "tmu_date", "type": "tm_unz_s", "offset": 56}
+    ]},
+    {"name": "unz_file_info", "kind": "alias", "alias": "unz_file_info_s"},
+    {"name": "unz_file_info$", "kind": "pointer", "base": "unz_file_info"},
+
+    {"name": "_unzFile", "kind": "struct", "size": 0, "fields": []},
+    {"name": "_unzFile$", "kind": "pointer", "base": "_unzFile"},
+    {"name": "unzFile", "kind": "alias", "alias": "_unzFile$", "str": "unzFile"},
+
     {"name": "stat",
      "kind": "struct",
      "size": 104,
@@ -67,6 +117,23 @@
      "args": ["zipFile", "char$", "zip_fileinfo$", "void$", "uint",
               "void$", "uint", "char$", "int", "int"]
     },
+    {"name": "zipOpenNewFileInZip2",
+     "result": "int",
+     "args": ["zipFile", "char$", "zip_fileinfo$", "void$", "uint",
+              "void$", "uint", "char$", "int", "int", "int"]
+    },
+    {"name": "zipOpenNewFileInZip3",
+     "result": "int",
+     "args": ["zipFile", "char$", "zip_fileinfo$", "void$", "uint",
+              "void$", "uint", "char$", "int", "int", "int", "int", "int",
+              "int", "char$", "ulong"]
+    },
+    {"name": "zipOpenNewFileInZip4",
+     "result": "int",
+     "args": ["zipFile", "char$", "zip_fileinfo$", "void$", "uint",
+              "void$", "uint", "char$", "int", "int", "int", "int", "int",
+              "int", "char$", "ulong", "ulong", "ulong"]
+    },
     {"name": "zipWriteInFileInZip",
      "result": "int",
      "args": ["zipFile", "void$", "uint"]
@@ -75,10 +142,93 @@
      "result": "int",
      "args": ["zipFile"]
     },
+    {"name": "zipCloseFileInZipRaw",
+     "result": "int",
+     "args": ["zipFile", "ulong", "ulong"]
+    },
     {"name": "zipClose",
      "result": "int",
      "args": ["zipFile", "char$"]
     },
+
+    {"name": "unzOpen",
+     "result": "unzFile",
+     "args": ["char$"]
+    },
+    {"name": "unzClose",
+     "result": "int",
+     "args": ["unzFile"]
+    },
+    {"name": "unzGetGlobalInfo",
+     "result": "int",
+     "args": ["unzFile", "unz_global_info$"]
+    },
+    {"name": "unzGetGlobalComment",
+     "result": "int",
+     "args": ["unzFile", "char$", "ulong"]
+    },
+    {"name": "unzGoToFirstFile",
+     "result": "int",
+     "args": ["unzFile"]
+    },
+    {"name": "unzGoToNextFile",
+     "result": "int",
+     "args": ["unzFile"]
+    },
+    {"name": "unzLocateFile",
+     "result": "int",
+     "args": ["unzFile", "char$", "int"]
+    },
+    {"name": "unzGetCurrentFileInfo",
+     "result": "int",
+     "args": ["unzFile", "unz_file_info$", "char$", "ulong", "char$", "ulong",
+              "char$", "ulong"]
+    },
+    {"name": "unzOpenCurrentFile",
+     "result": "int",
+     "args": ["unzFile"]
+    },
+    {"name": "unzOpenCurrentFilePassword",
+     "result": "int",
+     "args": ["unzFile", "char$"]
+    },
+    {"name": "unzOpenCurrentFile2",
+     "result": "int",
+     "args": ["unzFile", "int$", "int$", "int"]
+    },
+    {"name": "unzOpenCurrentFile3",
+     "result": "int",
+     "args": ["unzFile", "int$", "int$", "int", "char$"]
+    },
+    {"name": "unzCloseCurrentFile",
+     "result": "int",
+     "args": ["unzFile"]
+    },
+    {"name": "unzReadCurrentFile",
+     "result": "int",
+     "args": ["unzFile", "void$", "uint"]
+    },
+    {"name": "unztell",
+     "result": "long",
+     "args": ["unzFile"]
+    },
+    {"name": "unzeof",
+     "result": "int",
+     "args": ["unzFile"]
+    },
+    {"name": "unzGetLocalExtrafield",
+     "result": "int",
+     "args": ["unzFile", "void$", "uint"]
+    },
+    {"name": "unzGetOffset",
+     "result": "ulong",
+     "args": ["unzFile"]
+    },
+    {"name": "unzSetOffset",
+     "result": "int",
+     "args": ["unzFile", "ulong"]
+    },
+
     {"name": "fopen",
      "result": "FILE$",
      "args": ["char$", "char$"]

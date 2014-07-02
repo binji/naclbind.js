@@ -28,6 +28,9 @@ build out/zip/obj/ioapi.o: cc examples/zip/ioapi.c
 build out/zip/obj/zip.o: cc examples/zip/zip.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
+build out/zip/obj/unzip.o: cc examples/zip/unzip.c
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
 build out/zip/obj/zip_app.o: cc examples/zip/zip_app.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
@@ -37,6 +40,7 @@ build out/zip/obj/zip_glue.o: cc out/zip/gen/zip_glue.c
 build out/zip/zip.bc: link out/zip/obj/ioapi.o $
                            out/zip/obj/zip_app.o $
                            out/zip/obj/zip.o $
+                           out/zip/obj/unzip.o $
                            out/zip/obj/zip_glue.o $
                            out/2nacl/lib2nacl.a
   cc = $pnacl-cxx
