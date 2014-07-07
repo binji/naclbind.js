@@ -1,0 +1,72 @@
+# Copyright 2014 Ben Smith. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+ccflags-zip = -DUSE_FILE32API -DNOCRYPT -Iexamples/zip -Iout/zip/gen
+
+# zip
+zip-json = examples/zip/zip.json
+
+build out/zip/gen/zip_glue.c: template $template-glue-c | $easy-template $helper-py $commands-py $zip-json
+  json = $zip-json
+build out/zip/zip_glue.js: template $template-glue-js | $easy-template $helper-py $zip-json
+  json = $zip-json
+
+build out/zip/obj/ioapi.o: cc examples/zip/ioapi.c
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
+build out/zip/obj/zip.o: cc examples/zip/zip.c
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
+build out/zip/obj/zip_app.o: cc examples/zip/zip_app.c
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
+build out/zip/obj/zip_glue.o: cc out/zip/gen/zip_glue.c
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
+build out/zip/zip.bc: link out/zip/obj/ioapi.o $
+                           out/zip/obj/zip_app.o $
+                           out/zip/obj/zip.o $
+                           out/zip/obj/zip_glue.o $
+                           out/2nacl/lib2nacl.a
+  cc = $pnacl-cxx
+  ldflags = $ldflags-default $ldflags-release -l2nacl
+  libs = $libs-default
+build out/zip/zip.pexe: finalize out/zip/zip.bc
+build out/zip/zip.nmf: nmf out/zip/zip.pexe
+build out/zip/demo.jpg: cp examples/zip/demo.jpg
+build out/zip/main.css: cp examples/zip/css/main.css
+build out/zip/index.html: cp examples/zip/index.html
+build out/zip/nacl.js: cp src/js/nacl.js
+build out/zip/builtin.js: cp src/js/builtin.js
+build out/zip/promise.js: cp src/js/promise.js
+build out/zip/require.js: cp third_party/requirejs/require.js
+build out/zip/zip_example.js: cp examples/zip/zip_example.js
+build out/zip/zip.js: cp examples/zip/zip.js
+
+build zip: phony out/zip/index.html $
+                 out/zip/demo.jpg $
+                 out/zip/main.css $
+                 out/zip/nacl.js $
+                 out/zip/builtin.js $
+                 out/zip/promise.js $
+                 out/zip/require.js $
+                 out/zip/zip_example.js $
+                 out/zip/zip_glue.js $
+                 out/zip/zip.js $
+                 out/zip/zip.nmf
+default zip
+
+build run-zip: run || zip
+  dir = out/zip
+  page = index.html
