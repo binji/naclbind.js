@@ -802,7 +802,24 @@ define(['promise', 'builtin'], function(promise, builtin) {
     this.name = name;
     this.type = type;
     this.offset = offset;
+    this.fields = {};
+    if (type instanceof StructTypeData) {
+      this.addFields_(this.type.fields);
+    }
   }
+
+  StructField.prototype.addFields_ = function(fields) {
+    for (var name in fields) {
+      if (!fields.hasOwnProperty(name)) {
+        continue;
+      }
+
+      var field = fields[name];
+      var type = field.type;
+      var offset = this.offset + field.offset;
+      this.fields[name] = new StructField(name, type, offset);
+    }
+  };
 
   StructField.prototype.equals = function(other) {
     if (this === other) {
@@ -811,7 +828,7 @@ define(['promise', 'builtin'], function(promise, builtin) {
 
     return this.constructor === other.constructor &&
            this.name === other.name &&
-           this.type === other.type &&
+           this.type.equals(other.type) &&
            this.offset === other.offset;
   };
 
