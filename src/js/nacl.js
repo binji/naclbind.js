@@ -303,7 +303,8 @@ define(['promise', 'builtin'], function(promise, builtin) {
 
   Module.prototype.overloadMatches_ = function(funcType, args) {
     if (funcType.argTypes.length !== args.length) {
-      return false;
+      throw new Error('Mismatched argument length: ' +
+          funcType.argTypes.length + ' != ' + args.length);
     }
 
     for (var i = 0; i < funcType.argTypes.length; ++i) {
@@ -330,11 +331,13 @@ define(['promise', 'builtin'], function(promise, builtin) {
         argType = this.types.Array;
       } else if (arg instanceof Object) {
         argType = this.types.Dictionary;
+      } else if (arg === undefined) {
+        throw new Error('Arg #' + i + ' is undefined.');
       } else {
         // TODO(binji): handle other pepper types.
         // What kind of type is this?
-        console.log('Unexpected type of arg "' + arg + '": ' + typeof(arg));
-        return false;
+        throw new Error('Unexpected type of arg #' + i + ' "' + arg + '": ' +
+                        typeof(arg));
       }
 
       if (!this.canCoerceArgument_(arg, argType, funcArgType)) {
@@ -385,7 +388,12 @@ define(['promise', 'builtin'], function(promise, builtin) {
       return true;
     }
 
-    return false;
+    var errorMsg = 'Can\'t coerce ' + fromType.name + ' to ' + toType.name;
+    if (fromValue) {
+      errorMsg += ' (with fromValue = ' + fromValue + ')';
+    }
+
+    throw new Error(errorMsg);
   };
 
   Module.prototype.canCoercePointer_ = function(fromValue, fromType, toType) {
@@ -398,15 +406,20 @@ define(['promise', 'builtin'], function(promise, builtin) {
 
     // Unwrap the pointers and compare the base types. This will allow us to
     // implicitly cast from int32* to long*, for example.
-    if (this.canCoerceArgument_(undefined, fromType.baseType, toType.baseType)) {
-      return true;
+    try {
+      if (this.canCoerceArgument_(undefined, fromType.baseType, toType.baseType)) {
+        return true;
+      }
+    } catch(e) {
+      // It's OK if this fails.
     }
 
     // Coercing a pointer to void* is always valid.
-    if (toType !== this.types.void$) {
-      throw new Error('Can only coerce to void*, not ' + toType + '.');
+    if (toType === this.types.void$) {
+      return true;
     }
-    return true;
+
+    throw new Error('Can only coerce to void*, not ' + toType + '.');
   };
 
   Module.prototype.canCoercePrimitive_ = function(fromValue, fromType, toType) {
