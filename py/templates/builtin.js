@@ -36,7 +36,7 @@ define([], function() {
 [[  elif type.is_void:]]
     m.typeBuilder_.makeVoidType({{type.id}}, '{{type.js_ident}}');
 [[  elif type.is_primitive:]]
-    m.typeBuilder_.makePrimitiveType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {{jsbool(type.is_int)}}, {{jsbool(type.is_signed)}});
+    m.typeBuilder_.makePrimitiveType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {{jsbool(type.is_signed)}}, {{jsbool(type.is_int)}});
 [[  elif type.is_pepper:]]
     m.typeBuilder_.makePepperType({{type.id}}, '{{type.js_ident}}', {{type.js_prototype}});
 [[  elif type.is_struct:]]
