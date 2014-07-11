@@ -232,39 +232,11 @@ require(['promise', 'zip'], function(promise, zip) {
     });
   }
 
-  function xhrPromise(url) {
-    return new promise.PromisePlus(function(resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', url, true);
-      xhr.onload = function() {
-        resolve(xhr.response);
-      }
-      xhr.onerror = function(err) {
-        reject(err);
-      }
-      xhr.responseType = 'arraybuffer';
-      xhr.send();
-    });
-  }
-
   function loadFile(file) {
-    function addFile(name, file) {
-      zipper.addBlob(name, file);
-      size.addSize(file.size);
-      updateLabel();
-    }
-
-    // Sneakily add the demo.jpg as the first file.
-    if (numFiles++ === 0) {
-      xhrPromise('demo.jpg').then(function(data) {
-        addFile('meme.jpg', new Blob([data]));
-        addFile(file.name, file);
-      }).catch(function(err) {
-        console.log(err.stack);
-      });
-    } else {
-      addFile(file.name, file);
-    }
+    zipper.addBlob(file.name, file);
+    size.addSize(file.size);
+    numFiles++;
+    updateLabel();
   }
 
   function updateLabel() {

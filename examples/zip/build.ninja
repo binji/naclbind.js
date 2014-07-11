@@ -44,7 +44,6 @@ build out/zip/zip.bc: link out/zip/obj/ioapi.o $
   libs = $libs-default
 build out/zip/zip.pexe: finalize out/zip/zip.bc
 build out/zip/zip.nmf: nmf out/zip/zip.pexe
-build out/zip/demo.jpg: cp examples/zip/demo.jpg
 build out/zip/main.css: cp examples/zip/css/main.css
 build out/zip/index.html: cp examples/zip/index.html
 build out/zip/nacl.js: cp src/js/nacl.js
@@ -55,7 +54,6 @@ build out/zip/zip_example.js: cp examples/zip/zip_example.js
 build out/zip/zip.js: cp examples/zip/zip.js
 
 build zip: phony out/zip/index.html $
-                 out/zip/demo.jpg $
                  out/zip/main.css $
                  out/zip/nacl.js $
                  out/zip/builtin.js $
