@@ -168,6 +168,7 @@ define(['promise', 'builtin'], function(promise, builtin) {
 
 
   Module.prototype.commit = function() {
+    var that = this;
     assert(arguments.length >= 1, 'expected callback.');
 
     var callback = arguments[arguments.length - 1];
@@ -192,7 +193,7 @@ define(['promise', 'builtin'], function(promise, builtin) {
     this.postMessage(msg, function(result) {
       function idToHandle(value, ix) {
         if (typeof(value) === 'number' && !args[ix].type.isPrimitive()) {
-          return this.handles_.getHandle(value);
+          return that.handles_.getHandle(value);
         }
         return value;
       };
@@ -601,7 +602,7 @@ define(['promise', 'builtin'], function(promise, builtin) {
   };
 
   HandleList.prototype.getHandle = function(id) {
-    return this.handleIdHash[id];
+    return this.handleIdHash_[id];
   };
 
   HandleList.prototype.registerHandle = function(handle) {
