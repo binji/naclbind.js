@@ -56,9 +56,11 @@ build out/zip/promise.js: cp src/js/promise.js
 build out/zip/require.js: cp third_party/requirejs/require.js
 build out/zip/zip_example.js: cp examples/zip/zip_example.js
 build out/zip/zip.js: cp examples/zip/zip.js
+build out/zip/minizip.js: cp examples/zip/minizip.js
 
 build zip: phony out/zip/index.html $
                  out/zip/main.css $
+                 out/zip/minizip.js $
                  out/zip/nacl.js $
                  out/zip/builtin.js $
                  out/zip/promise.js $

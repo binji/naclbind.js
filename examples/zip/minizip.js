@@ -14,7 +14,7 @@
 
 "use strict";
 
-define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
+define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
   var m = zip_glue;
   var t = m.types;
   var f = m.functions;
@@ -47,7 +47,7 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
       throw new Error('Unexpected value for date: ' + fileinfo.date);
     }
 
-    if (fileinfo.attributes && typeof(fileinfo.attributes) !== 'number')) {
+    if (fileinfo.attributes && typeof(fileinfo.attributes) !== 'number') {
       throw new Error('Attributes should be a number.');
     }
   }
@@ -74,59 +74,66 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
     }
   }
 
-  function validateData(data) {
-    if (!(data instanceof ArrayBuffer)) {
-      throw new Error('Data should be an ArrayBuffer.');
-    }
+
+  function Zip() {
+    this.filename = null;
+    this.c = m.makeContext();
+    this.openedFile = false;
+    this.h_zipFile = null;
   }
 
+  Zip.prototype.open = function(callback, errback) {
+    var that = this;
 
-  /**
-   */
-  function Zip() {
+    // Generate a unique name in the NaCl modules memory filesystem to store
+    // the generated zip file.
     this.filename = numFiles + '.zip';
     numFiles++;
 
-    var that = this;
-    this.c = m.makeContext();
-    this.p = promise.resolve().then(function() {
-      var append = APPEND_STATUS_CREATE;
-      that.zipFile = f.zipOpen(that.c, that.filename, append);
-      return m.commitPromise();
-    }).then(function(result) {
-      if (result != ZIP_OK) {
-        return promise.reject('Unable to open zipfile: ' + that.filename);
-      }
-    });
-    this.opened = false;
-  }
-
-  /**
-   */
-  Zip.prototype.openFile_ = function(filename, opts) {
-    validateFilename(filename);
-    if (opts) {
-      if (opts.fileinfo)
-        validateFileinfo(opts.fileinfo);
-      if (opts.level)
-        validateLevel(opts.level);
-      if (opts.raw)
-        validateRaw(opts.raw);
-      if (opts.comment)
-        validateComment(opts.comments);
+    try {
+      var h_zipFile = f.zipOpen(this.c, this.filename, APPEND_STATUS_CREATE);
+      return m.commit(h_zipFile, function(h_zipFile) {
+        that.h_zipFile = h_zipFile;
+        callback();
+      });
+    } catch(e) {
+      errback(e);
     }
+  };
 
-    if (this.opened)
-      throw new Error('Must close before opening a new file for writing.');
-
-    this.opened = true;
-
+  Zip.prototype.write = function(filename, opts, data, callback, errback) {
     var that = this;
-    this.p = this.p.then(function() {
+
+    this.openFile(filename, opts, function() {
+      that.writeToFile(data, function() {
+        that.closeFile(callback, errback);
+      }, errback);
+    }, errback);
+  };
+
+  Zip.prototype.openFile = function(filename, opts, callback, errback) {
+    try {
+      validateFilename(filename);
+      if (opts) {
+        if (opts.fileinfo)
+          validateFileinfo(opts.fileinfo);
+        if (opts.level)
+          validateLevel(opts.level);
+        if (opts.raw)
+          validateRaw(opts.raw);
+        if (opts.comment)
+          validateComment(opts.comments);
+      }
+
+      if (this.openedFile)
+        throw new Error('Must close before opening a new file for writing.');
+
+      this.openedFile = true;
+
       var comment = null;
       var level = Z_DEFAULT_COMPRESSION;
       var raw = 0;
-      var c_fileinfo = null;
+      var h_fileinfo = null;
 
       if (opts) {
         if (opts.fileinfo) {
@@ -134,20 +141,20 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
           if (!date)
             date = new Date();
 
-          c_fileinfo = m.mallocType(that.c, t.zip_fileinfo);
+          h_fileinfo = m.mallocType(this.c, t.zip_fileinfo);
           var tm_fields = t.zip_fileinfo.fields.tmz_date.fields;
-          m.setField(that.c, tm_fields.tm_sec, c_fileinfo, date.getSeconds());
-          m.setField(that.c, tm_fields.tm_min, c_fileinfo, date.getMinutes());
-          m.setField(that.c, tm_fields.tm_hour, c_fileinfo, date.getHours());
-          m.setField(that.c, tm_fields.tm_mday, c_fileinfo, date.getDate());
-          m.setField(that.c, tm_fields.tm_mon, c_fileinfo, date.getMonth());
-          m.setField(that.c, tm_fields.tm_year, c_fileinfo,
+          m.setField(this.c, tm_fields.tm_sec, h_fileinfo, date.getSeconds());
+          m.setField(this.c, tm_fields.tm_min, h_fileinfo, date.getMinutes());
+          m.setField(this.c, tm_fields.tm_hour, h_fileinfo, date.getHours());
+          m.setField(this.c, tm_fields.tm_mday, h_fileinfo, date.getDate());
+          m.setField(this.c, tm_fields.tm_mon, h_fileinfo, date.getMonth());
+          m.setField(this.c, tm_fields.tm_year, h_fileinfo,
                      date.getFullYear() - 1980);
-          m.setField(that.c, t.zip_fileinfo.fields.dosDate, 0);
-          m.setField(that.c, t.zip_fileinfo.fields.internal_fa, 0);
+          m.setField(this.c, t.zip_fileinfo.fields.dosDate, 0);
+          m.setField(this.c, t.zip_fileinfo.fields.internal_fa, 0);
 
           var attributes = opts.fileinfo.attributes || 0;
-          m.setField(that.c, t.zip_fileinfo.fields.external_fa, attributes);
+          m.setField(this.c, t.zip_fileinfo.fields.external_fa, attributes);
         }
 
         if (opts.comment) comment = opts.comment;
@@ -155,44 +162,146 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
         if (opts.raw) raw = opts.raw ? 1 : 0;
       }
 
-      var result = f.zipOpenNewFileInZip2(that.c,
-                                          that.zipFile,
-                                          filename,
-                                          c_fileinfo,
-                                          null, 0,  // extrafield_local
-                                          null, 0,  // extrafield_global
-                                          comment,
-                                          Z_DEFLATED,  // method
-                                          level,
-                                          raw);
-      return m.commitPromise(result);
-    }).then(function(result) {
-      if (result != ZIP_OK) {
-        promise.reject('zipOpenNewFileInZip2 failed. result = ' + result);
-      }
-    });
+      var h_result = f.zipOpenNewFileInZip2(this.c,
+                                            this.h_zipFile,
+                                            filename,
+                                            h_fileinfo,
+                                            null, 0,  // extrafield_local
+                                            null, 0,  // extrafield_global
+                                            comment,
+                                            Z_DEFLATED,  // method
+                                            level,
+                                            raw);
+
+      m.commit(h_result, function(result) {
+        if (result != ZIP_OK) {
+          errback(new Error('zipOpenNewFileInZip2 failed. result = ' + result));
+          return;
+        }
+
+        callback();
+      });
+    } catch (e) {
+      errback(e);
+    }
   };
 
-  Zip.prototype.writeFile_ = function(ab) {
-    validateData(data);
-    var that = this;
-    this.p = this.p.then(function() {
-      var c_buf = f.arrayBufferMap(that.c, ab);
-      var c_len = ab.byteLength;
-      var result = f.zipWriteInFileInZip(that.c, that.zipFile, c_buf, c_len);
-      return m.commitPromise(result);
-    }).then(function(result) {
-      if (result != ZIP_OK) {
-        promise.reject('zipWriteInFileInZip failed. result = ' + result);
+  Zip.prototype.writeToFile = function(data, callback, errback) {
+    try {
+      if (data instanceof ArrayBuffer) {
+        this.writeArrayBufferToFile(data, callback, errback);
+      } else if (data instanceof Blob) {
+        this.writeBlobToFile(data, callback, errback);
+      } else {
+        throw new Error('Unexpected data type: ' + data);
       }
-    });
+    } catch(e) {
+      errback(e);
+    }
   };
 
-  Zip.prototype.closeFile_ = function() {
+  Zip.prototype.writeBlobToFile = function(blob, callback, errback) {
     var that = this;
-    this.p = this.p.then(function() {
-      f.zipCloseFileInZip(that.c, that.zipFile);
-      return m.commitPromise();
-    });
+
+    try {
+      var reader = new FileReader();
+      reader.onload = function() {
+        that.writeArrayBufferToFile(this.result, callback, errback);
+      };
+      reader.onerror = function() {
+        errback(reader.error);
+      };
+      reader.readAsArrayBuffer(blob);
+    } catch (e) {
+      errback(e);
+    }
+  };
+
+  Zip.prototype.writeArrayBufferToFile = function(ab, callback, errback) {
+    try {
+      var h_buf = f.arrayBufferMap(this.c, ab);
+      var h_len = ab.byteLength;
+      var h_result = f.zipWriteInFileInZip(this.c, this.h_zipFile,
+                                           h_buf, h_len);
+      m.commit(h_result, function(result) {
+        if (result != ZIP_OK) {
+          errback(new Error('zipWriteInFileInZip failed. result = ' + result));
+          return;
+        }
+
+        callback();
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Zip.prototype.closeFile = function(callback, errback) {
+    try {
+      this.openedFile = false;
+
+      var h_result = f.zipCloseFileInZip(this.c, this.h_zipFile);
+      m.commit(h_result, function(result) {
+        if (result != ZIP_OK) {
+          errback(new Error('zipCloseFileInZip failed. result = ' + result));
+          return;
+        }
+
+        callback();
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Zip.prototype.close = function(globalComment, callback, errback) {
+    try {
+      var h_result = f.zipClose(this.c, this.h_zipFile, globalComment);
+      m.commit(h_result, function(result) {
+        if (result != ZIP_OK) {
+          errback(new Error('zipClose failed. result = ' + result));
+          return;
+        }
+
+        callback();
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Zip.prototype.getData = function(callback, errback) {
+    var that = this;
+    try {
+      var h_statbuf = m.mallocType(this.c, t.stat);
+      var h_result = f.stat(this.c, this.filename, h_statbuf);
+      m.commit(h_result, function(result) {
+        if (result != 0) {
+          errback(new Error('stat(' + that.filename + ') failed.'));
+          return;
+        }
+
+        var h_size = m.getField(that.c, t.stat.fields.st_size, h_statbuf);
+        var h_ab = f.arrayBufferCreate(that.c, h_size);
+        var h_abPtr = f.arrayBufferMap(that.c, h_ab);
+        var h_file = f.fopen(that.c, that.filename, "r");
+        f.fread(that.c, h_abPtr, 1, h_size, h_file);
+        f.fclose(that.c, h_file);
+
+        m.commit(h_ab, function(ab) {
+          callback(ab);
+          m.destroyHandles(that.c);
+          that.c = null;
+          m.commit(function() {});
+        });
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  // Exports
+  return {
+    Zip: Zip
   };
 });
