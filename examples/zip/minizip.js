@@ -150,11 +150,12 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
           m.setField(this.c, tm_fields.tm_mon, h_fileinfo, date.getMonth());
           m.setField(this.c, tm_fields.tm_year, h_fileinfo,
                      date.getFullYear() - 1980);
-          m.setField(this.c, t.zip_fileinfo.fields.dosDate, 0);
-          m.setField(this.c, t.zip_fileinfo.fields.internal_fa, 0);
+          m.setField(this.c, t.zip_fileinfo.fields.dosDate, h_fileinfo, 0);
+          m.setField(this.c, t.zip_fileinfo.fields.internal_fa, h_fileinfo, 0);
 
           var attributes = opts.fileinfo.attributes || 0;
-          m.setField(this.c, t.zip_fileinfo.fields.external_fa, attributes);
+          m.setField(this.c, t.zip_fileinfo.fields.external_fa, h_fileinfo,
+                     attributes);
         }
 
         if (opts.comment) comment = opts.comment;
