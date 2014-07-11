@@ -757,6 +757,14 @@ bool HandleToVar(Handle handle, struct PP_Var* var) {
       *var = hobj.value.var;
       AddRefVar(var);
       break;
+    case TYPE_VOID_P:
+      if (hobj.value.voidp) {
+        var->type = PP_VARTYPE_INT32;
+        var->value.as_int = handle;
+      } else {
+        var->type = PP_VARTYPE_NULL;
+      }
+      break;
     default:
       VERROR("Don't know how to convert handle %d with type %s to var", handle,
              TypeToString(hobj.type));
