@@ -55,7 +55,6 @@ build out/zip/builtin.js: cp src/js/builtin.js
 build out/zip/promise.js: cp src/js/promise.js
 build out/zip/require.js: cp third_party/requirejs/require.js
 build out/zip/zip_example.js: cp examples/zip/zip_example.js
-build out/zip/zip.js: cp examples/zip/zip.js
 build out/zip/minizip.js: cp examples/zip/minizip.js
 
 build zip: phony out/zip/index.html $
@@ -67,7 +66,6 @@ build zip: phony out/zip/index.html $
                  out/zip/require.js $
                  out/zip/zip_example.js $
                  out/zip/zip_glue.js $
-                 out/zip/zip.js $
                  out/zip/zip.nmf
 default zip
 

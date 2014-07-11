@@ -301,6 +301,32 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
     }
   };
 
+  // Promise-based API.
+  function makePromiseFunction(func) {
+    return function() {
+      var that = this;
+      var args = Array.prototype.slice.call(arguments);
+      return new Promise(function(resolve, reject) {
+        args.push(resolve);
+        args.push(reject);
+        func.apply(that, args);
+      });
+    };
+  };
+
+  Zip.prototype.openPromise = makePromiseFunction(Zip.prototype.open);
+  Zip.prototype.writePromise = makePromiseFunction(Zip.prototype.write);
+  Zip.prototype.openFilePromise = makePromiseFunction(Zip.prototype.openFile);
+  Zip.prototype.writeToFilePromise =
+      makePromiseFunction(Zip.prototype.writeToFile);
+  Zip.prototype.writeBlobToFilePromise =
+      makePromiseFunction(Zip.prototype.writeBlobToFile);
+  Zip.prototype.writeArrayBufferToFilePromise =
+      makePromiseFunction(Zip.prototype.writeArrayBufferToFile);
+  Zip.prototype.closeFilePromise = makePromiseFunction(Zip.prototype.closeFile);
+  Zip.prototype.closePromise = makePromiseFunction(Zip.prototype.close);
+  Zip.prototype.getDataPromise = makePromiseFunction(Zip.prototype.getData);
+
   // Exports
   return {
     Zip: Zip

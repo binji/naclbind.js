@@ -14,9 +14,10 @@
 
 "use strict";
 
-require(['promise', 'zip'], function(promise, zip) {
+require(['promise', 'minizip'], function(promise, minizip) {
 
-  var zipper;
+  var zip;
+  var zipPromise;
   var state;
   var size = new Size('#size');
   var compressed = new Size('#compressed');
@@ -72,7 +73,7 @@ require(['promise', 'zip'], function(promise, zip) {
       window.clearInterval(this.id);
     }
 
-    this.size = value;
+    this.size = this.startSize = this.endSize = value;
     this.updateLabel();
     this.setChanging(false);
   };
@@ -117,7 +118,8 @@ require(['promise', 'zip'], function(promise, zip) {
   }
 
   function reset() {
-    zipper = new zip.Zipper();
+    zip = new minizip.Zip();
+    zipPromise = zip.openPromise();
     state = 'compress';
     size.setSizeImmediate(0);
     compressed.setSizeImmediate(0);
@@ -160,47 +162,52 @@ require(['promise', 'zip'], function(promise, zip) {
   }
 
   function onClickDropTarget(e) {
-    if (numFiles > 0) {
-      if (state === 'compress') {
-        zipper.close();
-        zipper.getZipped(function(zippedAb) {
-          var compressedSize = zippedAb.byteLength;
-          makeDownloadLink(zippedAb);
+    if (numFiles <= 0) {
+      return;
+    }
 
-          var sizeEl = $('#size');
-          var compressedEl = $('#compressed');
-          var percentEl = $('#percent');
+    if (state === 'compress') {
+      zipPromise = zipPromise.then(function() {
+        return zip.closePromise(null);
+      }).then(function() {
+        return zip.getDataPromise();
+      }).then(function(zippedAb) {
+        var compressedSize = zippedAb.byteLength;
+        makeDownloadLink(zippedAb);
 
-          // Move the uncompressed size to the left.
-          sizeEl.classList.add('left');
-          transitionPromise(sizeEl).then(function() {
-            // Then show the compressed size.
-            compressed.setSizeImmediate(size.endSize);
-            compressedEl.classList.remove('gone');
-            return transitionPromise(compressedEl);
-          }).then(function() {
-            // Wait a second for the size to countdown.
-            compressed.setSize(compressedSize);
-            return waitPromise(1000);
-          }).then(function() {
-            // Display the percentage.
-            percentEl.textContent = (compressedSize * 100 / size.endSize).toFixed(2) + '%';
-            percentEl.classList.remove('gone');
-            return transitionPromise(percentEl);
-          }).then(function() {
-            // Finally display the labels.
-            $('#uncompressedLabel').classList.remove('gone');
-            $('#compressedLabel').classList.remove('gone');
-            $('#percentLabel').classList.remove('gone');
-          });
+        var sizeEl = $('#size');
+        var compressedEl = $('#compressed');
+        var percentEl = $('#percent');
+
+        // Move the uncompressed size to the left.
+        sizeEl.classList.add('left');
+        transitionPromise(sizeEl).then(function() {
+          // Then show the compressed size.
+          compressed.setSizeImmediate(size.endSize);
+          compressedEl.classList.remove('gone');
+          return transitionPromise(compressedEl);
+        }).then(function() {
+          // Wait a second for the size to countdown.
+          compressed.setSize(compressedSize);
+          return waitPromise(1000);
+        }).then(function() {
+          // Display the percentage.
+          percentEl.textContent = (compressedSize * 100 / size.endSize).toFixed(2) + '%';
+          percentEl.classList.remove('gone');
+          return transitionPromise(percentEl);
+        }).then(function() {
+          // Finally display the labels.
+          $('#uncompressedLabel').classList.remove('gone');
+          $('#compressedLabel').classList.remove('gone');
+          $('#percentLabel').classList.remove('gone');
         });
+      });
 
-        state = 'download';
-        updateLabel();
-      } else if (state === 'download') {
-        $('#downloadLink').dispatchEvent(new MouseEvent('click'));
-        reset();
-      }
+      state = 'download';
+      updateLabel();
+    } else if (state === 'download') {
+      $('#downloadLink').dispatchEvent(new MouseEvent('click'));
+      reset();
     }
   }
 
@@ -233,10 +240,17 @@ require(['promise', 'zip'], function(promise, zip) {
   }
 
   function loadFile(file) {
-    zipper.addBlob(file.name, file);
-    size.addSize(file.size);
-    numFiles++;
-    updateLabel();
+    zipPromise = zipPromise.then(function() {
+      return zip.writePromise(file.name, {fileinfo: {date: new Date()}}, file);
+    }).then(function() {
+      size.addSize(file.size);
+      numFiles++;
+      updateLabel();
+    }).catch(function(err) {
+      // TODO(binji): display error to user?
+      console.error(err);
+      throw err;
+    });
   }
 
   function updateLabel() {
