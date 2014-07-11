@@ -241,6 +241,10 @@ define(['promise', 'builtin'], function(promise, builtin) {
 
   // TODO(binji): Where should these go? On the context...?
   Module.prototype.setField = function(context, structField, struct_p, value) {
+    assert(context instanceof Context);
+    assert(structField instanceof StructField);
+    assert(struct_p instanceof Handle);
+
     var dst = this.functions.add(context, struct_p, structField.offset);
     var pointerType = this.typeBuilder_.getPointerType(structField.type);
     if (structField.type.isPointer()) {
@@ -251,6 +255,10 @@ define(['promise', 'builtin'], function(promise, builtin) {
   };
 
   Module.prototype.getField = function(context, structField, struct_p) {
+    assert(context instanceof Context);
+    assert(structField instanceof StructField);
+    assert(struct_p instanceof Handle);
+
     var ptr = this.functions.add(context, struct_p, structField.offset);
     var pointerType = this.typeBuilder_.getPointerType(structField.type);
     if (structField.type.isPointer()) {
@@ -261,6 +269,7 @@ define(['promise', 'builtin'], function(promise, builtin) {
   };
 
   Module.prototype.mallocType = function(context, type) {
+    assert(context instanceof Context);
     var pointerType = this.typeBuilder_.getPointerType(type);
     return this.functions.malloc(context, type.sizeof()).cast(pointerType);
   };
