@@ -826,7 +826,7 @@ define(['promise', 'builtin'], function(promise, builtin) {
     this.type = type;
     this.offset = offset;
     this.fields = {};
-    if (type instanceof StructTypeData) {
+    if (type.data instanceof StructTypeData) {
       this.addFields_(this.type.fields);
     }
   }
