@@ -237,6 +237,10 @@
      "result": "size_t",
      "args": ["void$", "size_t", "size_t", "FILE$"]
     },
+    {"name": "fwrite",
+     "result": "size_t",
+     "args": ["void$", "size_t", "size_t", "FILE$"]
+    },
     {"name": "fclose",
      "result": "int",
      "args": ["FILE$"]

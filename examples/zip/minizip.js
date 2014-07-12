@@ -29,6 +29,9 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
   var ZIP_BADZIPFILE = -103;
   var ZIP_INTERNALERROR = -104;
 
+  var UNZ_OK = 0;
+  var UNZ_END_OF_LIST_OF_FILE = -100;
+
   var APPEND_STATUS_CREATE = 0;
   var APPEND_STATUS_CREATEAFTER = 1;
   var APPEND_STATUS_ADDINZIP = 2;
@@ -283,23 +286,192 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
         }
 
         var h_size = m.getField(that.c, t.stat.fields.st_size, h_statbuf);
+        f.free(that.c, h_statbuf);
         var h_ab = f.arrayBufferCreate(that.c, h_size);
         var h_abPtr = f.arrayBufferMap(that.c, h_ab);
         var h_file = f.fopen(that.c, that.filename, "r");
         f.fread(that.c, h_abPtr, 1, h_size, h_file);
+        f.arrayBufferUnmap(that.c, h_ab);
         f.fclose(that.c, h_file);
 
         m.commit(h_ab, function(ab) {
-          callback(ab);
           m.destroyHandles(that.c);
           that.c = null;
-          m.commit(function() {});
+          m.commit(function() {
+            callback(ab);
+          });
         });
       });
     } catch(e) {
       errback(e);
     }
   };
+
+  function Unzip() {
+    this.filename = null;
+    this.c = m.makeContext();
+    this.h_zipFile = null;
+  }
+
+  Unzip.prototype.open = function(zipFile, callback, errback) {
+    try {
+      if (zipFile instanceof ArrayBuffer) {
+        this.openArrayBuffer(zipFile, callback, errback);
+      } else if (data instanceof Blob) {
+        this.openBlob(zipFile, callback, errback);
+      } else {
+        throw new Error('Unexpected zipFile type: ' + zipFile);
+      }
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Unzip.prototype.openArrayBuffer = function(ab, callback, errback) {
+    try {
+      var h_abPtr = f.arrayBufferMap(this.c, ab);
+      var h_file = f.fopen(this.c, this.filename, "w");
+      f.fwrite(this.c, h_abPtr, 1, ab.byteLength, h_file);
+      f.fclose(this.c, h_file);
+
+      var h_zipFile = f.unzOpen(this.c, this.filename);
+      m.commit(h_zipFile, function(h_zipFile) {
+        if (result != UNZ_OK) {
+          errback(new Error('unzIpen failed. result = ' + result));
+          return;
+        }
+
+        callback();
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Unzip.prototype.openBlob = function(blob, callback, errback) {
+    var that = this;
+    try {
+      var reader = new FileReader();
+      reader.onload = function() {
+        that.openArrayBuffer(this.result, callback, errback);
+      };
+      reader.onerror = function() {
+        errback(reader.error);
+      };
+      reader.readAsArrayBuffer(blob);
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Unzip.prototype.goToFirstFile = function(callback, errback) {
+    try {
+      var h_result = f.unzGoToFirstFile(this.c, this.h_zipFile);
+      m.commit(h_result, function(result) {
+        if (result != UNZ_OK) {
+          errback(new Error('unzGoToFirstFile failed. result = ' + result));
+          return;
+        }
+
+        callback();
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Unzip.prototype.goToNextFile = function(callback, errback) {
+    try {
+      var h_result = f.unzGoToNextFile(this.c, this.h_zipFile);
+      m.commit(h_result, function(result) {
+        if (result == UNZ_END_OF_LIST_OF_FILE) {
+          callback(false);
+        } else if (result != UNZ_OK) {
+          errback(new Error('unzGoToNextFile failed. result = ' + result));
+        } else {
+          callback(true);
+        }
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Unzip.prototype.locateFile = function(filename, caseSensitive,
+                                        callback, errback) {
+    try {
+      var h_result = f.unzLocateFile(this.c, this.h_zipFile, filename,
+                                     caseSensitive);
+      m.commit(h_result, function(result) {
+        if (result == UNZ_END_OF_LIST_OF_FILE) {
+          callback(false);
+        } else if (result != UNZ_OK) {
+          errback(new Error('unzLocateFile failed. result = ' + result));
+        } else {
+          callback(true);
+        }
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Unzip.prototype.openCurrentFile = function(callback, errback) {
+    try {
+      var h_result = f.unzOpenCurrentFile(this.c, this.h_zipFile);
+      m.commit(h_result, function(result) {
+        if (result != UNZ_OK) {
+          errback(new Error('unzOpenCurrentFile failed. result = ' + result));
+          return;
+        }
+
+        callback();
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Unzip.prototype.closeCurrentFile = function(callback, errback) {
+    try {
+      var h_result = f.unzCloseCurrentFile(this.c, this.h_zipFile);
+      m.commit(h_result, function(result) {
+        if (result != UNZ_OK) {
+          errback(new Error('unzCloseCurrentFile failed. result = ' + result));
+          return;
+        }
+
+        callback();
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
+  Unzip.prototype.unzReadCurrentFile = function(length, callback, errback) {
+    try {
+      var h_buffer = f.malloc(this.c, length);
+      var h_result = f.unzReadCurrentFile(this.c, this.h_zipFile, h_buffer,
+                                          length);
+      var h_ab = f.arrayBufferCreate(this.c, length);
+      var h_abPtr = f.arrayBufferMap(this.c, h_ab);
+      f.memcpy(this.c, h_abPtr, h_buffer, length);
+      f.arrayBufferUnmap(this.c, h_ab);
+      f.free(this.c, h_buffer);
+
+      m.commit(h_result, h_ab, function(result, ab) {
+        if (result < 0) {
+          errback(new Error('unzReadCurrentFile failed. result = ' + result));
+          return;
+        }
+
+        callback(result);
+      });
+    } catch(e) {
+      errback(e);
+    }
+  };
+
 
   // Promise-based API.
   function makePromiseFunction(func) {
