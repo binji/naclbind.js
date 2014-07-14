@@ -142,14 +142,20 @@ define(['promise', 'builtin'], function(promise, builtin) {
       retHandleId = retHandle.id;
     }
 
+    this.pushCommand(func.name, funcType.id, args, retHandleId);
+
+    return retHandle;
+  };
+
+  Module.prototype.pushCommand = function(cmd, type, args, ret) {
     var message = {
-      cmd: func.name,
-      type: funcType.id,
+      cmd: cmd,
+      type: type,
       args: [],
       argIsHandle: [],
-      ret: retHandleId
+      ret: ret,
     };
-    for (var i = 0; i < funcType.data.argTypes.length; ++i) {
+    for (var i = 0; i < args.length; ++i) {
       var arg = args[i];
       var value;
       if (arg instanceof Handle) {
@@ -160,11 +166,8 @@ define(['promise', 'builtin'], function(promise, builtin) {
       message.args.push(value);
       message.argIsHandle.push(arg instanceof Handle);
     }
-
     this.commands_.push(message);
-
-    return retHandle;
-  };
+  }
 
 
   Module.prototype.commit = function() {
@@ -239,39 +242,12 @@ define(['promise', 'builtin'], function(promise, builtin) {
     return this.functionBuilder_.makeFunction.apply(this.functionBuilder_, arguments);
   };
 
-  // TODO(binji): Where should these go? On the context...?
-  Module.prototype.setField = function(context, structField, struct_p, value) {
-    assert(context instanceof Context);
-    assert(structField instanceof StructField);
-    assert(struct_p instanceof Handle);
-
-    var dst = this.functions.add(context, struct_p, structField.offset);
-    var pointerType = this.typeBuilder_.getPointerType(structField.type);
-    if (structField.type.isPointer()) {
-      return this.functions.set(context, dst.cast(this.types.void$$), value.cast(this.types.void$));
-    } else {
-      return this.functions.set(context, dst.cast(pointerType), value);
-    }
+  Module.prototype.getPointerType = function(type) {
+    return this.typeBuilder_.getPointerType(type);
   };
 
-  Module.prototype.getField = function(context, structField, struct_p) {
-    assert(context instanceof Context);
-    assert(structField instanceof StructField);
-    assert(struct_p instanceof Handle);
-
-    var ptr = this.functions.add(context, struct_p, structField.offset);
-    var pointerType = this.typeBuilder_.getPointerType(structField.type);
-    if (structField.type.isPointer()) {
-      return this.functions.get(context, ptr.cast(this.types.void$$)).cast(structField.type);
-    } else {
-      return this.functions.get(context, ptr.cast(pointerType));
-    }
-  };
-
-  Module.prototype.mallocType = function(context, type) {
-    assert(context instanceof Context);
-    var pointerType = this.typeBuilder_.getPointerType(type);
-    return this.functions.malloc(context, type.sizeof()).cast(pointerType);
+  Module.prototype.destroyHandles = function(handles) {
+    this.handles_.destroyHandles(handles);
   };
 
   Module.prototype.findOverload_ = function(funcName, args, funcTypeList) {
@@ -475,27 +451,6 @@ define(['promise', 'builtin'], function(promise, builtin) {
     return true;
   };
 
-  // TODO(binji): better name?
-  Module.prototype.destroyHandles = function(context) {
-    // TODO(binji): share code with callFunction?
-    var message = {
-      cmd: '*destroyHandles',
-      type: 0,  // None.
-      args: [],
-      argIsHandle: [],
-      ret: 0,  // Invalid.
-    };
-    for (var i = 0; i < context.handles.length; ++i) {
-      message.args.push(context.handles[i].id);
-      message.argIsHandle.push(true);
-    }
-
-    this.commands_.push(message);
-
-    // Remove them from the module's handle list too.
-    this.handles_.destroyHandles(context.handles);
-  };
-
 
   //// TypeBuilder /////////////////////////////////////////////////////////////
   function TypeBuilder() {
@@ -597,19 +552,63 @@ define(['promise', 'builtin'], function(promise, builtin) {
 
   //// Context /////////////////////////////////////////////////////////////////
   function Context(module) {
-    this.module = module;
-    this.handles = [];
+    this.$module_ = module;
+    this.$handles_ = [];
     // TODO(binji): nice way to clean up all these handles.
     // It would also be nice to clean up malloc'd memory, release PP_Vars, etc.
+
+    for (var name in module.functions) {
+      if (module.functions.hasOwnProperty(name)) {
+        this[name] = module.functions[name];
+      }
+    }
   }
 
-  Context.prototype.registerHandle = function(handle) {
+  Context.prototype.$registerHandle = function(handle) {
     assert(handle instanceof Handle, 'handle is not a Handle.');
-    this.handles.push(handle);
+    this.$handles_.push(handle);
   };
 
-  Context.prototype.callFunction = function(func, args) {
-    return this.module.callFunction(this, func, args);
+  Context.prototype.$callFunction = function(func, args) {
+    return this.$module_.callFunction(this, func, args);
+  };
+
+  Context.prototype.$destroyHandles = function() {
+    this.$module_.pushCommand('*destroyHandles', 0, this.$handles_, 0);
+
+    // Remove them from the module's handle list too.
+    this.$module_.destroyHandles(this.$handles_);
+  };
+
+  Context.prototype.$setField = function(structField, struct_p, value) {
+    assert(structField instanceof StructField);
+    assert(struct_p instanceof Handle);
+
+    var dst = this.add(struct_p, structField.offset);
+    var pointerType = this.$module_.getPointerType(structField.type);
+    if (structField.type.isPointer()) {
+      return this.set(dst.cast(this.$module_.types.void$$), value.cast(this.$module_.types.void$));
+    } else {
+      return this.set(dst.cast(pointerType), value);
+    }
+  };
+
+  Context.prototype.$getField = function(structField, struct_p) {
+    assert(structField instanceof StructField);
+    assert(struct_p instanceof Handle);
+
+    var ptr = this.add(struct_p, structField.offset);
+    var pointerType = this.$module_.getPointerType(structField.type);
+    if (structField.type.isPointer()) {
+      return this.get(ptr.cast(this.$module_.types.void$$)).cast(structField.type);
+    } else {
+      return this.get(ptr.cast(pointerType));
+    }
+  };
+
+  Context.prototype.$mallocType = function(type) {
+    var pointerType = this.$module_.getPointerType(type);
+    return this.malloc(type.sizeof()).cast(pointerType);
   };
 
 
@@ -649,7 +648,7 @@ define(['promise', 'builtin'], function(promise, builtin) {
       this.id = id;
     } else {
       this.id = handleList.registerHandle(this);
-      context.registerHandle(this);
+      context.$registerHandle(this);
     }
 
     this.context = context;
@@ -994,10 +993,9 @@ define(['promise', 'builtin'], function(promise, builtin) {
     assert(!(name in this.nameHash), 'function with this name already exists.');
 
     var cfunc = new CFunction(name, overloads);
-    var func = function(context) {
-      assert(context instanceof Context);
-      var args = Array.prototype.slice.call(arguments, 1);
-      return context.callFunction(cfunc, args);
+    var func = function() {
+      assert(this instanceof Context);
+      return this.$callFunction(cfunc, arguments);
     };
 
     this.nameHash[name] = func;

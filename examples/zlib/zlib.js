@@ -87,19 +87,18 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
 
   var m = zlib_glue;
   var t = m.types;
-  var f = m.functions;
 
   function zlibVersion() {
     var c = m.makeContext();
     return promise.resolve().then(function() {
-      var version = f.zlibVersion(c);
-      var versionLen = f.strlen(c, version);
-      var result = f.varFromUtf8(c, version, versionLen);
+      var version = c.zlibVersion();
+      var versionLen = c.strlen(version);
+      var result = c.varFromUtf8(version, versionLen);
       return m.commitPromise(result);
     }).then(function(result) {
       return promise.resolve(result);
     }).finally(function() {
-      m.destroyHandles(c);
+      c.$destroyHandles();
       return m.commitPromise();
     });
   }
@@ -110,29 +109,29 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
     var destLenPtr = null;
     return promise.resolve().then(function() {
       var sourceLen = inputAb.byteLength;
-      var destLenBound = f.compressBound(c, sourceLen);
-      dest = f.malloc(c, destLenBound).cast(t.uint8$);
-      var source = f.arrayBufferMap(c, inputAb).cast(t.uint8$);
-      destLenPtr = m.mallocType(c, t.uint32);
-      f.set(c, destLenPtr, destLenBound);
-      var result = f.compress(c, dest, destLenPtr, source, sourceLen);
+      var destLenBound = c.compressBound(sourceLen);
+      dest = c.malloc(destLenBound).cast(t.uint8$);
+      var source = c.arrayBufferMap(inputAb).cast(t.uint8$);
+      destLenPtr = c.$mallocType(t.uint32);
+      c.set(destLenPtr, destLenBound);
+      var result = c.compress(dest, destLenPtr, source, sourceLen);
       return m.commitPromise(result);
     }).then(function(result) {
       if (result !== Z_OK) {
         return promise.reject(result);
       }
 
-      var destLen = f.get(c, destLenPtr);
-      var destAb = f.arrayBufferCreate(c, destLen);
-      var destAbPtr = f.arrayBufferMap(c, destAb);
-      f.memcpy(c, destAbPtr, dest, destLen);
+      var destLen = c.get(destLenPtr);
+      var destAb = c.arrayBufferCreate(destLen);
+      var destAbPtr = c.arrayBufferMap(destAb);
+      c.memcpy(destAbPtr, dest, destLen);
       return m.commitPromise(destAb);
     }).then(function(destAb) {
       return promise.resolve(destAb);
     }).finally(function() {
-      f.free(c, dest);
-      f.free(c, destLenPtr);
-      m.destroyHandles(c);
+      c.free(dest);
+      c.free(destLenPtr);
+      c.$destroyHandles();
       return m.commitPromise();
     });
   }
@@ -147,11 +146,11 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
     var c = m.makeContext();
 
     return promise.resolve().then(function() {
-      stream = m.mallocType(c, t.z_stream);
-      f.memset(c, stream, 0, t.z_stream.sizeof());
+      stream = c.$mallocType(t.z_stream);
+      c.memset(stream, 0, t.z_stream.sizeof());
 
-      output = f.malloc(c, bufferSize);
-      var result = f.deflateInit(c, stream, level);
+      output = c.malloc(bufferSize);
+      var result = c.deflateInit(stream, level);
       return m.commitPromise(result);
     }).then(function(result) {
       if (result !== Z_OK) {
@@ -180,23 +179,23 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
         inputOffset += preAvailIn;
         var inputOffsetEnd = inputOffset + bufferSize;
         var inputSliceAb = sliceArrayBuffer(inputAb, inputOffset, inputOffsetEnd);
-        var inputSlice = f.arrayBufferMap(c, inputSliceAb);
-        m.setField(c, t.z_stream.fields.next_in, stream, inputSlice.cast(t.uint8$));
-        m.setField(c, t.z_stream.fields.avail_in, stream, inputSliceAb.byteLength);
-        m.setField(c, t.z_stream.fields.next_out, stream, output.cast(t.uint8$));
-        m.setField(c, t.z_stream.fields.avail_out, stream, bufferSize);
+        var inputSlice = c.arrayBufferMap(inputSliceAb);
+        c.$setField(t.z_stream.fields.next_in, stream, inputSlice.cast(t.uint8$));
+        c.$setField(t.z_stream.fields.avail_in, stream, inputSliceAb.byteLength);
+        c.$setField(t.z_stream.fields.next_out, stream, output.cast(t.uint8$));
+        c.$setField(t.z_stream.fields.avail_out, stream, bufferSize);
       }
 
       var inputLeft = inputAb.byteLength - inputOffset;
       var flush = inputLeft < bufferSize ? Z_FINISH : Z_NO_FLUSH;
-      var preAvailIn = m.getField(c, t.z_stream.fields.avail_in, stream);
-      var result = f.deflate(c, stream, flush);
-      var availIn = m.getField(c, t.z_stream.fields.avail_in, stream);
-      var availOut = m.getField(c, t.z_stream.fields.avail_out, stream);
-      var outUsed = f.sub(c, bufferSize, availOut);
-      var compressedAb = f.arrayBufferCreate(c, outUsed);
-      var outputAbPtr = f.arrayBufferMap(c, compressedAb);
-      f.memcpy(c, outputAbPtr, output, outUsed);
+      var preAvailIn = c.$getField(t.z_stream.fields.avail_in, stream);
+      var result = c.deflate(stream, flush);
+      var availIn = c.$getField(t.z_stream.fields.avail_in, stream);
+      var availOut = c.$getField(t.z_stream.fields.avail_out, stream);
+      var outUsed = c.sub(bufferSize, availOut);
+      var compressedAb = c.arrayBufferCreate(outUsed);
+      var outputAbPtr = c.arrayBufferMap(compressedAb);
+      c.memcpy(outputAbPtr, output, outUsed);
       return m.commitPromise(result, availIn, availOut, preAvailIn, compressedAb);
     }).then(function(result, availIn, availOut, preAvailIn, compressedAb) {
       // Consume the final bit of output, if any.
@@ -207,9 +206,9 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
 
       return promise.resolve(outputAb);
     }).finally(function() {
-      f.free(c, stream);
-      f.free(c, output);
-      m.destroyHandles(c);
+      c.free(stream);
+      c.free(output);
+      c.$destroyHandles();
       return m.commitPromise();
     });
   }

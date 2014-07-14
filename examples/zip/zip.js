@@ -17,7 +17,6 @@
 define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
   var m = zip_glue;
   var t = m.types;
-  var f = m.functions;
 
   var Z_DEFLATED = 8;
   var Z_DEFAULT_COMPRESSION = -1;
@@ -38,7 +37,7 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
     var that = this;
     this.c = m.makeContext();
     this.p = promise.resolve().then(function() {
-      that.zipFile = f.zipOpen(that.c, that.filename, 0);  // 0 = append
+      that.zipFile = that.c.zipOpen(that.filename, 0);  // 0 = append
       return m.commitPromise();
     });
   }
@@ -62,7 +61,7 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
     this.p = this.p.then(function() {
       // TODO(binji): Stack allocation of handles...?
       // TODO(binji): If error occurs, debugging info...?
-      var result = f.zipOpenNewFileInZip(c,
+      var result = c.zipOpenNewFileInZip(
         that.zipFile, name, null, null, 0, null, 0, null, Z_DEFLATED,
         Z_DEFAULT_COMPRESSION);
       return m.commitPromise(result);
@@ -73,18 +72,18 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
 
       return readBlobPromise(blob);
     }).then(function(blobAb) {
-      var buf = f.arrayBufferMap(c, blobAb);
+      var buf = c.arrayBufferMap(blobAb);
       var len = blob.size;
-      var result = f.zipWriteInFileInZip(c, that.zipFile, buf, len);
+      var result = c.zipWriteInFileInZip(that.zipFile, buf, len);
       return m.commitPromise(result);
     }).then(function(result) {
       if (result != ZIP_OK) {
         return promise.reject('zipWriteInFileInZip('+name+') failed.');
       }
     }).finally(function() {
-      f.zipCloseFileInZip(c, that.zipFile);
+      c.zipCloseFileInZip(that.zipFile);
       // TODO(binji): Can this be encoded in the command buffer?
-      m.destroyHandles(c);
+      c.$destroyHandles();
       return m.commitPromise();
     });
   };
@@ -93,31 +92,31 @@ define(['promise', 'nacl', 'zip_glue'], function(promise, nacl, zip_glue) {
     var that = this;
     this.p = this.p.then(function() {
       // TODO(binji): handle errors
-      f.zipClose(that.c, that.zipFile, null);
+      that.c.zipClose(that.zipFile, null);
 
       // Get the zip filename.
 
       // Get its size.
-      var statbuf = m.mallocType(that.c, t.stat);
-      f.stat(that.c, that.filename, statbuf);
-      var size = m.getField(that.c, t.stat.fields.st_size, statbuf);
+      var statbuf = that.c.$mallocType(t.stat);
+      that.c.stat(that.filename, statbuf);
+      var size = that.c.$getField(t.stat.fields.st_size, statbuf);
 
       // Create an ArrayBuffer of that size.
-      var ab = f.arrayBufferCreate(that.c, size);
-      var abPtr = f.arrayBufferMap(that.c, ab);
+      var ab = that.c.arrayBufferCreate(size);
+      var abPtr = that.c.arrayBufferMap(ab);
 
       // Open the zip file.
-      var file = f.fopen(that.c, that.filename, "r");
+      var file = that.c.fopen(that.filename, "r");
 
       // Read the data into the ArrayBuffer.
-      f.fread(that.c, abPtr, 1, size, file);
-      f.fclose(that.c, file);
+      that.c.fread(abPtr, 1, size, file);
+      that.c.fclose(file);
 
       return m.commitPromise(ab);
     }).then(function(zippedAb) {
       return promise.resolve(zippedAb);
     }).finally(function() {
-      m.destroyHandles(that.c);
+      that.c.$destroyHandles();
       that.c = null;
       // TODO(binji): Common pattern... simplify into a function?
       m.commitPromise();
