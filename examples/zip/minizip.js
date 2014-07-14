@@ -17,7 +17,6 @@
 define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
   var m = zip_glue;
   var t = m.types;
-  var f = m.functions;
 
   var Z_DEFLATED = 8;
   var Z_DEFAULT_COMPRESSION = -1;
@@ -94,7 +93,7 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
     numFiles++;
 
     try {
-      var h_zipFile = f.zipOpen(this.c, this.filename, APPEND_STATUS_CREATE);
+      var h_zipFile = this.c.zipOpen(this.filename, APPEND_STATUS_CREATE);
       return m.commit(h_zipFile, function(h_zipFile) {
         that.h_zipFile = h_zipFile;
         callback();
@@ -144,21 +143,21 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
           if (!date)
             date = new Date();
 
-          h_fileinfo = m.mallocType(this.c, t.zip_fileinfo);
+          h_fileinfo = this.c.$mallocType(t.zip_fileinfo);
           var tm_fields = t.zip_fileinfo.fields.tmz_date.fields;
-          m.setField(this.c, tm_fields.tm_sec, h_fileinfo, date.getSeconds());
-          m.setField(this.c, tm_fields.tm_min, h_fileinfo, date.getMinutes());
-          m.setField(this.c, tm_fields.tm_hour, h_fileinfo, date.getHours());
-          m.setField(this.c, tm_fields.tm_mday, h_fileinfo, date.getDate());
-          m.setField(this.c, tm_fields.tm_mon, h_fileinfo, date.getMonth());
-          m.setField(this.c, tm_fields.tm_year, h_fileinfo,
-                     date.getFullYear() - 1980);
-          m.setField(this.c, t.zip_fileinfo.fields.dosDate, h_fileinfo, 0);
-          m.setField(this.c, t.zip_fileinfo.fields.internal_fa, h_fileinfo, 0);
+          this.c.$setField(tm_fields.tm_sec, h_fileinfo, date.getSeconds());
+          this.c.$setField(tm_fields.tm_min, h_fileinfo, date.getMinutes());
+          this.c.$setField(tm_fields.tm_hour, h_fileinfo, date.getHours());
+          this.c.$setField(tm_fields.tm_mday, h_fileinfo, date.getDate());
+          this.c.$setField(tm_fields.tm_mon, h_fileinfo, date.getMonth());
+          this.c.$setField(tm_fields.tm_year, h_fileinfo,
+                           date.getFullYear() - 1980);
+          this.c.$setField(t.zip_fileinfo.fields.dosDate, h_fileinfo, 0);
+          this.c.$setField(t.zip_fileinfo.fields.internal_fa, h_fileinfo, 0);
 
           var attributes = opts.fileinfo.attributes || 0;
-          m.setField(this.c, t.zip_fileinfo.fields.external_fa, h_fileinfo,
-                     attributes);
+          this.c.$setField(t.zip_fileinfo.fields.external_fa, h_fileinfo,
+                           attributes);
         }
 
         if (opts.comment) comment = opts.comment;
@@ -166,16 +165,15 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
         if (opts.raw) raw = opts.raw ? 1 : 0;
       }
 
-      var h_result = f.zipOpenNewFileInZip2(this.c,
-                                            this.h_zipFile,
-                                            filename,
-                                            h_fileinfo,
-                                            null, 0,  // extrafield_local
-                                            null, 0,  // extrafield_global
-                                            comment,
-                                            Z_DEFLATED,  // method
-                                            level,
-                                            raw);
+      var h_result = this.c.zipOpenNewFileInZip2(this.h_zipFile,
+                                                 filename,
+                                                 h_fileinfo,
+                                                 null, 0,  // extrafield_local
+                                                 null, 0,  // extrafield_global
+                                                 comment,
+                                                 Z_DEFLATED,  // method
+                                                 level,
+                                                 raw);
 
       m.commit(h_result, function(result) {
         if (result != ZIP_OK) {
@@ -223,10 +221,10 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Zip.prototype.writeArrayBufferToFile = function(ab, callback, errback) {
     try {
-      var h_buf = f.arrayBufferMap(this.c, ab);
+      var h_buf = this.c.arrayBufferMap(ab);
       var h_len = ab.byteLength;
-      var h_result = f.zipWriteInFileInZip(this.c, this.h_zipFile,
-                                           h_buf, h_len);
+      var h_result = this.c.zipWriteInFileInZip(this.h_zipFile,
+                                                h_buf, h_len);
       m.commit(h_result, function(result) {
         if (result != ZIP_OK) {
           errback(new Error('zipWriteInFileInZip failed. result = ' + result));
@@ -244,7 +242,7 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
     try {
       this.openedFile = false;
 
-      var h_result = f.zipCloseFileInZip(this.c, this.h_zipFile);
+      var h_result = this.c.zipCloseFileInZip(this.h_zipFile);
       m.commit(h_result, function(result) {
         if (result != ZIP_OK) {
           errback(new Error('zipCloseFileInZip failed. result = ' + result));
@@ -260,7 +258,7 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Zip.prototype.close = function(globalComment, callback, errback) {
     try {
-      var h_result = f.zipClose(this.c, this.h_zipFile, globalComment);
+      var h_result = this.c.zipClose(this.h_zipFile, globalComment);
       m.commit(h_result, function(result) {
         if (result != ZIP_OK) {
           errback(new Error('zipClose failed. result = ' + result));
@@ -277,25 +275,25 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
   Zip.prototype.getData = function(callback, errback) {
     var that = this;
     try {
-      var h_statbuf = m.mallocType(this.c, t.stat);
-      var h_result = f.stat(this.c, this.filename, h_statbuf);
+      var h_statbuf = this.c.$mallocType(t.stat);
+      var h_result = this.c.stat(this.filename, h_statbuf);
       m.commit(h_result, function(result) {
         if (result != 0) {
           errback(new Error('stat(' + that.filename + ') failed.'));
           return;
         }
 
-        var h_size = m.getField(that.c, t.stat.fields.st_size, h_statbuf);
-        f.free(that.c, h_statbuf);
-        var h_ab = f.arrayBufferCreate(that.c, h_size);
-        var h_abPtr = f.arrayBufferMap(that.c, h_ab);
-        var h_file = f.fopen(that.c, that.filename, "r");
-        f.fread(that.c, h_abPtr, 1, h_size, h_file);
-        f.arrayBufferUnmap(that.c, h_ab);
-        f.fclose(that.c, h_file);
+        var h_size = that.c.$getField(t.stat.fields.st_size, h_statbuf);
+        that.c.free(h_statbuf);
+        var h_ab = that.c.arrayBufferCreate(h_size);
+        var h_abPtr = that.c.arrayBufferMap(h_ab);
+        var h_file = that.c.fopen(that.filename, "r");
+        that.c.fread(h_abPtr, 1, h_size, h_file);
+        that.c.arrayBufferUnmap(h_ab);
+        that.c.fclose(h_file);
 
         m.commit(h_ab, function(ab) {
-          m.destroyHandles(that.c);
+          that.c.$destroyHandles();
           that.c = null;
           m.commit(function() {
             callback(ab);
@@ -329,12 +327,12 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Unzip.prototype.openArrayBuffer = function(ab, callback, errback) {
     try {
-      var h_abPtr = f.arrayBufferMap(this.c, ab);
-      var h_file = f.fopen(this.c, this.filename, "w");
-      f.fwrite(this.c, h_abPtr, 1, ab.byteLength, h_file);
-      f.fclose(this.c, h_file);
+      var h_abPtr = this.c.arrayBufferMap(ab);
+      var h_file = this.c.fopen(this.filename, "w");
+      this.c.fwrite(h_abPtr, 1, ab.byteLength, h_file);
+      this.c.fclose(h_file);
 
-      var h_zipFile = f.unzOpen(this.c, this.filename);
+      var h_zipFile = this.c.unzOpen(this.filename);
       m.commit(h_zipFile, function(h_zipFile) {
         if (result != UNZ_OK) {
           errback(new Error('unzIpen failed. result = ' + result));
@@ -366,7 +364,7 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Unzip.prototype.goToFirstFile = function(callback, errback) {
     try {
-      var h_result = f.unzGoToFirstFile(this.c, this.h_zipFile);
+      var h_result = this.c.unzGoToFirstFile(this.h_zipFile);
       m.commit(h_result, function(result) {
         if (result != UNZ_OK) {
           errback(new Error('unzGoToFirstFile failed. result = ' + result));
@@ -382,7 +380,7 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Unzip.prototype.goToNextFile = function(callback, errback) {
     try {
-      var h_result = f.unzGoToNextFile(this.c, this.h_zipFile);
+      var h_result = this.c.unzGoToNextFile(this.h_zipFile);
       m.commit(h_result, function(result) {
         if (result == UNZ_END_OF_LIST_OF_FILE) {
           callback(false);
@@ -400,8 +398,8 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
   Unzip.prototype.locateFile = function(filename, caseSensitive,
                                         callback, errback) {
     try {
-      var h_result = f.unzLocateFile(this.c, this.h_zipFile, filename,
-                                     caseSensitive);
+      var h_result = this.c.unzLocateFile(this.h_zipFile, filename,
+                                          caseSensitive);
       m.commit(h_result, function(result) {
         if (result == UNZ_END_OF_LIST_OF_FILE) {
           callback(false);
@@ -418,7 +416,7 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Unzip.prototype.openCurrentFile = function(callback, errback) {
     try {
-      var h_result = f.unzOpenCurrentFile(this.c, this.h_zipFile);
+      var h_result = this.c.unzOpenCurrentFile(this.h_zipFile);
       m.commit(h_result, function(result) {
         if (result != UNZ_OK) {
           errback(new Error('unzOpenCurrentFile failed. result = ' + result));
@@ -434,7 +432,7 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Unzip.prototype.closeCurrentFile = function(callback, errback) {
     try {
-      var h_result = f.unzCloseCurrentFile(this.c, this.h_zipFile);
+      var h_result = this.c.unzCloseCurrentFile(this.h_zipFile);
       m.commit(h_result, function(result) {
         if (result != UNZ_OK) {
           errback(new Error('unzCloseCurrentFile failed. result = ' + result));
@@ -450,14 +448,14 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Unzip.prototype.unzReadCurrentFile = function(length, callback, errback) {
     try {
-      var h_buffer = f.malloc(this.c, length);
-      var h_result = f.unzReadCurrentFile(this.c, this.h_zipFile, h_buffer,
-                                          length);
-      var h_ab = f.arrayBufferCreate(this.c, length);
-      var h_abPtr = f.arrayBufferMap(this.c, h_ab);
-      f.memcpy(this.c, h_abPtr, h_buffer, length);
-      f.arrayBufferUnmap(this.c, h_ab);
-      f.free(this.c, h_buffer);
+      var h_buffer = this.c.malloc(length);
+      var h_result = this.c.unzReadCurrentFile(this.h_zipFile, h_buffer,
+                                               length);
+      var h_ab = this.c.arrayBufferCreate(length);
+      var h_abPtr = this.c.arrayBufferMap(h_ab);
+      this.c.memcpy(h_abPtr, h_buffer, length);
+      this.c.arrayBufferUnmap(h_ab);
+      this.c.free(h_buffer);
 
       m.commit(h_result, h_ab, function(result, ab) {
         if (result < 0) {
