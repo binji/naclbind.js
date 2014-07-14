@@ -284,7 +284,6 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
         }
 
         var h_size = that.c.$getField(t.stat.fields.st_size, h_statbuf);
-        that.c.free(h_statbuf);
         var h_ab = that.c.arrayBufferCreate(h_size);
         var h_abPtr = that.c.arrayBufferMap(h_ab);
         var h_file = that.c.fopen(that.filename, "r");
@@ -448,14 +447,13 @@ define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
 
   Unzip.prototype.unzReadCurrentFile = function(length, callback, errback) {
     try {
-      var h_buffer = this.c.malloc(length);
+      var h_buffer = this.c.$malloc(length);
       var h_result = this.c.unzReadCurrentFile(this.h_zipFile, h_buffer,
                                                length);
       var h_ab = this.c.arrayBufferCreate(length);
       var h_abPtr = this.c.arrayBufferMap(h_ab);
       this.c.memcpy(h_abPtr, h_buffer, length);
       this.c.arrayBufferUnmap(h_ab);
-      this.c.free(h_buffer);
 
       m.commit(h_result, h_ab, function(result, ab) {
         if (result < 0) {
