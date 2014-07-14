@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// DO NOT EDIT, this file is auto-generated from //py/templates/builtin.js
+
 [[[
 from helper import *
 from commands import *
