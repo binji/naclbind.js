@@ -110,7 +110,7 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
     return promise.resolve().then(function() {
       var sourceLen = inputAb.byteLength;
       var destLenBound = c.compressBound(sourceLen);
-      dest = c.malloc(destLenBound).cast(t.uint8$);
+      dest = c.$malloc(destLenBound).cast(t.uint8$);
       var source = c.arrayBufferMap(inputAb).cast(t.uint8$);
       destLenPtr = c.$mallocType(t.uint32);
       c.set(destLenPtr, destLenBound);
@@ -129,8 +129,6 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
     }).then(function(destAb) {
       return promise.resolve(destAb);
     }).finally(function() {
-      c.free(dest);
-      c.free(destLenPtr);
       c.$destroyHandles();
       return m.commitPromise();
     });
@@ -149,7 +147,7 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
       stream = c.$mallocType(t.z_stream);
       c.memset(stream, 0, t.z_stream.sizeof());
 
-      output = c.malloc(bufferSize);
+      output = c.$malloc(bufferSize);
       var result = c.deflateInit(stream, level);
       return m.commitPromise(result);
     }).then(function(result) {
@@ -206,8 +204,6 @@ define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
 
       return promise.resolve(outputAb);
     }).finally(function() {
-      c.free(stream);
-      c.free(output);
       c.$destroyHandles();
       return m.commitPromise();
     });

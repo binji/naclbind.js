@@ -45,6 +45,7 @@ require(['promise', 'nacl', 'git_glue'], function(promise, nacl, git_glue) {
       }
 
       repo = c.get(repo).cast(t.git_repository$);
+      repo.setFinalizer(c.git_repository_free.bind(c, repo));
 
       sig = c.$mallocType(t.git_signature$);
       var result = c.git_signature_now(sig, "Foo Bar", "foobar@example.com");
@@ -55,6 +56,7 @@ require(['promise', 'nacl', 'git_glue'], function(promise, nacl, git_glue) {
       }
 
       sig = c.get(sig).cast(t.git_signature$);
+      sig.setFinalizer(c.git_signature_free.bind(c, sig));
 
       index = c.$mallocType(t.git_index$);
       var result = c.git_repository_index(index, repo);
@@ -65,15 +67,11 @@ require(['promise', 'nacl', 'git_glue'], function(promise, nacl, git_glue) {
       }
 
       index = c.get(index).cast(t.git_index$);
+      index.setFinalizer(c.git_index_free.bind(c, index));
+
       tree_id = c.$mallocType(t.git_oid);
       var result = c.git_index_write_tree(tree_id, index);
       return m.commitPromise(result);
-    }).then(function(result) {
-      if (result < 0) {
-        return writeError();
-      }
-
-      c.git_index_free(index);
     }).then(function(result) {
       if (result < 0) {
         return writeError();
@@ -88,24 +86,16 @@ require(['promise', 'nacl', 'git_glue'], function(promise, nacl, git_glue) {
       }
 
       tree = c.get(tree).cast(t.git_tree$);
+      tree.setFinalizer(c.git_tree_free.bind(c, tree));
 
       commit_id = c.$mallocType(t.git_oid);
       var result = c.git_commit_create(commit_id, repo, "HEAD", sig, sig,
                                        null, "Initial Commit", tree, 0, null);
 
       return m.commitPromise(result);
-    }).then(function(result) {
-      if (result < 0) {
-        return writeError();
-      }
-
-      c.git_tree_free(tree);
-      c.git_signature_free(sig);
-      return m.commitPromise();
     }).catch(function(err) {
       console.error('error: ' + err.stack);
     }).finally(function() {
-      c.git_repository_free(repo);
       c.git_threads_shutdown();
       c.$destroyHandles();
       return m.commitPromise();

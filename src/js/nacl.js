@@ -247,6 +247,8 @@ define(['promise', 'builtin'], function(promise, builtin) {
   };
 
   Module.prototype.destroyHandles = function(handles) {
+    this.handles_.runFinalizers(handles);
+    this.pushCommand('*destroyHandles', 0, handles, 0);
     this.handles_.destroyHandles(handles);
   };
 
@@ -574,10 +576,8 @@ define(['promise', 'builtin'], function(promise, builtin) {
   };
 
   Context.prototype.$destroyHandles = function() {
-    this.$module_.pushCommand('*destroyHandles', 0, this.$handles_, 0);
-
-    // Remove them from the module's handle list too.
     this.$module_.destroyHandles(this.$handles_);
+    this.$handles_ = [];
   };
 
   Context.prototype.$setField = function(structField, struct_p, value) {
@@ -606,9 +606,19 @@ define(['promise', 'builtin'], function(promise, builtin) {
     }
   };
 
+  Context.prototype.$malloc = function(size) {
+    var handle = this.malloc(size);
+    handle.setFinalizer(this.free.bind(this, handle));
+    return handle;
+  };
+
   Context.prototype.$mallocType = function(type) {
     var pointerType = this.$module_.getPointerType(type);
-    return this.malloc(type.sizeof()).cast(pointerType);
+    var size = type.sizeof();
+    var handle = this.malloc(size).cast(pointerType);
+
+    handle.setFinalizer(this.free.bind(this, handle));
+    return handle;
   };
 
 
@@ -632,17 +642,34 @@ define(['promise', 'builtin'], function(promise, builtin) {
     return id;
   };
 
+  HandleList.prototype.runFinalizers = function(handles) {
+    for (var id in handles) {
+      if (!handles.hasOwnProperty(id)) {
+        continue;
+      }
+
+      // TODO(binji): I think this will need to be reverse-order of the call to
+      // setFinalizer; otherwise it seems likely that handles that reference
+      // other handles will be destroyed out-of-order.
+      handles[id].finalize();
+    }
+  };
+
   HandleList.prototype.destroyHandles = function(handles) {
-    var that = this;
-    handles.forEach(function(handle) {
-      delete that.handleIdHash_[handle.id];
-    });
+    for (var id in handles) {
+      if (!handles.hasOwnProperty(id)) {
+        continue;
+      }
+
+      var handle = handles[id];
+      delete this.handleIdHash_[handle.id];
+    }
   };
 
 
   //// Handle //////////////////////////////////////////////////////////////////
   function Handle(handleList, context, type, id) {
-    this.handleList = handleList;
+    this.handleList_ = handleList;
     this.type = type;
     if (id !== undefined) {
       this.id = id;
@@ -651,8 +678,26 @@ define(['promise', 'builtin'], function(promise, builtin) {
       context.$registerHandle(this);
     }
 
-    this.context = context;
+    this.context_ = context;
+    this.clonedFrom_ = null;
+    this.finalizer_ = null;
   }
+
+  Handle.prototype.getRoot_ = function() {
+    var handle = this;
+    while (handle.clonedFrom_ !== null) {
+      handle = handle.clonedFrom_;
+      assert(handle instanceof Handle);
+    }
+
+    return handle;
+  };
+
+  Handle.prototype.setFinalizer = function(finalizer) {
+    var root = this.getRoot_();
+    assert(root.finalizer_ === null);
+    root.finalizer_ = finalizer;
+  };
 
   Handle.prototype.toString = function() {
     return '[Handle ' + this.id + ' ' + this.type.toString() + ']';
@@ -660,7 +705,17 @@ define(['promise', 'builtin'], function(promise, builtin) {
 
   Handle.prototype.cast = function(newType) {
     // TODO(binji): check validity of cast
-    return new Handle(this.handleList, this.context, newType, this.id);
+    var handle = new Handle(this.handleList_, this.context_, newType, this.id);
+    handle.clonedFrom_ = this;
+    return handle;
+  };
+
+  Handle.prototype.finalize = function() {
+    if (!this.finalizer_) {
+      return;
+    }
+
+    this.finalizer_();
   };
 
 
