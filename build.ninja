@@ -40,6 +40,7 @@ helper-py = py/helper.py
 commands-py = py/commands.py
 template-glue-c = py/templates/glue.c
 template-glue-js = py/templates/glue.js
+template-app-c = py/templates/app.c
 
 
 rule cp

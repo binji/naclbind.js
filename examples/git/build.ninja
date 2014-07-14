@@ -18,12 +18,14 @@ ldflags-git = -Lexamples/git/payload/lib
 # git
 git-json = examples/git/git.json
 
+build out/git/gen/git_app.c: template $template-app-c | $easy-template $helper-py $git-json
+  json = $git-json
 build out/git/gen/git_glue.c: template $template-glue-c | $easy-template $helper-py $commands-py $git-json
   json = $git-json
 build out/git/git_glue.js: template $template-glue-js | $easy-template $helper-py $git-json
   json = $git-json
 
-build out/git/obj/git_app.o: cc examples/git/git_app.c
+build out/git/obj/git_app.o: cc out/git/gen/git_app.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-git
 build out/git/obj/git_glue.o: cc out/git/gen/git_glue.c

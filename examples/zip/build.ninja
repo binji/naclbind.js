@@ -17,6 +17,8 @@ ccflags-zip = -DUSE_FILE32API -DNOCRYPT -Iexamples/zip -Iout/zip/gen
 # zip
 zip-json = examples/zip/zip.json
 
+build out/zip/gen/zip_app.c: template $template-app-c | $easy-template $helper-py $zip-json
+  json = $zip-json
 build out/zip/gen/zip_glue.c: template $template-glue-c | $easy-template $helper-py $commands-py $zip-json
   json = $zip-json
 build out/zip/zip_glue.js: template $template-glue-js | $easy-template $helper-py $zip-json
@@ -31,7 +33,7 @@ build out/zip/obj/zip.o: cc examples/zip/zip.c
 build out/zip/obj/unzip.o: cc examples/zip/unzip.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
-build out/zip/obj/zip_app.o: cc examples/zip/zip_app.c
+build out/zip/obj/zip_app.o: cc out/zip/gen/zip_app.c
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zip
 build out/zip/obj/zip_glue.o: cc out/zip/gen/zip_glue.c

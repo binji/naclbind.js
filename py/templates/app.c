@@ -1,21 +1,29 @@
-// Copyright 2014 Ben Smith. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* Copyright 2014 Ben Smith. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* DO NOT EDIT, this file is auto-generated from //py/templates/app.c */
+
+[[[
+from helper import *
+]]]
 
 #include <pthread.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/mount.h>
+#include <sys/stat.h>
 
 #include <ppapi/c/pp_errors.h>
 #include <ppapi/c/pp_module.h>
@@ -28,7 +36,6 @@
 
 #include "nacl_io/nacl_io.h"
 
-#include "bool.h"
 #include "commands.h"
 #include "error.h"
 #include "interfaces.h"
@@ -36,7 +43,7 @@
 #include "queue.h"
 #include "var.h"
 
-extern bool HandleZlibCommand(Command* command);
+extern bool Handle{{Titlecase(name)}}Command(Command* command);
 
 static PPB_GetInterface get_browser_interface = NULL;
 static pthread_t g_handle_message_thread;
@@ -84,7 +91,7 @@ static void HandleMessage(struct PP_Var var) {
       continue;
     }
 
-    if (!HandleZlibCommand(command)) {
+    if (!Handle{{Titlecase(name)}}Command(command)) {
       if (!HandleBuiltinCommand(command)) {
         VERROR("Unknown command: %s", command->command);
       }
@@ -169,3 +176,4 @@ PP_EXPORT const void* PPP_GetInterface(const char* interface_name) {
 }
 
 PP_EXPORT void PPP_ShutdownModule() {}
+
