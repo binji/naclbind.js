@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-/* DO NOT EDIT, this file is auto-generated from //py/templates/commands.c */
+/* DO NOT EDIT, this file is auto-generated from //templates/commands.c */
 
 [[[
 from helper import *

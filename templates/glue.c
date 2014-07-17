@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-/* DO NOT EDIT, this file is auto-generated from //py/templates/glue.c */
+/* DO NOT EDIT, this file is auto-generated from //templates/glue.c */
 
 [[[
 from helper import *

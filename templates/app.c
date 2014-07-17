@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-/* DO NOT EDIT, this file is auto-generated from //py/templates/app.c */
+/* DO NOT EDIT, this file is auto-generated from //templates/app.c */
 
 [[[
 from helper import *
