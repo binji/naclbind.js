@@ -23,9 +23,9 @@ types, functions = FixTypes(types, functions)
 
 "use strict";
 
-var nacl = require('nacl');
+var $2nacl = require('2nacljs');
 
-var m = nacl.makeModule(
+var m = $2nacl.makeModule(
     '{{name}}-nacl', '{{name}}.nmf', 'application/x-pnacl');
 var t = m.types;
 var f = m.functions;
