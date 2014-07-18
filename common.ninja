@@ -1,0 +1,89 @@
+# Copyright 2014 Ben Smith. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+nacl_sdk_root = out/nacl_sdk/pepper_canary
+toolchain_dir = $nacl_sdk_root/toolchain
+toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
+pnacl-ar = $toolchain_dir_pnacl/bin/pnacl-ar
+pnacl-cc = $toolchain_dir_pnacl/bin/pnacl-clang
+pnacl-cxx = $toolchain_dir_pnacl/bin/pnacl-clang++
+pnacl-strip = $toolchain_dir_pnacl/bin/pnacl-strip
+pnacl-finalize = $toolchain_dir_pnacl/bin/pnacl-finalize
+pnacl-translate = $toolchain_dir_pnacl/bin/pnacl-translate
+nmf = $nacl_sdk_root/tools/create_nmf.py
+
+ccflags-default = -Wall -Wno-unused-value -Wno-long-long -Werror -pthread
+ccflags-debug = -g -O0
+ccflags-release = -g -O2 -DNDEBUG
+ccflags-include = -I$nacl_sdk_root/include -Isrc/c -Iout/2nacl/gen
+
+easy-template = bin/easy_template.py
+helper-py = bin/helper.py
+commands-py = bin/commands.py
+template-glue-c = templates/glue.c
+template-glue-js = templates/glue.js
+template-app-c = templates/app.c
+
+nacl-sdk-zip = out/nacl_sdk.zip
+nacl-sdk = out/nacl_sdk/naclsdk
+nacl-sdk-url = http://storage.googleapis.com/nativeclient-mirror/nacl/nacl_sdk/nacl_sdk.zip
+
+# SDK
+rule wget
+  command = wget $url -O $out
+  description = WGET $out
+rule unzip
+  command = unzip $in -d $outdir
+  description = UNZIP $in
+rule naclsdk
+  command = $nacl-sdk update $bundle --force
+  description = NACLSDK UPDATE $bundle
+
+# TODO(binji) - enable this when I have internet access. :)
+#build $nacl-sdk-zip: wget
+#  url = $nacl-sdk-url
+#build $nacl-sdk: unzip $nacl-sdk-zip
+#  outdir = out
+#build $nacl_sdk_root: naclsdk | $nacl-sdk
+#  bundle = pepper_canary
+
+rule cp
+  command = cp $in $out
+  description = COPY $out
+rule cc
+  command = $cc $ccflags -MMD -MF $out.d -c $in -o $out
+  description = CC $out
+  depfile = $out.d
+rule ar
+  command = rm -f $out && $ar rcs $out $in
+  description = AR $out
+rule link
+  command = $cc $in $ldflags $libs -o $out
+  description = LINK $out
+rule finalize
+  command = $pnacl-finalize $in -o $out
+  description = FINALIZE $out
+rule translate
+  command = $pnacl-translate $in --allow-llvm-bitcode-input -arch $arch -o $
+      $out
+  description = TRANSLATE $arch $out
+rule nmf
+  command = $nmf $in -o $out
+  description = NMF $out
+rule template
+  command = $easy-template -j $json $in > $out
+  description = TEMPLATE $out
+rule browserify
+  command = browserify $in -o $out --standalone $name
+  description = BROWSERIFY $out

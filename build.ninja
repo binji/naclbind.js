@@ -12,77 +12,61 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-nacl_sdk_root = out/nacl_sdk/pepper_canary
-toolchain_dir = $nacl_sdk_root/toolchain
-toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
-pnacl-ar = $toolchain_dir_pnacl/bin/pnacl-ar
-pnacl-cc = $toolchain_dir_pnacl/bin/pnacl-clang
-pnacl-cxx = $toolchain_dir_pnacl/bin/pnacl-clang++
-pnacl-strip = $toolchain_dir_pnacl/bin/pnacl-strip
-pnacl-finalize = $toolchain_dir_pnacl/bin/pnacl-finalize
-pnacl-translate = $toolchain_dir_pnacl/bin/pnacl-translate
-nmf = $nacl_sdk_root/tools/create_nmf.py
+include common.ninja
 
-ccflags-default = -Wall -Wno-unused-value -Wno-long-long -Werror -pthread
-ccflags-debug = -g -O0
-ccflags-release = -g -O2 -DNDEBUG
-ccflags-include = -I$nacl_sdk_root/include -Isrc/c -Iout/2nacl/gen
+template-builtin-js = templates/builtin.js
+template-type-h = templates/type.h
+template-type-c = templates/type.c
+template-commands-c = templates/commands.c
 
-easy-template = bin/easy_template.py
-helper-py = bin/helper.py
-commands-py = bin/commands.py
-template-glue-c = templates/glue.c
-template-glue-js = templates/glue.js
-template-app-c = templates/app.c
+builtin-json = src/json/builtin.json
+build src/js/builtin.js: template $template-builtin-js | $easy-template $helper-py $commands-py $builtin-json
+  json = $builtin-json
+build src/c/type.h: template $template-type-h | $easy-template $helper-py $commands-py $builtin-json
+  json = $builtin-json
+build src/c/type.c: template $template-type-c | $easy-template $helper-py $commands-py $builtin-json
+  json = $builtin-json
+build src/c/commands.c: template $template-commands-c | $easy-template $helper-py $commands-py $builtin-json
+  json = $builtin-json
 
-nacl-sdk-zip = out/nacl_sdk.zip
-nacl-sdk = out/nacl_sdk/naclsdk
-nacl-sdk-url = http://storage.googleapis.com/nativeclient-mirror/nacl/nacl_sdk/nacl_sdk.zip
+build out/2nacl/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release
+build out/2nacl/obj/commands.o: cc src/c/commands.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release
+build out/2nacl/obj/handle.o: cc src/c/handle.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release
+build out/2nacl/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release
+build out/2nacl/obj/message.o: cc src/c/message.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release
+build out/2nacl/obj/queue.o: cc src/c/queue.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release
+build out/2nacl/obj/type.o: cc src/c/type.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release
+build out/2nacl/obj/var.o: cc src/c/var.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags-default $ccflags-include $ccflags-release
+build out/2nacl/lib2nacl.a: ar out/2nacl/obj/builtin_funcs.o $
+                               out/2nacl/obj/commands.o $
+                               out/2nacl/obj/handle.o $
+                               out/2nacl/obj/interfaces.o $
+                               out/2nacl/obj/message.o $
+                               out/2nacl/obj/queue.o $
+                               out/2nacl/obj/type.o $
+                               out/2nacl/obj/var.o $
+                               || $nacl_sdk_root
+  ar = $pnacl-ar
 
-# SDK
-rule wget
-  command = wget $url -O $out
-  description = WGET $out
-rule unzip
-  command = unzip $in -d $outdir
-  description = UNZIP $in
-rule naclsdk
-  command = $nacl-sdk update $bundle --force
-  description = NACLSDK UPDATE $bundle
-
-# TODO(binji) - enable this when I have internet access. :)
-#build $nacl-sdk-zip: wget
-#  url = $nacl-sdk-url
-#build $nacl-sdk: unzip $nacl-sdk-zip
-#  outdir = out
-#build $nacl_sdk_root: naclsdk | $nacl-sdk
-#  bundle = pepper_canary
-
-rule cp
-  command = cp $in $out
-  description = COPY $out
-rule cc
-  command = $cc $ccflags -MMD -MF $out.d -c $in -o $out
-  description = CC $out
-  depfile = $out.d
-rule ar
-  command = rm -f $out && $ar rcs $out $in
-  description = AR $out
-rule link
-  command = $cc $in $ldflags $libs -o $out
-  description = LINK $out
-rule finalize
-  command = $pnacl-finalize $in -o $out
-  description = FINALIZE $out
-rule translate
-  command = $pnacl-translate $in --allow-llvm-bitcode-input -arch $arch -o $
-      $out
-  description = TRANSLATE $arch $out
-rule nmf
-  command = $nmf $in -o $out
-  description = NMF $out
-rule template
-  command = $easy-template -j $json $in > $out
-  description = TEMPLATE $out
-
-subninja src/build.ninja
+# dist
+build dist/lib2nacl.a: cp out/2nacl/lib2nacl.a
+build dist/2nacl.js: browserify src/js/nacl.js | $
+                                src/js/promise.js $
+                                src/js/builtin.js
+  name = tonacl
