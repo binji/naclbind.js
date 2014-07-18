@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-chrome = /opt/google/chrome-unstable/google-chrome-unstable
 nacl_sdk_root = out/nacl_sdk/pepper_canary
 toolchain_dir = $nacl_sdk_root/toolchain
 toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
@@ -23,25 +22,41 @@ pnacl-strip = $toolchain_dir_pnacl/bin/pnacl-strip
 pnacl-finalize = $toolchain_dir_pnacl/bin/pnacl-finalize
 pnacl-translate = $toolchain_dir_pnacl/bin/pnacl-translate
 nmf = $nacl_sdk_root/tools/create_nmf.py
-run-py = py/run.py
 
 ccflags-default = -Wall -Wno-unused-value -Wno-long-long -Werror -pthread
 ccflags-debug = -g -O0
 ccflags-release = -g -O2 -DNDEBUG
 ccflags-include = -I$nacl_sdk_root/include -Isrc/c -Iout/2nacl/gen
 
-ldflags-default = -Lout/2nacl
-ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug
-ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
-libs-default = -lnacl_io -lz -lppapi_cpp -lppapi
+easy-template = bin/easy_template.py
+helper-py = bin/helper.py
+commands-py = bin/commands.py
+template-glue-c = templates/glue.c
+template-glue-js = templates/glue.js
+template-app-c = templates/app.c
 
-easy-template = py/easy_template.py
-helper-py = py/helper.py
-commands-py = py/commands.py
-template-glue-c = py/templates/glue.c
-template-glue-js = py/templates/glue.js
-template-app-c = py/templates/app.c
+nacl-sdk-zip = out/nacl_sdk.zip
+nacl-sdk = out/nacl_sdk/naclsdk
+nacl-sdk-url = http://storage.googleapis.com/nativeclient-mirror/nacl/nacl_sdk/nacl_sdk.zip
 
+# SDK
+rule wget
+  command = wget $url -O $out
+  description = WGET $out
+rule unzip
+  command = unzip $in -d $outdir
+  description = UNZIP $in
+rule naclsdk
+  command = $nacl-sdk update $bundle --force
+  description = NACLSDK UPDATE $bundle
+
+# TODO(binji) - enable this when I have internet access. :)
+#build $nacl-sdk-zip: wget
+#  url = $nacl-sdk-url
+#build $nacl-sdk: unzip $nacl-sdk-zip
+#  outdir = out
+#build $nacl_sdk_root: naclsdk | $nacl-sdk
+#  bundle = pepper_canary
 
 rule cp
   command = cp $in $out
@@ -69,12 +84,5 @@ rule nmf
 rule template
   command = $easy-template -j $json $in > $out
   description = TEMPLATE $out
-rule run
-  pool = console
-  command = $run-py -C $dir -P $page -p 0 -- $chrome --no-first-run --user-data-dir=user-data-dir
-  description = RUN $page
 
 subninja src/build.ninja
-subninja examples/git/build.ninja
-subninja examples/zip/build.ninja
-subninja examples/zlib/build.ninja

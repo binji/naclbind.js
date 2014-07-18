@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-template-builtin-js = py/templates/builtin.js
-template-type-h = py/templates/type.h
-template-type-c = py/templates/type.c
-template-commands-c = py/templates/commands.c
+template-builtin-js = templates/builtin.js
+template-type-h = templates/type.h
+template-type-c = templates/type.c
+template-commands-c = templates/commands.c
 
-builtin-json = py/builtin.json
+builtin-json = src/json/builtin.json
 build src/js/builtin.js: template $template-builtin-js | $easy-template $helper-py $commands-py $builtin-json
   json = $builtin-json
 build src/c/type.h: template $template-type-h | $easy-template $helper-py $commands-py $builtin-json
@@ -27,28 +27,28 @@ build src/c/type.c: template $template-type-c | $easy-template $helper-py $comma
 build src/c/commands.c: template $template-commands-c | $easy-template $helper-py $commands-py $builtin-json
   json = $builtin-json
 
-build out/2nacl/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h
+build out/2nacl/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/commands.o: cc src/c/commands.c || src/c/type.h
+build out/2nacl/obj/commands.o: cc src/c/commands.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/handle.o: cc src/c/handle.c || src/c/type.h
+build out/2nacl/obj/handle.o: cc src/c/handle.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h
+build out/2nacl/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/message.o: cc src/c/message.c || src/c/type.h
+build out/2nacl/obj/message.o: cc src/c/message.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/queue.o: cc src/c/queue.c || src/c/type.h
+build out/2nacl/obj/queue.o: cc src/c/queue.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/type.o: cc src/c/type.c || src/c/type.h
+build out/2nacl/obj/type.o: cc src/c/type.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/var.o: cc src/c/var.c || src/c/type.h
+build out/2nacl/obj/var.o: cc src/c/var.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
 build out/2nacl/lib2nacl.a: ar out/2nacl/obj/builtin_funcs.o $
@@ -58,5 +58,13 @@ build out/2nacl/lib2nacl.a: ar out/2nacl/obj/builtin_funcs.o $
                                out/2nacl/obj/message.o $
                                out/2nacl/obj/queue.o $
                                out/2nacl/obj/type.o $
-                               out/2nacl/obj/var.o
+                               out/2nacl/obj/var.o $
+                               || $nacl_sdk_root
   ar = $pnacl-ar
+
+# dist
+build dist/lib2nacl.a: cp out/2nacl/lib2nacl.a
+# TODO(binji): concatenate?
+build dist/builtin.js: cp src/js/builtin.js
+build dist/promise.js: cp src/js/promise.js
+build dist/nacl.js: cp src/js/nacl.js
