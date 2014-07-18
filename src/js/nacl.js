@@ -203,7 +203,9 @@ Module.prototype.commit = function() {
 
     // convert back from Ids to Handles; keep the primitive values the same.
     var handles = Array.prototype.map.call(result.values, idToHandle);
-    callback.apply(null, handles);
+
+    // node.js-style callback. First param is error, second param is result.
+    callback(null, handles);
   });
 };
 

@@ -67,6 +67,5 @@ build out/2nacl/lib2nacl.a: ar out/2nacl/obj/builtin_funcs.o $
 # dist
 build dist/lib2nacl.a: cp out/2nacl/lib2nacl.a
 build dist/2nacl.js: browserify src/js/nacl.js | $
-                                src/js/promise.js $
                                 src/js/builtin.js
   name = tonacl
