@@ -14,154 +14,151 @@
 
 "use strict";
 
-define([], function() {
-  function ArgumentsWrapper(args) {
-    this.args = args;
-  }
+function ArgumentsWrapper(args) {
+  this.args = args;
+}
 
-  function wrapArguments(args) {
-    return new ArgumentsWrapper(args);
-  }
+function wrapArguments(args) {
+  return new ArgumentsWrapper(args);
+}
 
-  function wrapPromise(p) {
-    if (p instanceof PromisePlus) {
-      return p;
-    }
-    return new PromisePlus(p);
-  }
-
-  function unwrapPromise(p) {
-    if (p instanceof PromisePlus) {
-      return p.promise;
-    }
-
+function wrapPromise(p) {
+  if (p instanceof PromisePlus) {
     return p;
   }
+  return new PromisePlus(p);
+}
 
-  function PromisePlus(f) {
-    if (f instanceof Promise) {
-      this.promise = f;
-    } else if ((f instanceof Function) && f.length === 3) {
-      // Function that uses the "resolveMany" callback.
-      this.promise = new Promise(function(resolve, reject) {
-        f(function(x) { return resolve(x); },
-          function(x) { return reject(x); },
-          function() { return resolve(wrapArguments(arguments)); });
-      });
+function unwrapPromise(p) {
+  if (p instanceof PromisePlus) {
+    return p.promise;
+  }
+
+  return p;
+}
+
+function PromisePlus(f) {
+  if (f instanceof Promise) {
+    this.promise = f;
+  } else if ((f instanceof Function) && f.length === 3) {
+    // Function that uses the "resolveMany" callback.
+    this.promise = new Promise(function(resolve, reject) {
+      f(function(x) { return resolve(x); },
+        function(x) { return reject(x); },
+        function() { return resolve(wrapArguments(arguments)); });
+    });
+  } else {
+    this.promise = new Promise(f);
+  }
+}
+PromisePlus.prototype = Object.create(Promise.prototype);
+PromisePlus.prototype.constructor = PromisePlus;
+
+PromisePlus.resolve = function(x) {
+  return new PromisePlus(function(resolve) { resolve(x); });
+};
+
+PromisePlus.reject = function(x) {
+  return new PromisePlus(function(resolve, reject) { reject(x); });
+};
+
+PromisePlus.prototype.then = function(resolve, reject) {
+  function resolveFn(value) {
+    if (value instanceof ArgumentsWrapper) {
+      return unwrapPromise(resolve.apply(null, value.args));
     } else {
-      this.promise = new Promise(f);
+      return unwrapPromise(resolve(value));
     }
   }
-  PromisePlus.prototype = Object.create(Promise.prototype);
-  PromisePlus.prototype.constructor = PromisePlus;
 
-  PromisePlus.resolve = function(x) {
-    return new PromisePlus(function(resolve) { resolve(x); });
+  function rejectFn(value) {
+    return unwrapPromise(reject(value));
+  }
+
+  return wrapPromise(this.promise.then(
+      resolve ? resolveFn : undefined,
+      reject ? rejectFn : undefined));
+};
+
+PromisePlus.prototype.catch = function(reject) {
+  function rejectFn(value) {
+    return unwrapPromise(reject(value));
   };
 
-  PromisePlus.reject = function(x) {
-    return new PromisePlus(function(resolve, reject) { reject(x); });
-  };
+  return wrapPromise(this.promise.catch(reject ? rejectFn : undefined));
+};
 
-  PromisePlus.prototype.then = function(resolve, reject) {
-    function resolveFn(value) {
-      if (value instanceof ArgumentsWrapper) {
-        return unwrapPromise(resolve.apply(null, value.args));
+PromisePlus.prototype.finally = function(f) {
+  function resolveFn() {
+    var args = arguments;
+    return resolve().then(f).then(function() {
+      return resolveMany.apply(null, args);
+    });
+  }
+
+  function rejectFn(value) {
+    return resolve().then(f).then(function() {
+      return reject(value);
+    });
+  }
+
+  return this.then(resolveFn, rejectFn);
+};
+
+PromisePlus.prototype.if = function(cond, trueBlock, falseBlock) {
+  return this.then(function() {
+    var resolvedArgs = resolveMany.apply(null, arguments);
+    return resolvedArgs.then(cond).then(function(condResult) {
+      if (condResult) {
+        return resolvedArgs.then(trueBlock);
       } else {
-        return unwrapPromise(resolve(value));
+        if (falseBlock) {
+          return resolvedArgs.then(falseBlock);
+        } else {
+          return undefined;
+        }
       }
-    }
-
-    function rejectFn(value) {
-      return unwrapPromise(reject(value));
-    }
-
-    return wrapPromise(this.promise.then(
-        resolve ? resolveFn : undefined,
-        reject ? rejectFn : undefined));
-  };
-
-  PromisePlus.prototype.catch = function(reject) {
-    function rejectFn(value) {
-      return unwrapPromise(reject(value));
-    };
-
-    return wrapPromise(this.promise.catch(reject ? rejectFn : undefined));
-  };
-
-  PromisePlus.prototype.finally = function(f) {
-    function resolveFn() {
-      var args = arguments;
-      return resolve().then(f).then(function() {
-        return resolveMany.apply(null, args);
-      });
-    }
-
-    function rejectFn(value) {
-      return resolve().then(f).then(function() {
-        return reject(value);
-      });
-    }
-
-    return this.then(resolveFn, rejectFn);
-  };
-
-  PromisePlus.prototype.if = function(cond, trueBlock, falseBlock) {
-    return this.then(function() {
-      var resolvedArgs = resolveMany.apply(null, arguments);
-      return resolvedArgs.then(cond).then(function(condResult) {
-        if (condResult) {
-          return resolvedArgs.then(trueBlock);
-        } else {
-          if (falseBlock) {
-            return resolvedArgs.then(falseBlock);
-          } else {
-            return undefined;
-          }
-        }
-      });
     });
-  };
+  });
+};
 
-  PromisePlus.prototype.while = function(cond, block) {
-    return this.then(function loop() {
-      var resolvedArgs = resolveMany.apply(null, arguments);
-      return resolvedArgs.then(cond).then(function(condResult) {
-        if (condResult) {
-          return resolvedArgs.then(block).then(function() {
-            return loop.apply(null, arguments);
-          });
-        } else {
-          return resolvedArgs;
-        }
-      });
+PromisePlus.prototype.while = function(cond, block) {
+  return this.then(function loop() {
+    var resolvedArgs = resolveMany.apply(null, arguments);
+    return resolvedArgs.then(cond).then(function(condResult) {
+      if (condResult) {
+        return resolvedArgs.then(block).then(function() {
+          return loop.apply(null, arguments);
+        });
+      } else {
+        return resolvedArgs;
+      }
     });
-  };
+  });
+};
 
-  function reject(value) {
-    return PromisePlus.reject(value);
-  }
+function reject(value) {
+  return PromisePlus.reject(value);
+}
 
-  function resolve(value) {
-    return PromisePlus.resolve(value);
-  }
+function resolve(value) {
+  return PromisePlus.resolve(value);
+}
 
-  function resolveMany() {
-    return PromisePlus.resolve(wrapArguments(arguments));
-  }
+function resolveMany() {
+  return PromisePlus.resolve(wrapArguments(arguments));
+}
 
-  // Exports
-  return {
-    // exported constructors
-    PromisePlus: PromisePlus,
+// Exports
+module.exports = {
+  // exported constructors
+  PromisePlus: PromisePlus,
 
-    // exported functions
-    reject: reject,
-    resolve: resolve,
-    resolveMany: resolveMany,
-  };
-
-});
+  // exported functions
+  reject: reject,
+  resolve: resolve,
+  resolveMany: resolveMany,
+};
 
 /*
 // Some stuff that is useful for testing this promise library.

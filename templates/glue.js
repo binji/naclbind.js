@@ -23,23 +23,24 @@ types, functions = FixTypes(types, functions)
 
 "use strict";
 
-define(['nacl'], function(nacl) {
-  var m = nacl.makeModule(
-      '{{name}}-nacl', '{{name}}.nmf', 'application/x-pnacl');
-  var t = m.types;
-  var f = m.functions;
+var nacl = require('nacl');
+
+var m = nacl.makeModule(
+    '{{name}}-nacl', '{{name}}.nmf', 'application/x-pnacl');
+var t = m.types;
+var f = m.functions;
 
 [[for type in types.no_builtins.itervalues():]]
 [[  if type.is_alias:]]
-  m.makeAliasType('{{type.js_ident}}', t.{{type.alias_of.js_ident}});
+m.makeAliasType('{{type.js_ident}}', t.{{type.alias_of.js_ident}});
 [[  elif type.is_struct:]]
-  m.makeStructType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {
+m.makeStructType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {
 [[    for field in type.fields:]]
-    {{field.name}}: {type: t.{{field.type.js_ident}}, offset: {{field.offset}}},
+  {{field.name}}: {type: t.{{field.type.js_ident}}, offset: {{field.offset}}},
 [[    ]]
-  });
+});
 [[  elif type.is_pointer:]]
-  m.makePointerType({{type.id}}, '{{type.js_ident}}', t.{{type.base_type.js_ident}});
+m.makePointerType({{type.id}}, '{{type.js_ident}}', t.{{type.base_type.js_ident}});
 [[]]
 
 [[[
@@ -53,14 +54,13 @@ def ReturnTypeString(fn_type):
 ]]]
 [[for fn_type in types.function_types.itervalues():]]
 [[  if fn_type.is_alias:]]
-  var fnType_{{fn_type.js_ident}} = fnType_{{fn_type.alias_of.js_ident}};
+var fnType_{{fn_type.js_ident}} = fnType_{{fn_type.alias_of.js_ident}};
 [[  else:]]
-  var fnType_{{fn_type.js_ident}} = m.makeFunctionType({{fn_type.id}}{{ReturnTypeString(fn_type)}}{{ArgTypesString(fn_type)}});
+var fnType_{{fn_type.js_ident}} = m.makeFunctionType({{fn_type.id}}{{ReturnTypeString(fn_type)}}{{ArgTypesString(fn_type)}});
 [[]]
 
 [[for fn in functions:]]
-  m.makeFunction('{{fn.js_ident}}', fnType_{{fn.js_ident}});
+m.makeFunction('{{fn.js_ident}}', fnType_{{fn.js_ident}});
 [[]]
 
-  return m;
-});
+module.exports = m;

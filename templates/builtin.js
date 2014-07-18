@@ -26,29 +26,27 @@ def jsbool(x):
 
 "use strict";
 
-define([], function() {
-
-  function init(module) {
-    var m = module;
-    var t = m.types;
+function init(module) {
+  var m = module;
+  var t = m.types;
 
 [[for _, type in types.no_builtins.iteritems():]]
 [[  if type.is_alias:]]
-    m.makeAliasType('{{type.js_ident}}', t.{{type.alias_of.js_ident}});
+  m.makeAliasType('{{type.js_ident}}', t.{{type.alias_of.js_ident}});
 [[  elif type.is_void:]]
-    m.typeBuilder_.makeVoidType({{type.id}}, '{{type.js_ident}}');
+  m.typeBuilder_.makeVoidType({{type.id}}, '{{type.js_ident}}');
 [[  elif type.is_primitive:]]
-    m.typeBuilder_.makePrimitiveType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {{jsbool(type.is_signed)}}, {{jsbool(type.is_int)}});
+  m.typeBuilder_.makePrimitiveType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {{jsbool(type.is_signed)}}, {{jsbool(type.is_int)}});
 [[  elif type.is_pepper:]]
-    m.typeBuilder_.makePepperType({{type.id}}, '{{type.js_ident}}', {{type.js_prototype}});
+  m.typeBuilder_.makePepperType({{type.id}}, '{{type.js_ident}}', {{type.js_prototype}});
 [[  elif type.is_struct:]]
-    m.makeStructType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {
+  m.makeStructType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {
 [[    for field in type.fields:]]
-      {{field.name}}: {type: t.{{field.type.js_ident}}, offset: {{field.offset}}},
+    {{field.name}}: {type: t.{{field.type.js_ident}}, offset: {{field.offset}}},
 [[    ]]
-    });
+  });
 [[  elif type.is_pointer:]]
-    m.makePointerType({{type.id}}, '{{type.js_ident}}', t.{{type.base_type.js_ident}});
+  m.makePointerType({{type.id}}, '{{type.js_ident}}', t.{{type.base_type.js_ident}});
 [[]]
 
 [[[
@@ -62,24 +60,23 @@ def ReturnTypeString(fn_type):
 ]]]
 [[for fn_type in types.function_types.itervalues():]]
 [[  if fn_type.is_alias:]]
-    var fnType_{{fn_type.js_ident}} = fnType_{{fn_type.alias_of.js_ident}};
+  var fnType_{{fn_type.js_ident}} = fnType_{{fn_type.alias_of.js_ident}};
 [[  else:]]
-    var fnType_{{fn_type.js_ident}} = m.makeFunctionType({{fn_type.id}}{{ReturnTypeString(fn_type)}}{{ArgTypesString(fn_type)}});
+  var fnType_{{fn_type.js_ident}} = m.makeFunctionType({{fn_type.id}}{{ReturnTypeString(fn_type)}}{{ArgTypesString(fn_type)}});
 [[]]
 
 [[for fn in functions:]]
 [[  if len(fn.types) == 1:]]
-    m.makeFunction('{{fn.js_ident}}', fnType_{{fn.js_ident}});
+  m.makeFunction('{{fn.js_ident}}', fnType_{{fn.js_ident}});
 [[  else:]]
-    m.makeFunction('{{fn.js_ident}}', [
+  m.makeFunction('{{fn.js_ident}}', [
 [[    for fn_type in fn.types:]]
-      fnType_{{fn_type.js_ident}},
+    fnType_{{fn_type.js_ident}},
 [[    ]]
-    ]);
+  ]);
 [[]]
-  }
+}
 
-  return {
-    init: init
-  };
-});
+module.exports = {
+  init: init
+};
