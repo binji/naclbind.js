@@ -112,6 +112,9 @@ def RunTemplateString(src, template_dict):
 def main(args):
   parser = optparse.OptionParser()
   parser.add_option('-j', '--json', help='json file for input')
+  parser.add_option('-d', '--define', metavar="KEY:VALUE",
+                    action='append', dest='defines',
+                    help='add key/value pair')
   options, args = parser.parse_args(args)
   if not args:
     return
@@ -127,7 +130,25 @@ def main(args):
     if options.json:
       with open(options.json) as jsonf:
         template_dict = json.load(jsonf, object_hook=AttrDict)
-        print RunTemplateString(f.read(), template_dict)
+    else:
+      template_dict = {}
+
+    if options.defines:
+      for define in options.defines:
+        if ':' in define:
+          key, value = define.split(':', 1)
+        else:
+          key, value = define, ''
+
+        try:
+          value = json.loads(value)
+        except ValueError:
+          pass
+
+        template_dict[key] = value
+
+    if template_dict:
+      print RunTemplateString(f.read(), template_dict)
     else:
       print TemplateToPython(f.read())
 
