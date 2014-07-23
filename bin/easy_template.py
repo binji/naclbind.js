@@ -115,6 +115,7 @@ def main(args):
   parser.add_option('-d', '--define', metavar="KEY:VALUE",
                     action='append', dest='defines',
                     help='add key/value pair')
+  parser.add_option('-o', '--output', help='output to file')
   options, args = parser.parse_args(args)
   if not args:
     return
@@ -127,30 +128,38 @@ def main(args):
 
 
   with open(args[0]) as f:
-    if options.json:
-      with open(options.json) as jsonf:
-        template_dict = json.load(jsonf, object_hook=AttrDict)
-    else:
-      template_dict = {}
+    template = f.read()
 
-    if options.defines:
-      for define in options.defines:
-        if ':' in define:
-          key, value = define.split(':', 1)
-        else:
-          key, value = define, ''
+  if options.json:
+    with open(options.json) as jsonf:
+      template_dict = json.load(jsonf, object_hook=AttrDict)
+  else:
+    template_dict = {}
 
-        try:
-          value = json.loads(value)
-        except ValueError:
-          pass
+  if options.defines:
+    for define in options.defines:
+      if ':' in define:
+        key, value = define.split(':', 1)
+      else:
+        key, value = define, ''
 
-        template_dict[key] = value
+      try:
+        value = json.loads(value)
+      except ValueError:
+        pass
 
-    if template_dict:
-      print RunTemplateString(f.read(), template_dict)
-    else:
-      print TemplateToPython(f.read())
+      template_dict[key] = value
+
+  if template_dict:
+    result = RunTemplateString(template, template_dict)
+  else:
+    result = TemplateToPython(template)
+
+  if options.output:
+    with open(options.output, 'w') as outf:
+      outf.write(result)
+  else:
+    print result
 
 if __name__ == '__main__':
   sys.exit(main(sys.argv[1:]))

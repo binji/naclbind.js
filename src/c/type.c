@@ -135,4 +135,3 @@ const char* BuiltinTypeToString(Type id) {
   }
   return kTypeString[id];
 }
-

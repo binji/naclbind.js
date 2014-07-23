@@ -88,7 +88,7 @@ rule nmf
   command = $nmf $in -o $out
   description = NMF $out
 rule template
-  command = $easy-template -j $json $in > $out
+  command = $easy-template -j $json $in -o $out
   description = TEMPLATE $out
 rule browserify
   command = browserify $in -o $out --standalone $name

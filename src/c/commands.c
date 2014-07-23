@@ -1415,4 +1415,3 @@ void Handle_dictHasKey(Command* command) {
   printf("dictHasKey(%s, %s) => %d (%d)\n", VarTypeToString(&arg0), VarTypeToString(&arg1), result, command->ret_handle);
 }
 
-

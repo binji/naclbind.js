@@ -396,7 +396,6 @@ module.exports = {
   init: init
 };
 
-
 },{}],2:[function(_dereq_,module,exports){
 // Copyright 2014 Ben Smith. All Rights Reserved.
 //

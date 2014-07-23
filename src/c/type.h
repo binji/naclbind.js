@@ -213,4 +213,3 @@ const char* BuiltinTypeToString(Type);
 const char* TypeToString(Type);  // Defined in module.
 
 #endif  // TYPE_H_
-

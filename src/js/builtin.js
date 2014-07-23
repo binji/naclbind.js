@@ -394,4 +394,3 @@ function init(module) {
 module.exports = {
   init: init
 };
-
