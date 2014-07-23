@@ -72,7 +72,7 @@ rule link
   command = $cc $in $ldflags $libs -o $out
   description = LINK $out
 rule finalize
-  command = $pnacl-finalize $in -o $out
+  command = $pnacl-finalize $in -o $out && $pnacl-compress $out
   description = FINALIZE $out
 rule translate
   command = $pnacl-translate $in --allow-llvm-bitcode-input -arch $arch -o $
