@@ -5,6 +5,7 @@
 
 import copy
 import cStringIO
+import errno
 import json
 import optparse
 import os
@@ -156,6 +157,12 @@ def main(args):
     result = TemplateToPython(template)
 
   if options.output:
+    try:
+      os.makedirs(os.path.dirname(options.output))
+    except OSError as e:
+      if e.errno != errno.EEXIST:
+        raise
+
     with open(options.output, 'w') as outf:
       outf.write(result)
   else:
