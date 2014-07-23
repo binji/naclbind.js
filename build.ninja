@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+root = .
 include common.ninja
+
+ccflags = $ccflags-default -Wall -Wno-unused-value -Wno-long-long -Werror $
+          $ccflags-release
 
 template-builtin-js = templates/builtin.js
 template-type-h = templates/type.h
@@ -31,28 +35,28 @@ build src/c/commands.c: template $template-commands-c | $easy-template $helper-p
 
 build out/2nacl/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release
+  ccflags = $ccflags
 build out/2nacl/obj/commands.o: cc src/c/commands.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release
+  ccflags = $ccflags
 build out/2nacl/obj/handle.o: cc src/c/handle.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release
+  ccflags = $ccflags
 build out/2nacl/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release
+  ccflags = $ccflags
 build out/2nacl/obj/message.o: cc src/c/message.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release
+  ccflags = $ccflags
 build out/2nacl/obj/queue.o: cc src/c/queue.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release
+  ccflags = $ccflags
 build out/2nacl/obj/type.o: cc src/c/type.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release
+  ccflags = $ccflags
 build out/2nacl/obj/var.o: cc src/c/var.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
-  ccflags = $ccflags-default $ccflags-include $ccflags-release
+  ccflags = $ccflags
 build out/2nacl/lib2nacl.a: ar out/2nacl/obj/builtin_funcs.o $
                                out/2nacl/obj/commands.o $
                                out/2nacl/obj/handle.o $
@@ -65,7 +69,7 @@ build out/2nacl/lib2nacl.a: ar out/2nacl/obj/builtin_funcs.o $
   ar = $pnacl-ar
 
 # dist
-build dist/lib2nacl.a: cp out/2nacl/lib2nacl.a
+build $lib2nacl: cp out/2nacl/lib2nacl.a
 build dist/2nacl.js: browserify src/js/nacl.js | $
                                 src/js/builtin.js
   name = tonacl

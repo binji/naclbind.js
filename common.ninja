@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-nacl_sdk_root = out/nacl_sdk/pepper_canary
+nacl_sdk_root = $root/out/nacl_sdk/pepper_canary
 toolchain_dir = $nacl_sdk_root/toolchain
 toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
 pnacl-ar = $toolchain_dir_pnacl/bin/pnacl-ar
@@ -20,23 +20,29 @@ pnacl-cc = $toolchain_dir_pnacl/bin/pnacl-clang
 pnacl-cxx = $toolchain_dir_pnacl/bin/pnacl-clang++
 pnacl-strip = $toolchain_dir_pnacl/bin/pnacl-strip
 pnacl-finalize = $toolchain_dir_pnacl/bin/pnacl-finalize
+pnacl-compress = $toolchain_dir_pnacl/bin/pnacl-compress
 pnacl-translate = $toolchain_dir_pnacl/bin/pnacl-translate
 nmf = $nacl_sdk_root/tools/create_nmf.py
 
-ccflags-default = -Wall -Wno-unused-value -Wno-long-long -Werror -pthread
+ccflags-default = -pthread -I$nacl_sdk_root/include -I$root/src/c
 ccflags-debug = -g -O0
 ccflags-release = -g -O2 -DNDEBUG
-ccflags-include = -I$nacl_sdk_root/include -Isrc/c -Iout/2nacl/gen
 
-easy-template = bin/easy_template.py
-helper-py = bin/helper.py
-commands-py = bin/commands.py
-template-glue-c = templates/glue.c
-template-glue-js = templates/glue.js
-template-app-c = templates/app.c
+ldflags-default = -L$root/dist
+ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug
+ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
 
-nacl-sdk-zip = out/nacl_sdk.zip
-nacl-sdk = out/nacl_sdk/naclsdk
+easy-template = $root/bin/easy_template.py
+helper-py = $root/bin/helper.py
+commands-py = $root/bin/commands.py
+template-glue-c = $root/templates/glue.c
+template-glue-js = $root/templates/glue.js
+template-app-c = $root/templates/app.c
+
+lib2nacl = $root/dist/lib2nacl.a
+
+nacl-sdk-zip = $root/out/nacl_sdk.zip
+nacl-sdk = $root/out/nacl_sdk/naclsdk
 nacl-sdk-url = http://storage.googleapis.com/nativeclient-mirror/nacl/nacl_sdk/nacl_sdk.zip
 
 # SDK
@@ -54,7 +60,7 @@ rule naclsdk
 #build $nacl-sdk-zip: wget
 #  url = $nacl-sdk-url
 #build $nacl-sdk: unzip $nacl-sdk-zip
-#  outdir = out
+#  outdir = $root/out
 #build $nacl_sdk_root: naclsdk | $nacl-sdk
 #  bundle = pepper_canary
 
