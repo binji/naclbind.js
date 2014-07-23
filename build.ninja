@@ -33,43 +33,43 @@ build src/c/type.c: template $template-type-c | $easy-template $helper-py $comma
 build src/c/commands.c: template $template-commands-c | $easy-template $helper-py $commands-py $builtin-json
   json = $builtin-json
 
-build out/2nacl/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h $nacl_sdk_root
+build out/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/2nacl/obj/commands.o: cc src/c/commands.c || src/c/type.h $nacl_sdk_root
+build out/obj/commands.o: cc src/c/commands.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/2nacl/obj/handle.o: cc src/c/handle.c || src/c/type.h $nacl_sdk_root
+build out/obj/handle.o: cc src/c/handle.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/2nacl/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h $nacl_sdk_root
+build out/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/2nacl/obj/message.o: cc src/c/message.c || src/c/type.h $nacl_sdk_root
+build out/obj/message.o: cc src/c/message.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/2nacl/obj/queue.o: cc src/c/queue.c || src/c/type.h $nacl_sdk_root
+build out/obj/queue.o: cc src/c/queue.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/2nacl/obj/type.o: cc src/c/type.c || src/c/type.h $nacl_sdk_root
+build out/obj/type.o: cc src/c/type.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/2nacl/obj/var.o: cc src/c/var.c || src/c/type.h $nacl_sdk_root
+build out/obj/var.o: cc src/c/var.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/2nacl/lib2nacl.a: ar out/2nacl/obj/builtin_funcs.o $
-                               out/2nacl/obj/commands.o $
-                               out/2nacl/obj/handle.o $
-                               out/2nacl/obj/interfaces.o $
-                               out/2nacl/obj/message.o $
-                               out/2nacl/obj/queue.o $
-                               out/2nacl/obj/type.o $
-                               out/2nacl/obj/var.o $
-                               || $nacl_sdk_root
+build out/lib2nacl.a: ar out/obj/builtin_funcs.o $
+                         out/obj/commands.o $
+                         out/obj/handle.o $
+                         out/obj/interfaces.o $
+                         out/obj/message.o $
+                         out/obj/queue.o $
+                         out/obj/type.o $
+                         out/obj/var.o $
+                         || $nacl_sdk_root
   ar = $pnacl-ar
 
 # dist
-build $lib2nacl: cp out/2nacl/lib2nacl.a
+build $lib2nacl: cp out/lib2nacl.a
 build dist/2nacl.js: browserify src/js/nacl.js | $
                                 src/js/builtin.js
   name = tonacl
