@@ -483,11 +483,7 @@ function Module(name, nmf, mimeType, embedElementConstructor) {
     embedElementConstructor = EmbedElement;
   }
 
-  this.name = name;
-  this.nmf = nmf;
-  this.mimeType = mimeType;
-  this.element = null;
-
+  // private
   this.loaded_ = false;
   this.nextCallbackId_ = 1;
   this.idCallbackMap_ = [];
@@ -497,15 +493,19 @@ function Module(name, nmf, mimeType, embedElementConstructor) {
   this.functionBuilder_ = new FunctionBuilder();
   this.handles_ = new HandleList();
 
+  // public
+  this.name = name;
+  this.element = null;
   this.types = this.typeBuilder_.getNameHash();
   this.functions = this.functionBuilder_.getNameHash();
 
   this.initBuiltins_();
-  this.createEmbed_(embedElementConstructor);
+  this.createEmbed_(nmf, mimeType, embedElementConstructor);
 }
 
-Module.prototype.createEmbed_ = function(embedElementConstructor) {
-  this.element = new embedElementConstructor(this.nmf, this.mimeType);
+Module.prototype.createEmbed_ = function(nmf, mimeType,
+                                         embedElementConstructor) {
+  this.element = new embedElementConstructor(nmf, mimeType);
   this.element.addLoadListener(this.onLoad_.bind(this));
   this.element.addMessageListener(this.onMessage_.bind(this));
   this.element.addErrorListener(this.onError_.bind(this));
@@ -513,7 +513,7 @@ Module.prototype.createEmbed_ = function(embedElementConstructor) {
   this.element.appendToBody();
 };
 
-Module.prototype.postMessage = function(msg, callback) {
+Module.prototype.postMessage_ = function(msg, callback) {
   var id = this.nextCallbackId_++;
   this.idCallbackMap_[id] = callback;
 
@@ -576,7 +576,7 @@ Module.prototype.postQueuedMessages_ = function() {
   this.queuedMessages_ = null;
 };
 
-Module.prototype.callFunction = function(context, func, args) {
+Module.prototype.callFunction_ = function(context, func, args) {
   assert(func instanceof CFunction, 'expected func to be CFunction');
 
   var funcType = this.findOverload_(func.name, args, func.overloads);
@@ -589,12 +589,12 @@ Module.prototype.callFunction = function(context, func, args) {
     retHandleId = retHandle.id;
   }
 
-  this.pushCommand(func.name, funcType.id, args, retHandleId);
+  this.pushCommand_(func.name, funcType.id, args, retHandleId);
 
   return retHandle;
 };
 
-Module.prototype.pushCommand = function(cmd, type, args, ret) {
+Module.prototype.pushCommand_ = function(cmd, type, args, ret) {
   var message = {
     cmd: cmd,
     type: type,
@@ -640,7 +640,7 @@ Module.prototype.commit = function() {
   // Remove committed commands.
   this.commands_ = [];
 
-  this.postMessage(msg, function(result) {
+  this.postMessage_(msg, function(result) {
     function idToHandle(value, ix) {
       if (typeof(value) === 'number' && !args[ix].type.isPrimitive()) {
         return that.handles_.getHandle(value);
@@ -701,7 +701,7 @@ Module.prototype.getPointerType = function(type) {
 
 Module.prototype.destroyHandles = function(handles) {
   this.handles_.runFinalizers(handles);
-  this.pushCommand('*destroyHandles', 0, handles, 0);
+  this.pushCommand_('*destroyHandles', 0, handles, 0);
   this.handles_.destroyHandles(handles);
 };
 
@@ -1025,7 +1025,7 @@ Context.prototype.$registerHandle = function(handle) {
 };
 
 Context.prototype.$callFunction = function(func, args) {
-  return this.$module_.callFunction(this, func, args);
+  return this.$module_.callFunction_(this, func, args);
 };
 
 Context.prototype.$destroyHandles = function() {
