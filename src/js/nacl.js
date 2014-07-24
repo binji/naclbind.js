@@ -25,10 +25,6 @@ function assert(cond, msg) {
   }
 }
 
-function makeModule(name, nmf, mimeType, embedElementConstructor) {
-  return new Module(name, nmf, mimeType, embedElementConstructor);
-}
-
 // EmbedElement //////////////////////////////////////////////////////////////
 function EmbedElement(nmf, mimeType) {
   this.element = document.createElement('embed');
@@ -79,6 +75,10 @@ Object.defineProperty(EmbedElement.prototype, 'exitStatus', {
 
 // Module ////////////////////////////////////////////////////////////////////
 function Module(name, nmf, mimeType, embedElementConstructor) {
+  if (!(this instanceof Module)) {
+    return new Module(name, nmf, mimeType, embedElementConstructor);
+  }
+
   // Allow overriding for testing.
   if (embedElementConstructor === undefined) {
     embedElementConstructor = EmbedElement;
@@ -1134,5 +1134,5 @@ function CFunction(name, overloads) {
 
 
 module.exports = {
-  makeModule: makeModule
+  Module: Module
 };
