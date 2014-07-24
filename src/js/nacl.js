@@ -25,12 +25,65 @@ function assert(cond, msg) {
   }
 }
 
-function makeModule(name, nmf, mimeType) {
-  return new Module(name, nmf, mimeType);
+function makeModule(name, nmf, mimeType, embedElementConstructor) {
+  return new Module(name, nmf, mimeType, embedElementConstructor);
 }
 
+// EmbedElement //////////////////////////////////////////////////////////////
+function EmbedElement(nmf, mimeType) {
+  this.element = document.createElement('embed');
+  this.element.setAttribute('width', '0');
+  this.element.setAttribute('height', '0');
+  this.element.setAttribute('src', this.nmf);
+  this.element.setAttribute('type', this.mimeType);
+}
+
+EmbedElement.prototype.addEventListener_ = function(message, callback) {
+  this.element.addEventListener(message, callback, false);
+};
+
+EmbedElement.prototype.addLoadListener = function(callback) {
+  this.addEventListener_('load', callback);
+};
+
+EmbedElement.prototype.addMessageListener = function(callback) {
+  this.addEventListener_('message', callback);
+};
+
+EmbedElement.prototype.addErrorListener = function(callback) {
+  this.addEventListener_('error', callback);
+};
+
+EmbedElement.prototype.addCrashListener = function(callback) {
+  this.addEventListener_('crash', callback);
+};
+
+EmbedElement.prototype.appendToBody = function() {
+  document.body.appendChild(this.element);
+};
+
+EmbedElement.prototype.postMessage = function(msg) {
+  this.element.postMessage(msg);
+};
+
+Object.defineProperty(EmbedElement.prototype, 'lastError', {
+  get: function() { return this.element.lastError; },
+  enumerable: true
+});
+
+Object.defineProperty(EmbedElement.prototype, 'exitStatus', {
+  get: function() { return this.element.exitStatus; },
+  enumerable: true
+});
+
+
 // Module ////////////////////////////////////////////////////////////////////
-function Module(name, nmf, mimeType) {
+function Module(name, nmf, mimeType, embedElementConstructor) {
+  // Allow overriding for testing.
+  if (embedElementConstructor === undefined) {
+    embedElementConstructor = EmbedElement;
+  }
+
   this.name = name;
   this.nmf = nmf;
   this.mimeType = mimeType;
@@ -49,21 +102,16 @@ function Module(name, nmf, mimeType) {
   this.functions = this.functionBuilder_.getNameHash();
 
   this.initBuiltins_();
-  this.createEmbed_();
+  this.createEmbed_(embedElementConstructor);
 }
 
-Module.prototype.createEmbed_ = function() {
-  this.element = document.createElement('embed');
-  this.element.setAttribute('width', '0');
-  this.element.setAttribute('height', '0');
-  this.element.setAttribute('src', this.nmf);
-  this.element.setAttribute('type', this.mimeType);
-
-  this.element.addEventListener('load', this.onLoad_.bind(this), false);
-  this.element.addEventListener('message', this.onMessage_.bind(this), false);
-  this.element.addEventListener('error', this.onError_.bind(this), false);
-  this.element.addEventListener('crash', this.onCrash_.bind(this), false);
-  document.body.appendChild(this.element);
+Module.prototype.createEmbed_ = function(embedElementConstructor) {
+  this.element = new embedElementConstructor(this.nmf, this.mimeType);
+  this.element.addLoadListener(this.onLoad_.bind(this));
+  this.element.addMessageListener(this.onMessage_.bind(this));
+  this.element.addErrorListener(this.onError_.bind(this));
+  this.element.addCrashListener(this.onCrash_.bind(this));
+  this.element.appendToBody();
 };
 
 Module.prototype.postMessage = function(msg, callback) {
