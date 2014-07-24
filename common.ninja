@@ -47,22 +47,22 @@ nacl-sdk-url = http://storage.googleapis.com/nativeclient-mirror/nacl/nacl_sdk/n
 
 # SDK
 rule wget
-  command = wget $url -O $out
+  command = rm -f $out && wget -q $url -O $out --no-use-server-timestamps
   description = WGET $out
 rule unzip
-  command = unzip $in -d $outdir
+  command = unzip -DD -qo $in -d $outdir
   description = UNZIP $in
 rule naclsdk
-  command = $nacl-sdk update $bundle --force
+  command = $nacl-sdk update $bundle --force && touch $bundle
   description = NACLSDK UPDATE $bundle
+  pool = console
 
-# TODO(binji) - enable this when I have internet access. :)
-#build $nacl-sdk-zip: wget
-#  url = $nacl-sdk-url
-#build $nacl-sdk: unzip $nacl-sdk-zip
-#  outdir = $root/out
-#build $nacl_sdk_root: naclsdk | $nacl-sdk
-#  bundle = pepper_canary
+build $nacl-sdk-zip: wget
+  url = $nacl-sdk-url
+build $nacl-sdk: unzip $nacl-sdk-zip
+  outdir = $root/out
+build $nacl_sdk_root: naclsdk | $nacl-sdk
+  bundle = pepper_canary
 
 rule cp
   command = cp $in $out
