@@ -473,15 +473,22 @@ Object.defineProperty(EmbedElement.prototype, 'exitStatus', {
 
 
 // Module ////////////////////////////////////////////////////////////////////
-function Module(name, nmf, mimeType, embedElementConstructor) {
+/*
+ * opts:
+ *   name: Name of the module used for error reporting.
+ *   embedElementConstructor: Constructor to call when creating the embed
+ *      element. If undefined, this will default to using EmbedElement defined
+ *      above.
+ *   log: Logging function. If undefined, this will use console.log.
+ */
+function Module(nmf, mimeType, opts) {
   if (!(this instanceof Module)) {
-    return new Module(name, nmf, mimeType, embedElementConstructor);
+    return new Module(nmf, mimeType, opts);
   }
 
   // Allow overriding for testing.
-  if (embedElementConstructor === undefined) {
-    embedElementConstructor = EmbedElement;
-  }
+  var embedConstructor = opts.embedElementConstructor || EmbedElement;
+  this.log_ = opts.log || console.log.bind(console);
 
   // private
   this.loaded_ = false;
@@ -494,18 +501,17 @@ function Module(name, nmf, mimeType, embedElementConstructor) {
   this.handles_ = new HandleList();
 
   // public
-  this.name = name;
+  this.name = opts.name;
   this.element = null;
   this.types = this.typeBuilder_.getNameHash();
   this.functions = this.functionBuilder_.getNameHash();
 
   this.initBuiltins_();
-  this.createEmbed_(nmf, mimeType, embedElementConstructor);
+  this.createEmbed_(nmf, mimeType, embedConstructor);
 }
 
-Module.prototype.createEmbed_ = function(nmf, mimeType,
-                                         embedElementConstructor) {
-  this.element = new embedElementConstructor(nmf, mimeType);
+Module.prototype.createEmbed_ = function(nmf, mimeType, embedConstructor) {
+  this.element = new embedConstructor(nmf, mimeType);
   this.element.addLoadListener(this.onLoad_.bind(this));
   this.element.addMessageListener(this.onMessage_.bind(this));
   this.element.addErrorListener(this.onError_.bind(this));
@@ -531,7 +537,7 @@ Module.prototype.makeContext = function() {
 };
 
 Module.prototype.onLoad_ = function(event) {
-  console.log('module loaded.');
+  this.log_('module loaded.');
   this.loaded_ = true;
   this.postQueuedMessages_();
 };
@@ -545,7 +551,7 @@ Module.prototype.onMessage_ = function(event) {
   }
 
   if (msg.msg) {
-    console.log(msg.msg);
+    this.log_(msg.msg);
     return;
   }
 
@@ -727,7 +733,7 @@ Module.prototype.findOverload_ = function(funcName, args, funcTypeList) {
     msg += funcTypeList[i].toString() + "\n";
     msg += '  ' + errorMessages[i] + '\n';
   }
-  console.log(msg);
+  this.log_(msg);
 
   return null;
 };
@@ -996,14 +1002,6 @@ TypeBuilder.prototype.getPointerType = function(baseType) {
   return new Type(0, name, null, newTypeData);
 };
 
-TypeBuilder.prototype.log = function() {
-  for (var id in this.idHash) {
-    if (this.idHash.hasOwnProperty(id)) {
-      console.log('id: ' + id + ' type: ' + this.idHash[id]);
-    }
-  }
-};
-
 
 //// Context /////////////////////////////////////////////////////////////////
 function Context(module) {
@@ -1209,8 +1207,7 @@ Type.prototype.toString = function() {
 
 Type.prototype.equals = function(otherType) {
   if (!(otherType instanceof Type)) {
-    console.log("Attempting to compare Type with non-Type.");
-    return false;
+    throw new Error("Attempting to compare Type with non-Type.");
   }
   return this.data.equals(other.data);
 };
