@@ -35,7 +35,8 @@ TestEmbedElement.prototype.load = function() {
 };
 
 TestEmbedElement.prototype.message = function(msg) {
-  this.fireEvent('message', msg);
+  var event = {data: msg};
+  this.fireEvent('message', event);
 };
 
 TestEmbedElement.prototype.error = function(error) {
