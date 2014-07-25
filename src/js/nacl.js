@@ -810,7 +810,7 @@ Type.prototype.equals = function(otherType) {
   if (!(otherType instanceof Type)) {
     throw new Error("Attempting to compare Type with non-Type.");
   }
-  return this.data.equals(other.data);
+  return this.data.equals(otherType.data);
 };
 
 //// TypeData ////////////////////////////////////////////////////////////////
