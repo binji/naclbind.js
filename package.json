@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {},
   "devDependencies": {
+    "browserify": "^5.9.1",
     "mocha": "^1.21.0"
   },
   "scripts": {

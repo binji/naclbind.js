@@ -23,6 +23,7 @@ pnacl-finalize = $toolchain_dir_pnacl/bin/pnacl-finalize
 pnacl-compress = $toolchain_dir_pnacl/bin/pnacl-compress
 pnacl-translate = $toolchain_dir_pnacl/bin/pnacl-translate
 nmf = $nacl_sdk_root/tools/create_nmf.py
+browserify = node_modules/.bin/browserify
 
 ccflags-default = -pthread -I$nacl_sdk_root/include -I$root/src/c
 ccflags-debug = -g -O0
@@ -91,5 +92,5 @@ rule template
   command = $easy-template -j $json $in -o $out
   description = TEMPLATE $out
 rule browserify
-  command = browserify $in -o $out --standalone $name
+  command = $browserify $in -o $out --standalone $name
   description = BROWSERIFY $out
