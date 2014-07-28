@@ -169,54 +169,136 @@ describe('Module', function() {
   });
 
   describe('types', function() {
-    it('should allow creation of pointer types', function() {
-      assert.equal(t.foo, undefined);
-      m.makePointerType(1000, 'foo', t.int32$);
-      assert(!t.foo.equals(t.int32$));
-      assert(t.foo.baseType.equals(t.int32$));
-      assert(t.foo.id, 1000);
-    });
-
-    it('should allow creation of struct types', function() {
-      assert.equal(t.foo, undefined);
-      m.makeStructType(1000, 'foo', 8, {
-        'field1': {type: t.char, offset: 0},
-        'field2': {type: t.float32, offset: 4},
+    describe('pointer', function() {
+      it('create', function() {
+        assert.equal(t.foo, undefined);
+        m.makePointerType(1000, 'foo', t.int32$);
+        assert(!t.foo.equals(t.int32$));
+        assert(t.foo.baseType.equals(t.int32$));
+        assert(t.foo.id, 1000);
       });
-      assert.equal(Object.keys(t.foo.fields).length, 2);
-      assert.equal(t.foo.size, 8);
-      assert(t.foo.fields.field1.type.equals(t.char));
-      assert.equal(t.foo.fields.field1.offset, 0);
-      assert(t.foo.fields.field2.type.equals(t.float32));
-      assert.equal(t.foo.fields.field2.offset, 4);
-      assert.equal(t.foo.id, 1000);
+
+      it('should throw if id is non-unique', function() {
+        assert.throws(function() {
+          m.makePointerType(1, 'foo', t.int32$);
+        });
+      });
+
+      it('should throw if type is non-unique', function() {
+        // Try to make void*
+        assert.throws(function() {
+          m.makePointerType(1000, 'foo', t.void);
+        });
+      });
+
+      it('should throw if name is non-unique', function() {
+        assert.throws(function() {
+          m.makePointerType(1000, 'int32', t.int32$);
+        });
+      });
     });
 
-    it('should allow creation of alias types', function() {
-      assert.equal(t.foo, undefined);
-      m.makeAliasType('foo', t.int32);
-      assert(t.foo.equals(t.int32));
+    describe('struct', function() {
+      it('create', function() {
+        assert.equal(t.foo, undefined);
+        m.makeStructType(1000, 'foo', 8, {
+          'field1': {type: t.char, offset: 0},
+          'field2': {type: t.float32, offset: 4},
+        });
+        assert.equal(Object.keys(t.foo.fields).length, 2);
+        assert.equal(t.foo.size, 8);
+        assert(t.foo.fields.field1.type.equals(t.char));
+        assert.equal(t.foo.fields.field1.offset, 0);
+        assert(t.foo.fields.field2.type.equals(t.float32));
+        assert.equal(t.foo.fields.field2.offset, 4);
+        assert.equal(t.foo.id, 1000);
+      });
+
+      it('create w/o fields', function() {
+        m.makeStructType(1000, 'foo', 0, {});
+        assert.equal(Object.keys(t.foo.fields).length, 0);
+        assert.equal(t.foo.size, 0);
+        assert.equal(t.foo.id, 1000);
+      });
+
+      it('should throw if id is non-unique', function() {
+        assert.throws(function() {
+          m.makeStructType(1, 'foo', 0, {});
+        });
+      });
+
+      it('should throw if name is non-unique', function() {
+        assert.throws(function() {
+          m.makeStructType(1000, 'int32', 0, {});
+        });
+      });
     });
 
-    it('should allow creation of function types', function() {
-      // Define a function with signature void(float, char*);
-      // The signature must be unique; that is, two function types cannot have
-      // the same signature but different ids.
-      // So we pick a signature that is unlikely to conflict with builtins.
-      // TODO(binji): better way to do this?
-      var ftype = m.makeFunctionType(1000, t.void, t.float32, t.char$);
-      assert.equal(ftype.id, 1000);
-      assert(ftype.retType.equals(t.void));
-      assert.equal(ftype.argTypes.length, 2);
-      assert(ftype.argTypes[0].equals(t.float32));
-      assert(ftype.argTypes[1].equals(t.char$));
+    describe('alias', function() {
+      it('create', function() {
+        assert.equal(t.foo, undefined);
+        m.makeAliasType('foo', t.int32);
+        assert(t.foo.equals(t.int32));
+      });
+
+      it('should throw if name is non-unique', function() {
+        assert.notEqual(t.int32, undefined);
+        assert.throws(function() {
+          m.makeAliasType('int32', t.void);
+        });
+      });
     });
 
-    it('should allow creation of functions', function() {
-      assert.equal(m.functions.foo, undefined);
-      var ftype = m.makeFunctionType(1000, t.void, t.float32, t.char$);
-      m.makeFunction('foo', ftype);
-      assert.equal(typeof m.functions.foo, 'function');
+    describe('function', function() {
+      it('create type', function() {
+        // Define a function with signature void(float, char*);
+        // The signature must be unique; that is, two function types cannot have
+        // the same signature but different ids.
+        // So we pick a signature that is unlikely to conflict with builtins.
+        // TODO(binji): better way to do this?
+        var ftype = m.makeFunctionType(1000, t.void, t.float32, t.char$);
+        assert.equal(ftype.id, 1000);
+        assert(ftype.retType.equals(t.void));
+        assert.equal(ftype.argTypes.length, 2);
+        assert(ftype.argTypes[0].equals(t.float32));
+        assert(ftype.argTypes[1].equals(t.char$));
+      });
+
+      it('should throw if id is non-unique', function() {
+        assert.throws(function() {
+          m.makeFunctionType(1, t.void, t.float32, t.char$);
+        });
+      });
+
+      it('should throw if signature is non-unique', function() {
+        assert.throws(function() {
+          // This is the same signature as malloc.
+          m.makeFunctionType(1000, t.void$, t.size_t);
+        });
+      });
+
+      it('create function', function() {
+        assert.equal(m.functions.foo, undefined);
+        var ftype = m.makeFunctionType(1000, t.void, t.float32, t.char$);
+        m.makeFunction('foo', ftype);
+        assert.equal(typeof m.functions.foo, 'function');
+      });
+
+      it('create function w/ overloads', function() {
+        assert.equal(m.functions.foo, undefined);
+        var ftype = m.makeFunctionType(1000, t.void, t.float32, t.char$);
+        var ftype2 = m.makeFunctionType(1001, t.void, t.float64, t.int32$);
+        m.makeFunction('foo', [ftype, ftype2]);
+        assert.equal(typeof m.functions.foo, 'function');
+      });
+
+      it('should throw if name is non-unique', function() {
+        assert.notEqual(m.functions.malloc, undefined);
+        assert.throws(function() {
+          var ftype = m.makeFunctionType(1000, t.void, t.float32, t.char$);
+          m.makeFunction('malloc', ftype);
+        });
+      });
     });
   });
 });

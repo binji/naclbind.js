@@ -553,6 +553,7 @@ TypeBuilder.prototype.registerType_ = function(id, name, cStr, typeData) {
 TypeBuilder.prototype.makeAliasType = function(name, alias, cStr) {
   var otherType = this.nameHash[alias.name];
   var newType = new Type(otherType.id, name, cStr, otherType.data, otherType);
+  assert(!(name in this.nameHash), 'name ' + name + ' already exists');
   this.nameHash[name] = newType;
   return newType;
 };
