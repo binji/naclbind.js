@@ -53,7 +53,7 @@ rule unzip
   command = unzip -DD -qo $in -d $outdir
   description = UNZIP $in
 rule naclsdk
-  command = $nacl-sdk update $bundle --force && touch $bundle
+  command = $nacl-sdk update $bundle --force && touch out/nacl_sdk/$bundle
   description = NACLSDK UPDATE $bundle
   pool = console
 
