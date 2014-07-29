@@ -1531,7 +1531,9 @@ function CFunction(name, overloads) {
 
 
 module.exports = {
-  Module: Module
+  Module: Module,
+  // For Testing.
+  TypeBuilder: TypeBuilder
 };
 
 },{"./builtin":1}]},{},[2])(2)
