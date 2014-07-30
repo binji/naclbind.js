@@ -24,6 +24,16 @@ describe('TypeBuilder', function() {
 
   });
 
+  describe('primitive', function() {
+    it('create', function() {
+      tb.makePrimitiveType(1, 'char', 1, true, true);
+      assert.equal(t.char.name, 'char');
+      assert.equal(t.char.size, 1);
+      assert.equal(t.char.isSigned, true);
+      assert.equal(t.char.isInt, true);
+    });
+  });
+
   describe('pointer', function() {
     it('create', function() {
       tb.makePrimitiveType(1, 'char', 1, true, true);
