@@ -25,8 +25,8 @@
  * much less CPU (and battery), which is important to consider for ChromeOS
  * devices. */
 
-void InitializeMessageQueue();
+void InitializeMessageQueue(void);
 int EnqueueMessage(struct PP_Var);
-struct PP_Var DequeueMessage();
+struct PP_Var DequeueMessage(void);
 
 #endif /* QUEUE_H_ */

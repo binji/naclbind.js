@@ -38,7 +38,7 @@ const char* varToUtf8(struct PP_Var var, uint32_t* out_len) {
   return g_ppb_var->VarToUtf8(var, out_len);
 }
 
-struct PP_Var arrayCreate() {
+struct PP_Var arrayCreate(void) {
   return g_ppb_var_array->Create();
 }
 
@@ -74,7 +74,7 @@ void arrayBufferUnmap(struct PP_Var var) {
   return g_ppb_var_array_buffer->Unmap(var);
 }
 
-struct PP_Var dictCreate() {
+struct PP_Var dictCreate(void) {
   return g_ppb_var_dictionary->Create();
 }
 
