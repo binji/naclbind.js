@@ -197,8 +197,10 @@ def FilterParsedArgs(args, to_filter_out):
 
 def ExtendParsedClangArgs(args):
   defines = RunClangForDefines()
-  define_args = [('-D%s=%s' % (n, v), None) for n, v in defines]
-  return define_args + args
+  new_args = [('-undef', None)]
+  new_args += [('-D%s=%s' % (n, v), None) for n, v in defines]
+  new_args += args
+  return new_args
 
 
 def RunClangForDefines():
@@ -206,7 +208,6 @@ def RunClangForDefines():
   stdout, _ = Run(cmd)
   stdout_lines = stdout.splitlines()
   result = []
-  keep = False
   for line in stdout_lines:
     # Lines look like:
     # #define MACRO_NAME SOME MACRO VALUE
@@ -215,14 +216,8 @@ def RunClangForDefines():
       name, value = split_line[1], None
     else:
       name, value = split_line[1:]
-    if name == '__clang_version__':
-      # Keep everything after __clang_version__; those won't be defined by
-      # default (stuff like __native_client__ and __pnacl__).
-      keep = True
-      continue
 
-    if keep:
-      result.append((name, value))
+    result.append((name, value))
   return result
 
 
