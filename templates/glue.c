@@ -13,149 +13,104 @@
  * limitations under the License.
  */
 
-/* DO NOT EDIT, this file is auto-generated from //templates/glue.c */
+/* DO NOT EDIT, this file is auto-generated from //templates/glue.gen.c */
 
-[[[
-from helper import *
-from commands import *
-
-types, functions = FixTypes(types, functions)
-]]]
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-[[for header in system_headers:]]
-#include <{{header}}>
-[[]]
-
-[[for header in headers:]]
-#include "{{header}}"
-[[]]
-
-#include "bool.h"
-#include "commands.h"
-#include "error.h"
-#include "interfaces.h"
-#include "macros.h"
-#include "message.h"
-#include "type.h"
-#include "var.h"
-
-enum {
-  TYPE_{{name.upper()}}_FIRST = {{helper.FIRST_ID}} - 1,
-[[for type in types.no_builtins.itervalues():]]
-[[  if not type.is_alias:]]
-  TYPE_{{CamelToMacro(type.c_ident)}} = {{type.id}},
-[[for type in types.function_types.itervalues():]]
-[[  if type.is_alias:]]
-  TYPE_FUNC_{{CamelToMacro(type.c_ident)}} = TYPE_FUNC_{{CamelToMacro(type.alias_of.c_ident)}},
-[[  else:]]
-  TYPE_FUNC_{{CamelToMacro(type.c_ident)}} = {{type.id}},
-[[]]
-  NUM_TYPES
-};
-
-static const char* kTypeString[] = {
-[[for _, type in types.no_builtins.iteritems():]]
-[[  if not type.is_alias:]]
-  /* {{type.id}} */ "{{type}}",
-[[for _, type in types.function_types.iteritems():]]
-[[  if not type.is_alias:]]
-  /* {{type.id}} */ "{{type}}",
-[[]]
-};
-
-const char* TypeToString(Type id) {
-  if (id < NUM_BUILTIN_TYPES) {
-    return BuiltinTypeToString(id);
-  } else if (id >= NUM_TYPES) {
-    return "<unknown>";
-  } else {
-    return kTypeString[id - NUM_BUILTIN_TYPES];
-  }
-}
-
-[[for fn in functions:]]
-static void Handle_{{fn.c_ident}}(Command* command);
-[[]]
-
-typedef void (*HandleFunc)(Command*);
-typedef struct {
-  const char* name;
-  HandleFunc func;
-} NameFunc;
-
-// TODO(binji): hashmap
-static NameFunc g_FuncMap[] = {
-[[for fn in functions:]]
-  {"{{fn.c_ident}}", Handle_{{fn.c_ident}}},
-[[]]
-  {NULL, NULL},
-};
-
-// Static assert for struct sizes and field offsets.
-[[for type in types.no_builtins.itervalues():]]
-[[  if type.is_struct and (not type.is_alias and not type.anonymous):]]
-[[    if type.size != 0:]]
-COMPILE_ASSERT(sizeof(struct {{type.c_ident}}) == {{type.size}});
-[[    for field in type.fields:]]
-COMPILE_ASSERT(offsetof(struct {{type.c_ident}}, {{field.name}}) == {{field.offset}});
-[[  elif type.is_struct and (type.is_alias and type.alias_of.anonymous):]]
-[[    if type.size != 0:]]
-COMPILE_ASSERT(sizeof({{type.c_ident}}) == {{type.size}});
-[[    for field in type.fields:]]
-COMPILE_ASSERT(offsetof({{type.c_ident}}, {{field.name}}) == {{field.offset}});
-[[]]
-
-
-bool Handle{{Titlecase(name)}}Command(Command* command) {
-  NameFunc* name_func = &g_FuncMap[0];
-  for (; name_func->name; name_func++) {
-    if (strcmp(name_func->name, command->command) == 0) {
-      name_func->func(command);
-      return TRUE;
-    }
-  }
-  return FALSE;
-}
-
-[[for fn in functions:]]
-void Handle_{{fn.c_ident}}(Command* command) {
-[[  if len(fn.types) == 1:]]
-  TYPE_CHECK(TYPE_FUNC_{{CamelToMacro(fn.c_ident)}});
-[[    for arg_ix, arg_type in enumerate(fn.types[0].arg_types):]]
-  {{ArgInit(arg_ix, arg_type)}}
-[[    ]]
-[[    if fn.types[0].return_type.is_void:]]
-  {{fn.c_ident}}({{ArgsCommaSep(fn.types[0].arg_types)}});
-[[    else:]]
-  {{fn.types[0].return_type}} result = ({{fn.types[0].return_type}}){{fn.c_ident}}({{ArgsCommaSep(fn.types[0].arg_types)}});
-  {{RegisterHandle(fn.types[0].return_type)}}
-[[    ]]
-  {{PrintFunction(fn.c_ident, fn.types[0])}}
-[[  else:]]
-  switch (command->type) {
-[[    for fn_type in fn.types:]]
-    case TYPE_FUNC_{{CamelToMacro(fn_type.c_ident)}}: {
-[[      for arg_ix, arg_type in enumerate(fn_type.arg_types):]]
-      {{ArgInit(arg_ix, arg_type)}}
-[[      ]]
-[[      if fn_type.return_type.is_void:]]
-      {{fn.c_ident}}({{ArgsCommaSep(fn_type.arg_types)}});
+[[for fn in collector.functions:]]
+static void Handle_{{fn.spelling}}(Command* command) {
+[[  arguments = list(fn.type.argument_types())]]
+[[  for i, arg in enumerate(arguments):]]
+[[    arg = arg.get_canonical()]]
+[[    if arg.kind == TypeKind.POINTER:]]
+[[      pointee = arg.get_pointee()]]
+[[      if pointee.kind in (TypeKind.CHAR_S, TypeKind.CHAR_U):]]
+  ARG_CHARP({{i}});
+[[      elif pointee.kind == TypeKind.VOID:]]
+  ARG_VOIDP({{i}});
+[[      elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
+  // UNSUPPORTED: {{arg.spelling}}
+  void* arg{{i}} = NULL;
 [[      else:]]
-      {{fn_type.return_type}} result = ({{fn_type.return_type}}){{fn.c_ident}}({{ArgsCommaSep(fn_type.arg_types)}});
-      {{RegisterHandle(fn_type.return_type)}}
-[[      ]]
-      {{PrintFunction(fn.c_ident, fn_type)}}
-      break;
-    }
-[[    ]]
-    default:
-      TYPE_FAIL;
-      break;
-  }
+  ARG_VOIDP_CAST({{i}}, {{arg.spelling}});
+[[    elif arg.kind == TypeKind.LONG:]]
+  ARG_INT_CAST({{i}}, long);
+[[    elif arg.kind == TypeKind.ULONG:]]
+  ARG_UINT_CAST({{i}}, unsigned long);
+[[    elif arg.kind == TypeKind.LONGLONG:]]
+  ARG_INT64({{i}});
+[[    elif arg.kind == TypeKind.ULONGLONG:]]
+  ARG_UINT64({{i}});
+[[    elif arg.kind in (TypeKind.INT, TypeKind.SHORT, TypeKind.SCHAR, TypeKind.CHAR_S):]]
+  ARG_INT({{i}});
+[[    elif arg.kind in (TypeKind.UINT, TypeKind.USHORT, TypeKind.UCHAR, TypeKind.CHAR_U):]]
+  ARG_UINT({{i}});
+[[    elif arg.kind == TypeKind.ULONG:]]
+  ARG_UINT_CAST({{i}}, unsigned long);
+[[    elif arg.kind == TypeKind.FLOAT:]]
+  ARG_FLOAT32({{i}});
+[[    elif arg.kind == TypeKind.DOUBLE:]]
+  ARG_FLOAT64({{i}});
+[[    elif arg.kind == TypeKind.ENUM:]]
+  ARG_INT_CAST({{i}}, {{arg.spelling}});
+[[    elif arg.kind == TypeKind.CONSTANTARRAY:]]
+  // UNSUPPORTED: {{arg.spelling}}
+  void* arg{{i}} = NULL;
+[[    else:]]
+  // UNSUPPORTED: {{arg.spelling}}
+[[  ]]
+[[  result_type = fn.type.get_result().get_canonical()]]
+[[  if result_type.kind != TypeKind.VOID:]]
+  {{result_type.spelling}} result = {{fn.spelling}}({{', '.join('arg%d' % i for i in range(len(arguments)))}});
+[[    if result_type.kind in (TypeKind.SCHAR, TypeKind.CHAR_S):]]
+  RegisterHandleInt8(command->ret_handle, result);
+[[    elif result_type.kind in (TypeKind.UCHAR, TypeKind.CHAR_U):]]
+  RegisterHandleUint8(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.SHORT:]]
+  RegisterHandleInt16(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.USHORT:]]
+  RegisterHandleUint16(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.INT:]]
+  RegisterHandleInt32(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.UINT:]]
+  RegisterHandleUint32(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.LONG:]]
+  RegisterHandleInt32(command->ret_handle, (int32_t)result);
+[[    elif result_type.kind == TypeKind.ULONG:]]
+  RegisterHandleUint32(command->ret_handle, (uint32_t)result);
+[[    elif result_type.kind == TypeKind.LONGLONG:]]
+  RegisterHandleInt64(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.ULONGLONG:]]
+  RegisterHandleUint64(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.FLOAT:]]
+  RegisterHandleFloat(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.DOUBLE:]]
+  RegisterHandleDouble(command->ret_handle, result);
+[[    elif result_type.kind == TypeKind.POINTER:]]
+  RegisterHandleVoidp(command->ret_handle, result);
+[[    else:]]
+  // UNSUPPORTED: {{result_type.spelling}}
+  RegisterHandleVoidp(command->ret_handle, NULL);
+[[  else:]]
+  {{fn.spelling}}({{', '.join('arg%d' % i for i in range(len(arguments)))}});
 [[  ]]
 }
-
 [[]]
+
+enum {
+  NUM_FUNCTIONS = {{len(collector.functions)}};
+};
+
+static HandleFunc g_FuncMap[] = {
+[[for fn in collector.functions:]]
+  Handle_{{fn.spelling}},
+[[]]
+};
+
+static bool HandleCommand(Command* command) {
+  if (command->command < 0 || command->command >= NUM_FUNCTIONS) {
+    return FALSE;
+  }
+
+  HandleFunc func = &g_FuncMap[command->command];
+  func(command);
+  return TRUE;
+}
