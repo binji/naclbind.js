@@ -28,9 +28,9 @@ run-py = py/run.py
 ccflags-default = -Wall -Wno-unused-value -Wno-long-long -Werror -pthread
 ccflags-debug = -g -O0
 ccflags-release = -g -O2 -DNDEBUG
-ccflags-include = -I$nacl_sdk_root/include -Isrc/c -Iout/2nacl/gen
+ccflags-include = -I$nacl_sdk_root/include -Isrc/c -Iout/naclbind/gen
 
-ldflags-default = -Lout/2nacl
+ldflags-default = -Lout/naclbind
 ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug
 ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
 libs-default = -lnacl_io -lz -lppapi_cpp -lppapi

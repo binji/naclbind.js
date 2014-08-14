@@ -14,7 +14,7 @@
 
 "use strict";
 
-define(['promise', 'nacl', 'zlib_glue'], function(promise, nacl, zlib_glue) {
+define(['promise', 'zlib_glue'], function(promise, zlib_glue) {
 
   function sliceArrayBuffer(ab, begin, end) {
     var oldLength = ab.byteLength;

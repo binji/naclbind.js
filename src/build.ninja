@@ -27,36 +27,36 @@ build src/c/type.c: template $template-type-c | $easy-template $helper-py $comma
 build src/c/commands.c: template $template-commands-c | $easy-template $helper-py $commands-py $builtin-json
   json = $builtin-json
 
-build out/2nacl/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h
+build out/naclbind/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/commands.o: cc src/c/commands.c || src/c/type.h
+build out/naclbind/obj/commands.o: cc src/c/commands.c || src/c/type.h
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/handle.o: cc src/c/handle.c || src/c/type.h
+build out/naclbind/obj/handle.o: cc src/c/handle.c || src/c/type.h
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h
+build out/naclbind/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/message.o: cc src/c/message.c || src/c/type.h
+build out/naclbind/obj/message.o: cc src/c/message.c || src/c/type.h
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/queue.o: cc src/c/queue.c || src/c/type.h
+build out/naclbind/obj/queue.o: cc src/c/queue.c || src/c/type.h
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/type.o: cc src/c/type.c || src/c/type.h
+build out/naclbind/obj/type.o: cc src/c/type.c || src/c/type.h
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/obj/var.o: cc src/c/var.c || src/c/type.h
+build out/naclbind/obj/var.o: cc src/c/var.c || src/c/type.h
   cc = $pnacl-cc
   ccflags = $ccflags-default $ccflags-include $ccflags-release
-build out/2nacl/lib2nacl.a: ar out/2nacl/obj/builtin_funcs.o $
-                               out/2nacl/obj/commands.o $
-                               out/2nacl/obj/handle.o $
-                               out/2nacl/obj/interfaces.o $
-                               out/2nacl/obj/message.o $
-                               out/2nacl/obj/queue.o $
-                               out/2nacl/obj/type.o $
-                               out/2nacl/obj/var.o
+build out/naclbind/libnaclbind.a: ar out/naclbind/obj/builtin_funcs.o $
+                               out/naclbind/obj/commands.o $
+                               out/naclbind/obj/handle.o $
+                               out/naclbind/obj/interfaces.o $
+                               out/naclbind/obj/message.o $
+                               out/naclbind/obj/queue.o $
+                               out/naclbind/obj/type.o $
+                               out/naclbind/obj/var.o
   ar = $pnacl-ar

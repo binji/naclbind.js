@@ -33,21 +33,21 @@ build out/git/obj/git_glue.o: cc out/git/gen/git_glue.c
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-git
 build out/git/git.bc: link out/git/obj/git_app.o $
                            out/git/obj/git_glue.o $
-                           out/2nacl/lib2nacl.a
+                           out/naclbind/libnaclbind.a
   cc = $pnacl-cxx
   ldflags = $ldflags-default $ldflags-release $ldflags-git
-  libs = -l2nacl -lgit2 -lssl -lcrypto $libs-default -lglibc-compat
+  libs = -lnaclbind -lgit2 -lssl -lcrypto $libs-default -lglibc-compat
 build out/git/git.pexe: finalize out/git/git.bc
 build out/git/git.nmf: nmf out/git/git.pexe
 build out/git/git.js: cp examples/git/git.js
 build out/git/index.html: cp examples/git/index.html
-build out/git/nacl.js: cp src/js/nacl.js
+build out/git/naclbind.js: cp src/js/naclbind.js
 build out/git/builtin.js: cp src/js/builtin.js
 build out/git/promise.js: cp src/js/promise.js
 build out/git/require.js: cp third_party/requirejs/require.js
 
 build git: phony out/git/index.html $
-                 out/git/nacl.js $
+                 out/git/naclbind.js $
                  out/git/builtin.js $
                  out/git/promise.js $
                  out/git/require.js $

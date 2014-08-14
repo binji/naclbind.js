@@ -14,7 +14,7 @@
 
 "use strict";
 
-define(['nacl', 'zip_glue'], function(nacl, zip_glue) {
+define(['zip_glue'], function(zip_glue) {
   var m = zip_glue;
   var t = m.types;
 

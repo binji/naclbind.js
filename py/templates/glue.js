@@ -23,8 +23,8 @@ types, functions = FixTypes(types, functions)
 
 "use strict";
 
-define(['nacl'], function(nacl) {
-  var m = nacl.makeModule(
+define(['naclbind'], function(naclbind) {
+  var m = naclbind.makeModule(
       '{{name}}-nacl', '{{name}}.nmf', 'application/x-pnacl');
   var t = m.types;
   var f = m.functions;

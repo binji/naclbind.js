@@ -14,7 +14,7 @@
 
 "use strict";
 
-require(['promise', 'nacl', 'git_glue'], function(promise, nacl, git_glue) {
+require(['promise', 'git_glue'], function(promise, git_glue) {
   var m = git_glue;
   var t = m.types;
 

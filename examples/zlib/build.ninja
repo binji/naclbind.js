@@ -32,13 +32,13 @@ build out/zlib/obj/zlib_glue.o: cc out/zlib/gen/zlib_glue.c
   ccflags = $ccflags-default $ccflags-include $ccflags-release $ccflags-zlib
 build out/zlib/zlib.bc: link out/zlib/obj/zlib_app.o $
                              out/zlib/obj/zlib_glue.o $
-                             out/2nacl/lib2nacl.a
+                             out/naclbind/libnaclbind.a
   cc = $pnacl-cxx
-  ldflags = $ldflags-default $ldflags-release -l2nacl
+  ldflags = $ldflags-default $ldflags-release -lnaclbind
   libs = $libs-default
 build out/zlib/zlib.pexe: finalize out/zlib/zlib.bc
 build out/zlib/zlib.nmf: nmf out/zlib/zlib.pexe
-build out/zlib/nacl.js: cp src/js/nacl.js
+build out/zlib/naclbind.js: cp src/js/naclbind.js
 build out/zlib/builtin.js: cp src/js/builtin.js
 build out/zlib/promise.js: cp src/js/promise.js
 build out/zlib/index.html: cp examples/zlib/index.html
@@ -47,7 +47,7 @@ build out/zlib/zlib_example.js: cp examples/zlib/zlib_example.js
 build out/zlib/require.js: cp third_party/requirejs/require.js
 
 build zlib: phony out/zlib/index.html $
-                  out/zlib/nacl.js $
+                  out/zlib/naclbind.js $
                   out/zlib/builtin.js $
                   out/zlib/promise.js $
                   out/zlib/require.js $

@@ -44,15 +44,15 @@ build out/zip/zip.bc: link out/zip/obj/ioapi.o $
                            out/zip/obj/zip.o $
                            out/zip/obj/unzip.o $
                            out/zip/obj/zip_glue.o $
-                           out/2nacl/lib2nacl.a
+                           out/naclbind/libnaclbind.a
   cc = $pnacl-cxx
-  ldflags = $ldflags-default $ldflags-release -l2nacl
+  ldflags = $ldflags-default $ldflags-release -lnaclbind
   libs = $libs-default
 build out/zip/zip.pexe: finalize out/zip/zip.bc
 build out/zip/zip.nmf: nmf out/zip/zip.pexe
 build out/zip/main.css: cp examples/zip/css/main.css
 build out/zip/index.html: cp examples/zip/index.html
-build out/zip/nacl.js: cp src/js/nacl.js
+build out/zip/naclbind.js: cp src/js/naclbind.js
 build out/zip/builtin.js: cp src/js/builtin.js
 build out/zip/promise.js: cp src/js/promise.js
 build out/zip/require.js: cp third_party/requirejs/require.js
@@ -62,7 +62,7 @@ build out/zip/minizip.js: cp examples/zip/minizip.js
 build zip: phony out/zip/index.html $
                  out/zip/main.css $
                  out/zip/minizip.js $
-                 out/zip/nacl.js $
+                 out/zip/naclbind.js $
                  out/zip/builtin.js $
                  out/zip/promise.js $
                  out/zip/require.js $
