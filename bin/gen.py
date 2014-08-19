@@ -276,6 +276,162 @@ class Acceptor(object):
     return self.default
 
 
+PRIMITIVE_TYPES = set([
+  TypeKind.VOID.value, TypeKind.BOOL.value, TypeKind.CHAR_U.value,
+  TypeKind.UCHAR.value, TypeKind.CHAR16.value, TypeKind.CHAR32.value,
+  TypeKind.USHORT.value, TypeKind.UINT.value, TypeKind.ULONG.value,
+  TypeKind.ULONGLONG.value, TypeKind.UINT128.value, TypeKind.CHAR_S.value,
+  TypeKind.SCHAR.value, TypeKind.WCHAR.value, TypeKind.SHORT.value,
+  TypeKind.INT.value, TypeKind.LONG.value, TypeKind.LONGLONG.value,
+  TypeKind.INT128.value, TypeKind.FLOAT.value, TypeKind.DOUBLE.value,
+  TypeKind.LONGDOUBLE.value,
+])
+
+PRIMITIVE_TYPE_KINDS_NAME = {
+  TypeKind.VOID.value: 'void',
+  TypeKind.BOOL.value: 'bool',
+  TypeKind.CHAR_U.value: 'char',
+  TypeKind.UCHAR.value: 'uchar',
+  TypeKind.CHAR16.value: 'char16',
+  TypeKind.CHAR32.value: 'char32',
+  TypeKind.USHORT.value: 'ushort',
+  TypeKind.UINT.value: 'uint',
+  TypeKind.ULONG.value: 'ulong',
+  TypeKind.ULONGLONG.value: 'ulonglong',
+  TypeKind.UINT128.value: 'uint128',
+  TypeKind.CHAR_S.value: 'char',
+  TypeKind.SCHAR.value: 'schar',
+  TypeKind.WCHAR.value: 'wchar',
+  TypeKind.SHORT.value: 'short',
+  TypeKind.INT.value: 'int',
+  TypeKind.LONG.value: 'long',
+  TypeKind.LONGLONG.value: 'longlong',
+  TypeKind.INT128.value: 'int128',
+  TypeKind.FLOAT.value: 'float',
+  TypeKind.DOUBLE.value: 'double',
+  TypeKind.LONGDOUBLE.value: 'longdouble',
+}
+
+PRIMITIVE_TYPE_KINDS_KIND = {
+  TypeKind.VOID.value: 'VOID',
+  TypeKind.BOOL.value: 'BOOL',
+  TypeKind.CHAR_U.value: 'CHAR_U',
+  TypeKind.UCHAR.value: 'UCHAR',
+  TypeKind.CHAR16.value: 'CHAR16',
+  TypeKind.CHAR32.value: 'CHAR32',
+  TypeKind.USHORT.value: 'USHORT',
+  TypeKind.UINT.value: 'UINT',
+  TypeKind.ULONG.value: 'ULONG',
+  TypeKind.ULONGLONG.value: 'ULONGLONG',
+  TypeKind.UINT128.value: 'UINT128',
+  TypeKind.CHAR_S.value: 'CHAR_S',
+  TypeKind.SCHAR.value: 'SCHAR',
+  TypeKind.WCHAR.value: 'WCHAR',
+  TypeKind.SHORT.value: 'SHORT',
+  TypeKind.INT.value: 'INT',
+  TypeKind.LONG.value: 'LONG',
+  TypeKind.LONGLONG.value: 'LONGLONG',
+  TypeKind.INT128.value: 'INT128',
+  TypeKind.FLOAT.value: 'FLOAT',
+  TypeKind.DOUBLE.value: 'DOUBLE',
+  TypeKind.LONGDOUBLE.value: 'LONGDOUBLE',
+}
+
+
+def IsQualified(t):
+  return (t.is_const_qualified() or t.is_volatile_qualified() or
+          t.is_restrict_qualified())
+
+def GetJsQualifiedArg(t):
+  a = []
+  if t.is_const_qualified():
+    a.append('Type.CONST')
+  if t.is_volatile_qualified():
+    a.append('Type.VOLATILE')
+  if t.is_restrict_qualified():
+    a.append('Type.RESTRICT')
+  return '|'.join(a)
+
+def GetJsQualifiedArgWithComma(t):
+  q = GetJsQualifiedArg(t)
+  if q:
+    return ', ' + q
+  return q
+
+
+VALID_SPELLING_PARTS = ('struct', 'enum', 'const', 'volatile', 'restrict')
+def SpellingBaseName(spelling):
+  parts = spelling.split(' ')
+  if not all(p in VALID_SPELLING_PARTS for p in parts[:-1]):
+    print 'Spelling: %r, Bad parts: %r' % (
+        spelling,
+        ' '.join(set(parts) - set(VALID_SPELLING_PARTS)))
+    assert False
+  return parts[-1]
+
+
+def GetJsInline(t):
+  if t.kind.value in PRIMITIVE_TYPES:
+    if IsQualified(t):
+      return 'Type.Numeric(Type.%s, %s)' % (
+          PRIMITIVE_TYPE_KINDS_KIND[t.kind.value], GetJsQualifiedArg(t))
+    else:
+      return 'Type.%s' % PRIMITIVE_TYPE_KINDS_NAME[t.kind.value]
+
+  value = TYPE_KINDS_JS_INLINE.get(t.kind.value, None)
+  if not value:
+    raise Error('Unsupported type: %s: %r' % (t.kind, t.spelling))
+
+  if type(value) is str:
+    return value
+  return value(t)
+
+def GetJsInline_Pointer(t):
+  return 'Type.Pointer(%s%s)' % (GetJsInline(t.get_pointee()),
+                                 GetJsQualifiedArgWithComma(t))
+
+def GetJsInline_Record(t):
+  return 'Tags.%s' % SpellingBaseName(t.spelling)
+
+def GetJsInline_FunctionProto(t):
+  return 'Type.Function(%s, [%s])' % (
+      GetJsInline(t.get_result()),
+      ', '.join(GetJsInline(a) for a in t.argument_types()))
+
+def GetJsInline_Typedef(t):
+  return 'Types.%s' % SpellingBaseName(t.spelling)
+
+def GetJsInline_Enum(t):
+  return 'Types.%s' % SpellingBaseName(t.spelling)
+
+def GetJsInline_Unexposed(t):
+  can = t.get_canonical()
+  if can.kind != TypeKind.UNEXPOSED:
+    return GetJsInline(can)
+
+  return 'Types.%s' % SpellingBaseName(t.spelling)
+
+def GetJsInline_ConstantArray(t):
+  return 'Type.Array(%s, %d%s)' % (
+      GetJsInline(t.get_array_element_type()), t.get_array_size(),
+      GetJsQualifiedArgWithComma(t))
+
+def GetJsInline_IncompleteArray(t):
+  return 'Type.Array(%s%s)' % (GetJsInline(t.get_array_element_type()),
+                               GetJsQualifiedArgWithComma(t))
+
+TYPE_KINDS_JS_INLINE = {
+  TypeKind.POINTER.value: GetJsInline_Pointer,
+  TypeKind.RECORD.value: GetJsInline_Record,
+  TypeKind.FUNCTIONPROTO.value: GetJsInline_FunctionProto,
+  TypeKind.TYPEDEF.value: GetJsInline_Typedef,
+  TypeKind.ENUM.value: GetJsInline_Enum,
+  TypeKind.UNEXPOSED.value: GetJsInline_Unexposed,
+  TypeKind.CONSTANTARRAY.value: GetJsInline_ConstantArray,
+  TypeKind.INCOMPLETEARRAY.value: GetJsInline_IncompleteArray,
+}
+
+
 PRIMITIVE_TYPE_KINDS_MANGLE = {
   TypeKind.VOID.value: 'v',
   TypeKind.BOOL.value: 'b',
@@ -306,7 +462,7 @@ def MangleName(s):
   return '%d%s' % (len(s), s)
 
 
-def Mangle(t):
+def Mangle(t, canonical=True):
   ret = ''
   if t.is_restrict_qualified():
     ret += 'r'
@@ -320,12 +476,12 @@ def Mangle(t):
   elif t.kind == TypeKind.POINTER:
     ret += 'P' + Mangle(t.get_pointee())
   elif t.kind == TypeKind.TYPEDEF:
-    ret += Mangle(t.get_canonical())
+    if canonical:
+      ret += Mangle(t.get_canonical())
+    else:
+      ret += MangleName(SpellingBaseName(t.spelling))
   elif t.kind in (TypeKind.RECORD, TypeKind.ENUM):
-    # Find last space, everything else should be
-    # const/volatile/restrict/struct/enum.
-    s = t.spelling.split(' ')[-1]
-    ret += MangleName(s)
+    ret += MangleName(SpellingBaseName(t.spelling))
   elif t.kind == TypeKind.FUNCTIONPROTO:
     ret += 'F'
     ret += Mangle(t.get_result())
@@ -342,7 +498,10 @@ def Mangle(t):
   elif t.kind == TypeKind.CONSTANTARRAY:
     ret += 'A%d_%s' % (t.get_array_size(), Mangle(t.get_array_element_type()))
   elif t.kind == TypeKind.UNEXPOSED:
-    ret += Mangle(t.get_canonical())
+    if canonical or t.get_canonical().kind != TypeKind.UNEXPOSED:
+      ret += Mangle(t.get_canonical())
+    else:
+      ret += MangleName(SpellingBaseName(t.spelling))
   else:
     print t.kind, t.spelling
     import pdb; pdb.set_trace()
@@ -353,13 +512,39 @@ def Mangle(t):
 class Type(object):
   def __init__(self, t):
     self.type = t
-    # Generate C typedefs for function prototypes.
-    self.c_typedef = None
-    if t.kind == TypeKind.FUNCTIONPROTO:
-      self.c_typedef = 'TYPE_%s' % (Mangle(t))
+    self.js_inline = GetJsInline(t)
+    self.js_mangle = Mangle(t, canonical=False)
+
+  def IsPrimitive(self):
+    return self.type.kind.value in PRIMITIVE_TYPES
+
+  def IsTagType(self):
+    return self.type.kind.value in (TypeKind.RECORD.value, TypeKind.ENUM.value)
+
+  def GetName(self):
+    if self.type.kind.value in (TypeKind.TYPEDEF.value, TypeKind.RECORD.value,
+                                TypeKind.ENUM.value):
+      return SpellingBaseName(self.type.spelling)
+    raise Error('Don\'t know how to get name of type %s' % self.type.spelling)
+
+  def argument_types(self):
+    for t in self.type.argument_types():
+      yield Type(t)
+
+  def fields(self):
+    for f in self.type.get_declaration().get_children():
+      yield f.spelling, Type(f.type), self.type.get_offset(f.spelling) / 8
 
   def __getattr__(self, name):
-    return getattr(self.type, name)
+    val = getattr(self.type, name)
+    if callable(val):
+      def wrapper(*args, **kwargs):
+        result = val(*args, **kwargs)
+        if isinstance(result, clang.cindex.Type):
+          return Type(result)
+        return result
+      return wrapper
+    return val
 
   def __eq__(self, other):
     if type(self) != type(other):
@@ -368,31 +553,15 @@ class Type(object):
     t1 = self.type
     t2 = other.type
 
-    if t1 == t2:
-      return True
-
-    # The types still may be equal as far as we're concerned, even if clang
-    # doesn't think so.
-    if t1.spelling != t2.spelling:
+    if t1.kind != t2.kind:
       return False
 
-    t1typedef = t1.kind == TypeKind.TYPEDEF
-    t2typedef = t2.kind == TypeKind.TYPEDEF
-    t1can = t1.get_canonical()
-    t2can = t2.get_canonical()
-
-    # It may be that one is an anonymous struct/enum and the other is a typedef
-    # of it. It seems that libclang gives them the same spelling in this case.
-    # We want to distinguish these two types, so in this case return not equal.
-    if (t1typedef and t1can == t2) or (t2typedef and t2can == t1):
-      return False
-
-    # If the canonical types are the same, and neither are typedefs then we'll
-    # consider the types identical.
-    if not t1typedef and not t2typedef and t1can == t2can:
+    if self.IsPrimitive():
       return True
+    return t1 == t2
 
     # They must be different, but how?
+    print '%s:%r %s:%r' % (t1.kind, t1.spelling, t2.kind, t2.spelling)
     assert False
     return False
 
@@ -440,9 +609,10 @@ class Collector(object):
 
     f = Function(f)
     self.functions.append(f)
-    if f.type not in self.function_types:
-      self.function_types[f.type] = []
-    self.function_types[f.type].append(f)
+    t = f.type.get_canonical()
+    if t not in self.function_types:
+      self.function_types[t] = []
+    self.function_types[t].append(f)
 
   def _VisitType(self, t):
     t = Type(t)
@@ -474,7 +644,8 @@ class Collector(object):
         self._VisitFunctionDecl(fn_decl)
 
   def SortedFunctionTypes(self):
-    for fn_type in sorted(self.function_types.keys(), key=lambda f: f.spelling):
+    key = lambda f: Mangle(f, canonical=False)
+    for fn_type in sorted(self.function_types.keys(), key=key):
       yield fn_type, self.function_types[fn_type]
 
 
@@ -528,7 +699,7 @@ def main(args):
   collector = Collector(acceptor, tu)
   collector.Collect()
 
-  with open('../templates/glue.c') as f:
+  with open('../templates/glue.js') as f:
     template = f.read()
 
   # See http://stackoverflow.com/a/14620633

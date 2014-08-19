@@ -14,53 +14,49 @@
 
 // DO NOT EDIT, this file is auto-generated from //templates/glue.js
 
-[[[
-from helper import *
-from commands import *
+var naclbind = require('naclbind');
 
-types, functions = FixTypes(types, functions)
-]]]
+Type = naclbind.Type;
+Tags = {};
+Types = {};
 
-"use strict";
-
-var $2nacl = require('2nacljs');
-
-var m = $2nacl.makeModule(
-    '{{name}}-nacl', '{{name}}.nmf', 'application/x-pnacl');
-var t = m.types;
-var f = m.functions;
-
-[[for type in types.no_builtins.itervalues():]]
-[[  if type.is_alias:]]
-m.makeAliasType('{{type.js_ident}}', t.{{type.alias_of.js_ident}});
-[[  elif type.is_struct:]]
-m.makeStructType({{type.id}}, '{{type.js_ident}}', {{type.size}}, {
-[[    for field in type.fields:]]
-  {{field.name}}: {type: t.{{field.type.js_ident}}, offset: {{field.offset}}},
+[[for type in collector.types_topo:]]
+[[  if type.kind == TypeKind.TYPEDEF:]]
+{{type.js_inline}} = Type.Typedef('{{type.GetName()}}', {{type.get_canonical().js_inline}});
+[[  elif type.kind == TypeKind.RECORD:]]
+{{type.js_inline}} = Type.Record('{{type.GetName()}}', [
+[[    for name, ftype, offset in type.fields():]]
+  {name: '{{name}}', type: {{ftype.js_inline}}, offset: {{offset}}},
 [[    ]]
-});
-[[  elif type.is_pointer:]]
-m.makePointerType({{type.id}}, '{{type.js_ident}}', t.{{type.base_type.js_ident}});
+], {{type.get_size()}});
+[[  elif type.kind == TypeKind.ENUM:]]
+{{type.js_inline}} = Type.Enum('{{type.GetName()}}'}});
+[[  ]]
 [[]]
 
-[[[
-def ArgTypesString(fn_type):
-  if fn_type.arg_types:
-    return ', ' + CommaSep(['t.%s' % t.js_ident for t in fn_type.arg_types])
-  return ''
-
-def ReturnTypeString(fn_type):
-  return ', t.' + fn_type.return_type.js_ident
-]]]
-[[for fn_type in types.function_types.itervalues():]]
-[[  if fn_type.is_alias:]]
-var fnType_{{fn_type.js_ident}} = fnType_{{fn_type.alias_of.js_ident}};
+[[for type, _ in collector.SortedFunctionTypes():]]
+// {{type.get_canonical().spelling}}
+var FuncType_{{type.js_mangle}} = Type.Function(
+  {{type.get_result().get_canonical().js_inline}},
+  [
+[[  for arg_type in type.argument_types():]]
+    {{arg_type.get_canonical().js_inline}},
+[[  ]]
+[[  if type.is_function_variadic():]]
+  ], Type.VARIADIC
 [[  else:]]
-var fnType_{{fn_type.js_ident}} = m.makeFunctionType({{fn_type.id}}{{ReturnTypeString(fn_type)}}{{ArgTypesString(fn_type)}});
+  ]
+[[  ]]
+);
 [[]]
 
-[[for fn in functions:]]
-m.makeFunction('{{fn.js_ident}}', fnType_{{fn.js_ident}});
+m = naclbind.Module();
+
+[[for i, fn in enumerate(collector.functions):]]
+m.defineFunction({{i+1}}, '{{fn.spelling}}', FuncType_{{fn.type.get_canonical().js_mangle}});
 [[]]
+
+m.Types = Types;
+m.Tags = Tags;
 
 module.exports = m;
