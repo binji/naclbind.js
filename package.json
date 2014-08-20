@@ -10,8 +10,8 @@
     "mocha": "^1.21.0"
   },
   "scripts": {
-    "test": "mocha",
-    "hint": "jshint src"
+    "pretest": "jshint src",
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
