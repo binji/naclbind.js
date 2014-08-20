@@ -40,7 +40,7 @@ template-glue-c = $root/templates/glue.c
 template-glue-js = $root/templates/glue.js
 template-app-c = $root/templates/app.c
 
-lib2nacl = $root/dist/lib2nacl.a
+libnaclbind = $root/dist/libnaclbind.a
 
 nacl-sdk-zip = $root/out/nacl_sdk.zip
 nacl-sdk = $root/out/nacl_sdk/naclsdk

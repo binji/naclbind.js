@@ -1,1 +1,1 @@
-module.exports = require('./dist/2nacl.js');
+module.exports = require('./dist/naclbind.js');

@@ -20,7 +20,7 @@ include $root/common.ninja
 
 ccflags = $ccflags-default $ccflags-release {{ccflags}}
 ldflags = $ldflags-default $ldflags-release {{ldflags}}
-libs = -l2nacl {{' '.join('-l%s' % lib for lib in libs)}} -lppapi
+libs = -lnaclbind {{' '.join('-l%s' % lib for lib in libs)}} -lppapi
 
 json-file = {{json_file}}
 
@@ -43,7 +43,7 @@ build out/{{name}}.bc: link $
 [[for obj in objs:]]
     {{obj}} $
 [[]]
-    $lib2nacl
+    $libnaclbind
   cc = $pnacl-cxx
   ldflags = $ldflags
   libs = $libs

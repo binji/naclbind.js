@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var nacl = require('../dist/2nacl'),
+var naclbind = require('../dist/naclbind'),
     EmbedElement = require('./test_embed_element'),
     assert = require('assert');
 
@@ -20,7 +20,7 @@ var nacl = require('../dist/2nacl'),
 describe('TypeBuilder', function() {
   var tb, t;
   beforeEach(function() {
-    tb = new nacl.TypeBuilder;
+    tb = new naclbind.TypeBuilder;
     t = tb.nameHash;
 
   });

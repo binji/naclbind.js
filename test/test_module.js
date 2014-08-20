@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var nacl = require('../dist/2nacl'),
+var naclbind = require('../dist/naclbind'),
     EmbedElement = require('./test_embed_element'),
     assert = require('assert');
 
@@ -22,7 +22,7 @@ function doNothing() {}
 describe('Module', function() {
   var m, t, el;
   beforeEach(function() {
-    m = nacl.Module('foo.nmf', 'application/x-pnacl', {
+    m = naclbind.Module('foo.nmf', 'application/x-pnacl', {
       name: 'foo',
       embedElementConstructor: EmbedElement,
       log: doNothing,

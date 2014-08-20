@@ -57,7 +57,7 @@ build out/obj/type.o: cc src/c/type.c || src/c/type.h $nacl_sdk_root
 build out/obj/var.o: cc src/c/var.c || src/c/type.h $nacl_sdk_root
   cc = $pnacl-cc
   ccflags = $ccflags
-build out/lib2nacl.a: ar out/obj/builtin_funcs.o $
+build out/libnaclbind.a: ar out/obj/builtin_funcs.o $
                          out/obj/commands.o $
                          out/obj/handle.o $
                          out/obj/interfaces.o $
@@ -69,7 +69,7 @@ build out/lib2nacl.a: ar out/obj/builtin_funcs.o $
   ar = $pnacl-ar
 
 # dist
-build $lib2nacl: cp out/lib2nacl.a
-build dist/2nacl.js: browserify src/js/nacl.js | $
-                                src/js/builtin.js
+build $libnaclbind: cp out/libnaclbind.a
+build dist/naclbind.js: browserify src/js/nacl.js | $
+                                   src/js/builtin.js
   name = tonacl

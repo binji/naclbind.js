@@ -1,5 +1,5 @@
 {
-  "name": "2nacl.js",
+  "name": "naclbind.js",
   "version": "0.0.0",
   "description": "Easy JavaScript to Native Client bindings",
   "main": "index.js",
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/binji/2nacl.js.git"
+    "url": "https://github.com/binji/naclbind.js.git"
   },
   "keywords": [
     "nacl",
@@ -26,7 +26,7 @@
   "author": "binji@chromium.org",
   "license": "Apache",
   "bugs": {
-    "url": "https://github.com/binji/2nacl.js/issues"
+    "url": "https://github.com/binji/naclbind.js/issues"
   },
-  "homepage": "https://github.com/binji/2nacl.js"
+  "homepage": "https://github.com/binji/naclbind.js"
 }
