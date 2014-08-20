@@ -344,8 +344,7 @@ function GetSpelling(type, opt_name, opt_lastKind) {
       lastPrec,
       spelling,
       argsSpelling,
-      name,
-      i;
+      name;
 
   spelling = GetCV(type);
   if (type.kind in PRIMITIVE_SPELLING) {

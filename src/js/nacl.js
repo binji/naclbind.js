@@ -27,6 +27,8 @@ function assert(cond, msg) {
 
 // EmbedElement //////////////////////////////////////////////////////////////
 function EmbedElement(nmf, mimeType) {
+  this.nmf = nmf;
+  this.mimeType = mimeType;
   this.element = document.createElement('embed');
   this.element.setAttribute('width', '0');
   this.element.setAttribute('height', '0');
@@ -790,8 +792,6 @@ function Type(id, name, cStr, typeData, aliasOf) {
   this.cStr = cStr;
   this.data = typeData;
   this.aliasOf = aliasOf || null;
-
-  var that = this;
 
   // Delegate other properties to TypeData.
   for (var propName in typeData) {

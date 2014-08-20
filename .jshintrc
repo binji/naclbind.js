@@ -8,5 +8,6 @@
   "newcap": false,
   "node": true,
   "quotmark": "single",
-  "undef": true
+  "undef": true,
+  "unused": "vars"
 }
