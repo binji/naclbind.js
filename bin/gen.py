@@ -359,7 +359,8 @@ def GetJsQualifiedArgWithComma(t):
   return q
 
 
-VALID_SPELLING_PARTS = ('struct', 'enum', 'const', 'volatile', 'restrict')
+VALID_SPELLING_PARTS = ('struct', 'union', 'enum', 'const', 'volatile',
+                        'restrict')
 def SpellingBaseName(spelling):
   parts = spelling.split(' ')
   if not all(p in VALID_SPELLING_PARTS for p in parts[:-1]):

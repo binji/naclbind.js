@@ -18,6 +18,7 @@ var nacl = require('../dist/2nacl'),
 
 function doNothing() {}
 
+/*
 describe('Module', function() {
   var m, t, el;
   beforeEach(function() {
@@ -242,3 +243,4 @@ describe('Module', function() {
     });
   });
 });
+*/

@@ -16,6 +16,7 @@ var nacl = require('../dist/2nacl'),
     EmbedElement = require('./test_embed_element'),
     assert = require('assert');
 
+/*
 describe('TypeBuilder', function() {
   var tb, t;
   beforeEach(function() {
@@ -150,3 +151,4 @@ describe('TypeBuilder', function() {
     });
   });
 });
+*/

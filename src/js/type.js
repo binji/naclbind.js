@@ -1,0 +1,482 @@
+// Copyright 2014 Ben Smith. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Matches LLVM TypeKind names (but not values).
+var INVALID = 0,
+    UNEXPOSED = 1,
+    VOID = 2,
+    BOOL = 3,
+    CHAR_U = 4,
+    UCHAR = 5,
+    USHORT = 6,
+    UINT = 7,
+    ULONG = 8,
+    ULONGLONG = 9,
+    CHAR_S = 10,
+    SCHAR = 11,
+    WCHAR = 12,
+    SHORT = 13,
+    INT = 14,
+    LONG = 15,
+    LONGLONG = 16,
+    FLOAT = 17,
+    DOUBLE = 18,
+    POINTER = 19,
+    RECORD = 20,
+    ENUM = 21,
+    TYPEDEF = 22,
+    FUNCTIONPROTO = 23,
+    CONSTANTARRAY = 24,
+    INCOMPLETEARRAY = 25,
+
+    PRIMITIVE_SPELLING = {
+      2: 'void',
+      3: 'bool',
+      4: 'char',
+      5: 'unsigned char',
+      6: 'unsigned short',
+      7: 'unsigned int',
+      8: 'unsigned long',
+      9: 'unsigned long long',
+      10: 'char',
+      11: 'signed char',
+      12: 'wchar_t',
+      13: 'short',
+      14: 'int',
+      15: 'long',
+      16: 'long long',
+      17: 'float',
+      18: 'double',
+    },
+
+    PRIMITIVE_RANK = {
+      3: 1,  // bool
+      4: 2,  // char (unsigned)
+      5: 2,  // unsigned char
+      6: 3,  // unsigned short
+      7: 4,  // unsigned int
+      8: 5,  // unsigned long
+      9: 6,  // unsigned long long
+      10: 2,  // char (signed)
+      11: 2,  // signed char
+      12: 4,  // wchar_t
+      13: 3,  // short
+      14: 4,  // int
+      15: 5,  // long
+      16: 6,  // long long
+      17: 7,  // float
+      18: 8,  // double
+    },
+
+    PRIMITIVE_SIGNED = {
+      4: true,  // char (unsigned)
+      5: true,  // unsigned char
+      6: true,  // unsigned short
+      7: true,  // unsigned int
+      8: true,  // unsigned long
+      9: true,  // unsigned long long
+      10: false,  // char (signed)
+      11: false,  // signed char
+      12: false,  // wchar_t
+      13: false,  // short
+      14: false,  // int
+      15: false,  // long
+      16: false,  // long long
+    },
+
+    IS_CONST = 1,
+    IS_VOLATILE = 2,
+    IS_RESTRICT = 4,
+
+    VARIADIC = true,
+    NOT_VARIADIC = false,
+
+    STRUCT = false,
+    UNION = true,
+
+    CAST_ERROR = 0,
+    CAST_OK = 1,
+    CAST_TRUNCATE = 2,
+    CAST_SIGNED_UNSIGNED = 3,
+    CAST_INT_TO_POINTER = 4,
+    CAST_POINTER_TO_INT = 5,
+    CAST_DISCARD_QUALIFIER = 6,
+    CAST_INT_TO_ENUM = 7,
+    CAST_DIFFERENT_ENUMS = 8,
+    CAST_INCOMPATIBLE_POINTERS = 9;
+
+    SPELLING_PRECEDENCE = {};
+
+SPELLING_PRECEDENCE[POINTER] = 1;
+SPELLING_PRECEDENCE[CONSTANTARRAY] = 2;
+SPELLING_PRECEDENCE[INCOMPLETEARRAY] = 2;
+SPELLING_PRECEDENCE[FUNCTIONPROTO] = 3;
+
+
+function kindIsInteger(kind) {
+  return kind >= 3 && kind <= 16;
+}
+
+function kindIsPointerlike(kind) {
+  return kind === POINTER || kind === CONSTANTARRAY ||
+         kind === INCOMPLETEARRAY;
+}
+
+function getPointerlikePointee(type) {
+  if (type.kind === POINTER) {
+    return type.pointee;
+  } else if (type.kind === CONSTANTARRAY) {
+    return type.elementType;
+  } else if (type.kind === INCOMPLETEARRAY) {
+    return type.elementType;
+  }
+  return null;
+}
+
+function canCastPointerTo(from, to) {
+  var fp = getPointerlikePointee(from),
+      tp;
+  if (kindIsPointerlike(to.kind)) {
+    tp = getPointerlikePointee(to);
+    if (!fp.isCompatibleWith(tp)) {
+      return CAST_INCOMPATIBLE_POINTERS;
+    }
+
+    // If there is a qualifier in |this| that is not set in |that|, it is an
+    // error.
+    if ((from.cv & ~to.cv) !== 0) {
+      return CAST_DISCARD_QUALIFIER;
+    }
+
+    return CAST_OK;
+  } else if (kindIsInteger(to.kind)) {
+    return CAST_POINTER_TO_INT;
+  } else {
+    return CAST_ERROR;
+  }
+}
+
+function Type(kind, cv) {
+  if (!(this instanceof Type)) { return new Type(kind, cv); }
+  this.kind = kind;
+  this.cv = cv || 0;
+}
+Type.prototype.canCastTo = function(that) {
+  return CAST_ERROR;
+};
+
+function Void(cv) {
+  if (!(this instanceof Void)) { return new Void(cv); }
+  Type.call(this, VOID, cv);
+  this.spelling = GetSpelling(this);
+}
+Void.prototype = Object.create(Type.prototype);
+Void.constructor = Void;
+
+function Numeric(kind, cv) {
+  if (!(this instanceof Numeric)) { return new Numeric(kind, cv); }
+  Type.call(this, kind, cv);
+  this.spelling = GetSpelling(this);
+}
+Numeric.prototype = Object.create(Type.prototype);
+Numeric.constructor = Numeric;
+Numeric.prototype.canCastTo = function(that) {
+  var thisIsInteger,
+      thisRank,
+      thisSigned,
+      thatSigned;
+  if (this.constructor !== that.constructor) {
+    thisIsInteger = kindIsInteger(this.kind);
+    if (thisIsInteger && kindIsPointerlike(that.kind)) {
+      return CAST_INT_TO_POINTER;
+    } else if (thisIsInteger && that.kind == ENUM) {
+      return CAST_INT_TO_ENUM;
+    }
+
+    return CAST_ERROR;
+  }
+
+  thisRank = PRIMITIVE_RANK[this.kind];
+  thatRank = PRIMITIVE_RANK[that.kind];
+  thisSigned = PRIMITIVE_SIGNED[this.kind];
+  thatSigned = PRIMITIVE_SIGNED[that.kind];
+  if (thisRank > thatRank) {
+    return CAST_TRUNCATE;
+  } else if (thisRank === thatRank && thisSigned !== thatSigned) {
+    return CAST_SIGNED_UNSIGNED;
+  }
+
+  return CAST_OK;
+};
+
+function Pointer(pointee, cv) {
+  if (!(this instanceof Pointer)) { return new Pointer(pointee, cv); }
+  Type.call(this, POINTER, cv);
+  this.pointee = pointee;
+  this.spelling = GetSpelling(this);
+}
+Pointer.prototype = Object.create(Type.prototype);
+Pointer.constructor = Pointer;
+Pointer.prototype.canCastTo = function(that) {
+  return canCastPointerTo(this, that);
+};
+
+function Record(tag, fields, isUnion, cv) {
+  if (!(this instanceof Record)) { return new Record(tag, fields, isUnion, cv); }
+  Type.call(this, RECORD, cv);
+  this.tag = tag;
+  this.fields = fields;
+  this.isUnion = isUnion || false;
+  this.spelling = GetSpelling(this);
+}
+Record.prototype = Object.create(Type.prototype);
+Record.constructor = Record;
+Record.prototype.canCastTo = function(that) {
+  return this.isCompatibleWith(that);
+};
+
+function Field(name, type, offset) {
+  if (!(this instanceof Field)) { return new Field(name, type, offset); }
+  this.name = name;
+  this.type = type;
+  this.offset = offset;
+}
+
+
+function Enum(tag, cv) {
+  if (!(this instanceof Enum)) { return new Enum(tag, cv); }
+  Type.call(this, ENUM, cv);
+  this.tag = tag;
+  this.spelling = GetSpelling(this);
+};
+Enum.prototype = Object.create(Type.prototype);
+Enum.constructor = Enum;
+Enum.prototype.canCastTo = function(that) {
+  if (this.constructor !== that.constructor) {
+    return kindIsInteger(that.kind) ? CAST_OK : CAST_ERROR;
+  }
+
+  return this.tag === that.tag ? CAST_OK : CAST_DIFFERENT_ENUMS;
+};
+
+function Typedef(tag, canonical, cv) {
+  if (!(this instanceof Typedef)) { return new Typedef(tag, canonical, cv); }
+  Type.call(this, TYPEDEF, cv);
+  this.tag = tag;
+  this.canonical = canonical;
+  this.spelling = GetSpelling(this);
+}
+Typedef.prototype = Object.create(Type.prototype);
+Typedef.constructor = Typedef;
+Typedef.prototype.canCastTo = function(that) {
+  return this.isCompatibleWith(that);
+};
+
+function FunctionProto(resultType, argTypes, cv, variadic) {
+  if (!(this instanceof FunctionProto)) { return new FunctionProto(resultType, argTypes, cv, variadic); }
+  Type.call(this, FUNCTIONPROTO, cv);
+  this.resultType = resultType;
+  this.argTypes = argTypes;
+  this.variadic = variadic || false;
+  this.spelling = GetSpelling(this);
+}
+FunctionProto.prototype = Object.create(Type.prototype);
+FunctionProto.constructor = FunctionProto;
+FunctionProto.prototype.canCastTo = function(that) {
+  return this.isCompatibleWith(that);
+};
+
+function ConstantArray(elementType, arraySize, cv) {
+  if (!(this instanceof ConstantArray)) { return new ConstantArray(elementType, arraySize, cv); }
+  Type.call(this, CONSTANTARRAY, cv);
+  this.elementType = elementType;
+  this.arraySize = arraySize;
+  this.spelling = GetSpelling(this);
+}
+ConstantArray.prototype = Object.create(Type.prototype);
+ConstantArray.constructor = ConstantArray;
+ConstantArray.prototype.canCastTo = function(that) {
+  return canCastPointerTo(this, that);
+};
+
+function IncompleteArray(elementType, cv) {
+  if (!(this instanceof IncompleteArray)) { return new IncompleteArray(elementType, cv); }
+  Type.call(this, INCOMPLETEARRAY, cv);
+  this.elementType = elementType;
+  this.spelling = GetSpelling(this);
+}
+IncompleteArray.prototype = Object.create(Type.prototype);
+IncompleteArray.constructor = IncompleteArray;
+IncompleteArray.prototype.canCastTo = function(that) {
+  return canCastPointerTo(this, that);
+};
+
+function GetCV(type) {
+  var result = '';
+  if (type.cv & IS_CONST) result += 'const ';
+  if (type.cv & IS_VOLATILE) result += 'volatile ';
+  if (type.cv & IS_RESTRICT) result += 'restrict ';
+  return result;
+}
+
+function GetSpelling(type, opt_name, opt_lastKind) {
+  var prec,
+      lastPrec,
+      spelling,
+      argsSpelling,
+      name,
+      i;
+
+  spelling = GetCV(type);
+  if (type.kind in PRIMITIVE_SPELLING) {
+    spelling += PRIMITIVE_SPELLING[type.kind];
+    if (opt_name) {
+      spelling += ' ' + opt_name;
+    }
+
+    return spelling;
+  }
+
+  name = opt_name || '';
+  prec = SPELLING_PRECEDENCE[type.kind];
+  lastPrec = SPELLING_PRECEDENCE[opt_lastKind];
+
+  if (prec && lastPrec && prec > lastPrec) {
+    name = '(' + name + ')';
+  }
+
+  if (type.kind === TYPEDEF) {
+    spelling += type.tag;
+    if (name) {
+      spelling +=  ' ' + name;
+    }
+  } else if (type.kind === POINTER) {
+    name = '*' + spelling + name;
+    spelling = GetSpelling(type.pointee, name, POINTER);
+  } else if (type.kind === ENUM) {
+    spelling += 'enum ' + type.tag;
+    if (name) {
+      spelling += ' ' + name;
+    }
+  } else if (type.kind === RECORD) {
+    if (type.isUnion) {
+      spelling += 'union ' + type.tag;
+    } else {
+      spelling += 'struct ' + type.tag;
+    }
+    if (name) {
+      spelling += ' ' + name;
+    }
+  } else if (type.kind === CONSTANTARRAY) {
+    name += '[' + type.arraySize + ']';
+    spelling = GetSpelling(type.elementType, name, CONSTANTARRAY);
+  } else if (type.kind === INCOMPLETEARRAY) {
+    name += '[]';
+    spelling = GetSpelling(type.elementType, name, INCOMPLETEARRAY);
+  } else if (type.kind === FUNCTIONPROTO) {
+    name += '(';
+    if (type.argTypes.length > 0) {
+      argsSpelling = type.argTypes.map(function(a) { return GetSpelling(a); });
+      if (type.variadic) {
+        argsSpelling.push('...');
+      }
+      name += argsSpelling.join(', ');
+    } else {
+      name += 'void';
+    }
+    name += ')';
+    spelling = GetSpelling(type.resultType, name, FUNCTIONPROTO);
+  } else {
+    throw new Error('Unknown kind: ' + type.kind);
+  }
+
+  return spelling;
+}
+
+module.exports = {
+  // Types
+  void: Void(),
+  bool: Numeric(BOOL),
+  char: Numeric(CHAR_S),
+  uchar: Numeric(UCHAR),
+  ushort: Numeric(USHORT),
+  uint: Numeric(UINT),
+  ulong: Numeric(ULONG),
+  ulonglong: Numeric(ULONGLONG),
+  schar: Numeric(SCHAR),
+  wchar: Numeric(WCHAR),
+  short: Numeric(SHORT),
+  int: Numeric(INT),
+  long: Numeric(LONG),
+  longlong: Numeric(LONGLONG),
+  float: Numeric(FLOAT),
+  double: Numeric(DOUBLE),
+
+  // Type constructors
+  Void: Void,
+  Numeric: Numeric,
+  Pointer: Pointer,
+  Record: Record,
+  Field: Field,
+  Enum: Enum,
+  Typedef: Typedef,
+  Function: FunctionProto,
+  Array: ConstantArray,
+  IncompleteArray: IncompleteArray,
+
+  // Qualifiers
+  CONST: IS_CONST,
+  VOLATILE: IS_VOLATILE,
+  RESTRICT: IS_RESTRICT,
+
+  // Type constants
+  VARIADIC: VARIADIC,
+  NOT_VARIADIC: NOT_VARIADIC,
+  STRUCT: STRUCT,
+  UNION: UNION,
+
+  // Kinds
+  INVALID: INVALID,
+  UNEXPOSED: UNEXPOSED,
+  VOID: VOID,
+  BOOL: BOOL,
+  CHAR_U: CHAR_U,
+  UCHAR: UCHAR,
+  USHORT: USHORT,
+  UINT: UINT,
+  ULONG: ULONG,
+  ULONGLONG: ULONGLONG,
+  CHAR_S: CHAR_S,
+  SCHAR: SCHAR,
+  WCHAR: WCHAR,
+  SHORT: SHORT,
+  INT: INT,
+  LONG: LONG,
+  LONGLONG: LONGLONG,
+  FLOAT: FLOAT,
+  DOUBLE: DOUBLE,
+  POINTER: POINTER,
+  RECORD: RECORD,
+  ENUM: ENUM,
+  TYPEDEF: TYPEDEF,
+  FUNCTIONPROTO: FUNCTIONPROTO,
+  CONSTANTARRAY: CONSTANTARRAY,
+  INCOMPLETEARRAY: INCOMPLETEARRAY,
+
+  // Default char to signed
+  CHAR: CHAR_S,
+
+  // Functions
+  GetSpelling: GetSpelling,
+};

@@ -21,6 +21,8 @@ Tags = {};
 Types = {};
 
 [[for type in collector.types_topo:]]
+[[  if type.kind == TypeKind.UNEXPOSED:]]
+[[    type = type.get_canonical()]]
 [[  if type.kind == TypeKind.TYPEDEF:]]
 {{type.js_inline}} = Type.Typedef('{{type.GetName()}}', {{type.get_canonical().js_inline}});
 [[  elif type.kind == TypeKind.RECORD:]]
@@ -30,12 +32,14 @@ Types = {};
 [[    ]]
 ], {{type.get_size()}});
 [[  elif type.kind == TypeKind.ENUM:]]
-{{type.js_inline}} = Type.Enum('{{type.GetName()}}'}});
+{{type.js_inline}} = Type.Enum('{{type.GetName()}}');
+[[  else:]]
+// {{type.kind}} {{type.spelling}}
 [[  ]]
 [[]]
 
-[[for type, _ in collector.SortedFunctionTypes():]]
-// {{type.get_canonical().spelling}}
+[[for type, fns in collector.SortedFunctionTypes():]]
+// {{type.get_canonical().spelling}} -- {{', '.join(fn.spelling for fn in fns)}}
 var FuncType_{{type.js_mangle}} = Type.Function(
   {{type.get_result().get_canonical().js_inline}},
   [
