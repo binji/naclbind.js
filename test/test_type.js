@@ -132,8 +132,46 @@ describe('Type', function() {
   });
 
   describe('Cast', function() {
+    describe('Void', function() {
+      it('should allow cast of void -> void', function() {
+        assert.equal(type.void.canCastTo(type.void), type.CAST_OK);
+      });
+
+      it('should fail cast of void -> anything else', function() {
+        var e = type.Enum('e'),
+            s = type.Record('s', type.Field('f', type.int, 0)),
+            u = type.Record('s', type.Field('f', type.int, 0), type.UNION),
+            f = type.Function(type.void, type.int),
+            fp = type.Pointer(f),
+            p = type.Pointer(type.void),
+            a = type.Array(type.char, 2),
+            ia = type.IncompleteArray(type.char);
+        assert.equal(type.void.canCastTo(e), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(s), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(u), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(f), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(fp), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(p), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(a), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(ia), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.bool), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.char), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.short), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.int), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.long), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.longlong), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.uchar), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.ushort), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.uint), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.ulong), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.ulonglong), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.float), type.CAST_ERROR);
+        assert.equal(type.void.canCastTo(type.double), type.CAST_ERROR);
+      });
+    });
+
     describe('Numeric', function() {
-      it('should allow casting of numeric -> larger numeric', function() {
+      it('should allow cast of numeric -> larger numeric', function() {
         assert.equal(type.bool.canCastTo(type.char), type.CAST_OK);
         assert.equal(type.char.canCastTo(type.short), type.CAST_OK);
         assert.equal(type.short.canCastTo(type.int), type.CAST_OK);
@@ -146,7 +184,7 @@ describe('Type', function() {
         assert.equal(type.float.canCastTo(type.double), type.CAST_OK);
       });
 
-      it('should allow casting of unsigned -> larger signed', function() {
+      it('should allow cast of unsigned -> larger signed', function() {
         assert.equal(type.uchar.canCastTo(type.short), type.CAST_OK);
         assert.equal(type.ushort.canCastTo(type.int), type.CAST_OK);
         assert.equal(type.uint.canCastTo(type.long), type.CAST_OK);

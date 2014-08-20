@@ -183,6 +183,9 @@ function Void(cv) {
 }
 Void.prototype = Object.create(Type.prototype);
 Void.prototype.constructor = Void;
+Void.prototype.canCastTo = function(that) {
+  return that.kind === VOID;
+};
 
 function Numeric(kind, cv) {
   if (!(this instanceof Numeric)) { return new Numeric(kind, cv); }
