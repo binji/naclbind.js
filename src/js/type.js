@@ -114,7 +114,7 @@ var INVALID = 0,
     CAST_DISCARD_QUALIFIER = 6,
     CAST_INT_TO_ENUM = 7,
     CAST_DIFFERENT_ENUMS = 8,
-    CAST_INCOMPATIBLE_POINTERS = 9;
+    CAST_INCOMPATIBLE_POINTERS = 9,
 
     SPELLING_PRECEDENCE = {};
 
@@ -182,7 +182,7 @@ function Void(cv) {
   this.spelling = GetSpelling(this);
 }
 Void.prototype = Object.create(Type.prototype);
-Void.constructor = Void;
+Void.prototype.constructor = Void;
 
 function Numeric(kind, cv) {
   if (!(this instanceof Numeric)) { return new Numeric(kind, cv); }
@@ -190,7 +190,7 @@ function Numeric(kind, cv) {
   this.spelling = GetSpelling(this);
 }
 Numeric.prototype = Object.create(Type.prototype);
-Numeric.constructor = Numeric;
+Numeric.prototype.constructor = Numeric;
 Numeric.prototype.canCastTo = function(that) {
   var thisIsInteger,
       thisRank,
@@ -200,7 +200,7 @@ Numeric.prototype.canCastTo = function(that) {
     thisIsInteger = kindIsInteger(this.kind);
     if (thisIsInteger && kindIsPointerlike(that.kind)) {
       return CAST_INT_TO_POINTER;
-    } else if (thisIsInteger && that.kind == ENUM) {
+    } else if (thisIsInteger && that.kind === ENUM) {
       return CAST_INT_TO_ENUM;
     }
 
@@ -227,7 +227,7 @@ function Pointer(pointee, cv) {
   this.spelling = GetSpelling(this);
 }
 Pointer.prototype = Object.create(Type.prototype);
-Pointer.constructor = Pointer;
+Pointer.prototype.constructor = Pointer;
 Pointer.prototype.canCastTo = function(that) {
   return canCastPointerTo(this, that);
 };
@@ -241,7 +241,7 @@ function Record(tag, fields, isUnion, cv) {
   this.spelling = GetSpelling(this);
 }
 Record.prototype = Object.create(Type.prototype);
-Record.constructor = Record;
+Record.prototype.constructor = Record;
 Record.prototype.canCastTo = function(that) {
   return this.isCompatibleWith(that);
 };
@@ -261,7 +261,7 @@ function Enum(tag, cv) {
   this.spelling = GetSpelling(this);
 };
 Enum.prototype = Object.create(Type.prototype);
-Enum.constructor = Enum;
+Enum.prototype.constructor = Enum;
 Enum.prototype.canCastTo = function(that) {
   if (this.constructor !== that.constructor) {
     return kindIsInteger(that.kind) ? CAST_OK : CAST_ERROR;
@@ -278,7 +278,7 @@ function Typedef(tag, canonical, cv) {
   this.spelling = GetSpelling(this);
 }
 Typedef.prototype = Object.create(Type.prototype);
-Typedef.constructor = Typedef;
+Typedef.prototype.constructor = Typedef;
 Typedef.prototype.canCastTo = function(that) {
   return this.isCompatibleWith(that);
 };
@@ -292,7 +292,7 @@ function FunctionProto(resultType, argTypes, cv, variadic) {
   this.spelling = GetSpelling(this);
 }
 FunctionProto.prototype = Object.create(Type.prototype);
-FunctionProto.constructor = FunctionProto;
+FunctionProto.prototype.constructor = FunctionProto;
 FunctionProto.prototype.canCastTo = function(that) {
   return this.isCompatibleWith(that);
 };
@@ -305,7 +305,7 @@ function ConstantArray(elementType, arraySize, cv) {
   this.spelling = GetSpelling(this);
 }
 ConstantArray.prototype = Object.create(Type.prototype);
-ConstantArray.constructor = ConstantArray;
+ConstantArray.prototype.constructor = ConstantArray;
 ConstantArray.prototype.canCastTo = function(that) {
   return canCastPointerTo(this, that);
 };
@@ -317,7 +317,7 @@ function IncompleteArray(elementType, cv) {
   this.spelling = GetSpelling(this);
 }
 IncompleteArray.prototype = Object.create(Type.prototype);
-IncompleteArray.constructor = IncompleteArray;
+IncompleteArray.prototype.constructor = IncompleteArray;
 IncompleteArray.prototype.canCastTo = function(that) {
   return canCastPointerTo(this, that);
 };
@@ -476,6 +476,18 @@ module.exports = {
 
   // Default char to signed
   CHAR: CHAR_S,
+
+  // Cast results
+  CAST_ERROR: CAST_ERROR,
+  CAST_OK: CAST_OK,
+  CAST_TRUNCATE: CAST_TRUNCATE,
+  CAST_SIGNED_UNSIGNED: CAST_SIGNED_UNSIGNED,
+  CAST_INT_TO_POINTER: CAST_INT_TO_POINTER,
+  CAST_POINTER_TO_INT: CAST_POINTER_TO_INT,
+  CAST_DISCARD_QUALIFIER: CAST_DISCARD_QUALIFIER,
+  CAST_INT_TO_ENUM: CAST_INT_TO_ENUM,
+  CAST_DIFFERENT_ENUMS: CAST_DIFFERENT_ENUMS,
+  CAST_INCOMPATIBLE_POINTERS: CAST_INCOMPATIBLE_POINTERS,
 
   // Functions
   GetSpelling: GetSpelling,

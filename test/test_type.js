@@ -130,4 +130,129 @@ describe('Type', function() {
       //assert.equal(spell(PFA_iiE), 'int (*)(int)[]');
     });
   });
+
+  describe('Cast', function() {
+    describe('Numeric', function() {
+      it('should allow casting of numeric -> larger numeric', function() {
+        assert.equal(type.bool.canCastTo(type.char), type.CAST_OK);
+        assert.equal(type.char.canCastTo(type.short), type.CAST_OK);
+        assert.equal(type.short.canCastTo(type.int), type.CAST_OK);
+        assert.equal(type.int.canCastTo(type.long), type.CAST_OK);
+        assert.equal(type.long.canCastTo(type.longlong), type.CAST_OK);
+        assert.equal(type.uchar.canCastTo(type.ushort), type.CAST_OK);
+        assert.equal(type.ushort.canCastTo(type.uint), type.CAST_OK);
+        assert.equal(type.uint.canCastTo(type.ulong), type.CAST_OK);
+        assert.equal(type.ulong.canCastTo(type.ulonglong), type.CAST_OK);
+        assert.equal(type.float.canCastTo(type.double), type.CAST_OK);
+      });
+
+      it('should allow casting of unsigned -> larger signed', function() {
+        assert.equal(type.uchar.canCastTo(type.short), type.CAST_OK);
+        assert.equal(type.ushort.canCastTo(type.int), type.CAST_OK);
+        assert.equal(type.uint.canCastTo(type.long), type.CAST_OK);
+        assert.equal(type.ulong.canCastTo(type.longlong), type.CAST_OK);
+      });
+
+      it('should warn on cast of unsigned <-> equal-sized signed', function() {
+        var signedUnsigned = type.CAST_SIGNED_UNSIGNED;
+        assert.equal(type.uchar.canCastTo(type.char), signedUnsigned);
+        assert.equal(type.ushort.canCastTo(type.short), signedUnsigned);
+        assert.equal(type.uint.canCastTo(type.int), signedUnsigned);
+        assert.equal(type.ulong.canCastTo(type.long), signedUnsigned);
+        assert.equal(type.ulonglong.canCastTo(type.longlong), signedUnsigned);
+
+        assert.equal(type.char.canCastTo(type.uchar), signedUnsigned);
+        assert.equal(type.short.canCastTo(type.ushort), signedUnsigned);
+        assert.equal(type.int.canCastTo(type.uint), signedUnsigned);
+        assert.equal(type.long.canCastTo(type.ulong), signedUnsigned);
+        assert.equal(type.longlong.canCastTo(type.ulonglong), signedUnsigned);
+      });
+
+      it('should warn on cast of numeric -> smaller numeric', function() {
+        assert.equal(type.char.canCastTo(type.bool), type.CAST_TRUNCATE);
+        assert.equal(type.short.canCastTo(type.char), type.CAST_TRUNCATE);
+        assert.equal(type.int.canCastTo(type.short), type.CAST_TRUNCATE);
+        assert.equal(type.long.canCastTo(type.int), type.CAST_TRUNCATE);
+        assert.equal(type.longlong.canCastTo(type.long), type.CAST_TRUNCATE);
+        assert.equal(type.ushort.canCastTo(type.uchar), type.CAST_TRUNCATE);
+        assert.equal(type.uint.canCastTo(type.ushort), type.CAST_TRUNCATE);
+        assert.equal(type.ulong.canCastTo(type.uint), type.CAST_TRUNCATE);
+        assert.equal(type.ulonglong.canCastTo(type.ulong), type.CAST_TRUNCATE);
+        assert.equal(type.double.canCastTo(type.float), type.CAST_TRUNCATE);
+      });
+
+      it('should warn on cast of integral -> pointer-like', function() {
+        var c = type.char,
+            v = type.void,
+            p = type.Pointer(v),
+            a = type.Array(c, 2),
+            ia = type.IncompleteArray(c);
+        [p, a, ia].forEach(function(x) {
+          assert.equal(type.char.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.short.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.int.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.long.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.longlong.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.uchar.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.ushort.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.uint.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.ulong.canCastTo(x), type.CAST_INT_TO_POINTER);
+          assert.equal(type.ulonglong.canCastTo(x), type.CAST_INT_TO_POINTER);
+        });
+      });
+
+      it('should fail to cast float -> pointer-like', function() {
+        var c = type.char,
+            v = type.void,
+            p = type.Pointer(v),
+            a = type.Array(c, 2),
+            ia = type.IncompleteArray(c);
+        [p, a, ia].forEach(function(x) {
+          assert.equal(type.float.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.double.canCastTo(x), type.CAST_ERROR);
+        });
+      });
+
+      it('should warn on cast of integral -> enum', function() {
+        var e = type.Enum('e');
+        assert.equal(type.char.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.short.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.int.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.long.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.longlong.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.uchar.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.ushort.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.uint.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.ulong.canCastTo(e), type.CAST_INT_TO_ENUM);
+        assert.equal(type.ulonglong.canCastTo(e), type.CAST_INT_TO_ENUM);
+      });
+
+      it('should fail to cast float -> enum', function() {
+        var e = type.Enum('e');
+        assert.equal(type.float.canCastTo(e), type.CAST_ERROR);
+        assert.equal(type.double.canCastTo(e), type.CAST_ERROR);
+      });
+
+      it('should fail to cast numeric -> record, void, function', function() {
+        var s = type.Record('s', type.Field('f', type.int, 0)),
+            u = type.Record('s', type.Field('f', type.int, 0), type.UNION),
+            v = type.void,
+            f = type.Function(type.void, type.int);
+        [s, u, v, f].forEach(function(x) {
+          assert.equal(type.char.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.short.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.int.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.long.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.longlong.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.uchar.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.ushort.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.uint.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.ulong.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.ulonglong.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.float.canCastTo(x), type.CAST_ERROR);
+          assert.equal(type.double.canCastTo(x), type.CAST_ERROR);
+        });
+      });
+    });
+  });
 });
