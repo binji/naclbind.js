@@ -24,7 +24,10 @@ def jsbool(x):
   return 'true' if x else 'false'
 ]]]
 
-"use strict";
+'use strict';
+
+/* Disable line length warning */
+/* jshint -W101 */
 
 function init(module) {
   var m = module;

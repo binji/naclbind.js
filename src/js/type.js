@@ -194,6 +194,7 @@ Numeric.prototype.constructor = Numeric;
 Numeric.prototype.canCastTo = function(that) {
   var thisIsInteger,
       thisRank,
+      thatRank,
       thisSigned,
       thatSigned;
   if (this.constructor !== that.constructor) {
@@ -233,7 +234,9 @@ Pointer.prototype.canCastTo = function(that) {
 };
 
 function Record(tag, fields, isUnion, cv) {
-  if (!(this instanceof Record)) { return new Record(tag, fields, isUnion, cv); }
+  if (!(this instanceof Record)) {
+    return new Record(tag, fields, isUnion, cv);
+  }
   Type.call(this, RECORD, cv);
   this.tag = tag;
   this.fields = fields;
@@ -259,7 +262,7 @@ function Enum(tag, cv) {
   Type.call(this, ENUM, cv);
   this.tag = tag;
   this.spelling = GetSpelling(this);
-};
+}
 Enum.prototype = Object.create(Type.prototype);
 Enum.prototype.constructor = Enum;
 Enum.prototype.canCastTo = function(that) {
@@ -284,7 +287,9 @@ Typedef.prototype.canCastTo = function(that) {
 };
 
 function FunctionProto(resultType, argTypes, cv, variadic) {
-  if (!(this instanceof FunctionProto)) { return new FunctionProto(resultType, argTypes, cv, variadic); }
+  if (!(this instanceof FunctionProto)) {
+    return new FunctionProto(resultType, argTypes, cv, variadic);
+  }
   Type.call(this, FUNCTIONPROTO, cv);
   this.resultType = resultType;
   this.argTypes = argTypes;
@@ -298,7 +303,9 @@ FunctionProto.prototype.canCastTo = function(that) {
 };
 
 function ConstantArray(elementType, arraySize, cv) {
-  if (!(this instanceof ConstantArray)) { return new ConstantArray(elementType, arraySize, cv); }
+  if (!(this instanceof ConstantArray)) {
+    return new ConstantArray(elementType, arraySize, cv);
+  }
   Type.call(this, CONSTANTARRAY, cv);
   this.elementType = elementType;
   this.arraySize = arraySize;
@@ -311,7 +318,9 @@ ConstantArray.prototype.canCastTo = function(that) {
 };
 
 function IncompleteArray(elementType, cv) {
-  if (!(this instanceof IncompleteArray)) { return new IncompleteArray(elementType, cv); }
+  if (!(this instanceof IncompleteArray)) {
+    return new IncompleteArray(elementType, cv);
+  }
   Type.call(this, INCOMPLETEARRAY, cv);
   this.elementType = elementType;
   this.spelling = GetSpelling(this);

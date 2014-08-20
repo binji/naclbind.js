@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-"use strict";
+'use strict';
 
 var builtin = require('./builtin');
 
@@ -146,8 +146,7 @@ Module.prototype.onLoad_ = function(event) {
 Module.prototype.onMessage_ = function(event) {
   var msg = event.data;
   if (typeof(msg) !== 'object') {
-    var msg = this.name_ + ': unexpected value from module: ' +
-        JSON.stringify(msg);
+    msg = this.name_ + ': unexpected value from module: ' + JSON.stringify(msg);
     throw new Error(msg);
   }
 
@@ -165,7 +164,8 @@ Module.prototype.onMessage_ = function(event) {
 };
 
 Module.prototype.onError_ = function(event) {
-  var msg = this.name_ + ': error loading NaCl module: ' + this.element.lastError;
+  var msg = this.name_ + ': error loading NaCl module: ' +
+            this.element.lastError;
   throw new Error(msg);
 };
 
@@ -221,7 +221,7 @@ Module.prototype.pushCommand_ = function(cmd, type, args, ret) {
     message.argIsHandle.push(arg instanceof Handle);
   }
   this.commands_.push(message);
-}
+};
 
 
 Module.prototype.commit = function() {
@@ -253,7 +253,7 @@ Module.prototype.commit = function() {
         return that.handles_.getHandle(value);
       }
       return value;
-    };
+    }
 
     // convert back from Ids to Handles; keep the primitive values the same.
     var handles = Array.prototype.map.call(result.values, idToHandle);
@@ -299,7 +299,8 @@ Module.prototype.makeFunctionType = function(id, retType) {
 };
 
 Module.prototype.makeFunction = function(name, overloads) {
-  return this.functionBuilder_.makeFunction.apply(this.functionBuilder_, arguments);
+  return this.functionBuilder_.makeFunction.apply(this.functionBuilder_,
+                                                  arguments);
 };
 
 Module.prototype.getPointerType = function(type) {
@@ -313,8 +314,9 @@ Module.prototype.destroyHandles = function(handles) {
 };
 
 Module.prototype.findOverload_ = function(funcName, args, funcTypeList) {
-  var errorMessages = [];
-  for (var i = 0; i < funcTypeList.length; ++i) {
+  var errorMessages = [],
+      i;
+  for (i = 0; i < funcTypeList.length; ++i) {
     try {
       if (this.overloadMatches_(funcTypeList[i], args)) {
         return funcTypeList[i];
@@ -329,9 +331,9 @@ Module.prototype.findOverload_ = function(funcName, args, funcTypeList) {
   msg = 'No overload found for call "' + funcName + '(';
   msg += Array.prototype.join.call(args, ', ');
   msg += ')".\n';
-  msg += "Possibilities:\n";
-  for (var i = 0; i < funcTypeList.length; ++i) {
-    msg += funcTypeList[i].toString() + "\n";
+  msg += 'Possibilities:\n';
+  for (i = 0; i < funcTypeList.length; ++i) {
+    msg += funcTypeList[i].toString() + '\n';
     msg += '  ' + errorMessages[i] + '\n';
   }
   this.log_(msg);
@@ -445,7 +447,8 @@ Module.prototype.canCoercePointer_ = function(fromValue, fromType, toType) {
   // Unwrap the pointers and compare the base types. This will allow us to
   // implicitly cast from int32* to long*, for example.
   try {
-    if (this.canCoerceArgument_(undefined, fromType.baseType, toType.baseType)) {
+    if (this.canCoerceArgument_(undefined, fromType.baseType,
+                                toType.baseType)) {
       return true;
     }
   } catch(e) {
@@ -468,7 +471,8 @@ Module.prototype.canCoercePrimitive_ = function(fromValue, fromType, toType) {
     if (fromType.isInt) {
       // Both ints.
       if (fromType.sizeof() > toType.sizeof()) {
-        throw new Error('Argument type is too large: ' + fromType + ' > ' + toType + '.');
+        throw new Error('Argument type is too large: ' + fromType + ' > ' +
+                        toType + '.');
       } else if (fromType.sizeof() === toType.sizeof()) {
         if (fromType.isSigned === toType.isSigned) {
           return true;
@@ -488,12 +492,14 @@ Module.prototype.canCoercePrimitive_ = function(fromValue, fromType, toType) {
           return true;
         }
 
-        throw new Error('Signed/unsigned mismatch: ' + fromType + ', ' + toType + '.');
+        throw new Error('Signed/unsigned mismatch: ' + fromType + ', ' +
+                        toType + '.');
       }
     } else {
       // Both floats.
       if (fromType.sizeof() > toType.sizeof()) {
-        throw new Error('Argument type is too large: ' + fromType + ' > ' + toType + '.');
+        throw new Error('Argument type is too large: ' + fromType + ' > ' +
+                        toType + '.');
       }
     }
   } else {
@@ -501,12 +507,14 @@ Module.prototype.canCoercePrimitive_ = function(fromValue, fromType, toType) {
     if (fromType.isInt) {
       // From int to float.
       if ((toType === this.types.float32 && fromType.sizeof() >= 4) ||
-          (toType === this.types.float64 && fromType.sizeof() == 8)) {
-        throw new Error('Argument type is too large: ' + fromType + ' > ' + toType + '.');
+          (toType === this.types.float64 && fromType.sizeof() === 8)) {
+        throw new Error('Argument type is too large: ' + fromType + ' > ' +
+                        toType + '.');
       }
     } else {
       // From float to int.
-      throw new Error('Implicit cast from float to int: ' + fromType + ' => ' + toType + '.');
+      throw new Error('Implicit cast from float to int: ' + fromType + ' => ' +
+                      toType + '.');
     }
   }
 
@@ -568,7 +576,8 @@ TypeBuilder.prototype.makePointerType = function(id, name, baseType) {
   return this.registerType_(id, name, null, typeData);
 };
 
-TypeBuilder.prototype.makePrimitiveType = function(id, name, size, isSigned, isInt) {
+TypeBuilder.prototype.makePrimitiveType = function(id, name, size, isSigned,
+                                                   isInt) {
   var typeData = new PrimitiveTypeData(name, size, isSigned, isInt);
   return this.registerType_(id, name, null, typeData);
 };
@@ -601,7 +610,7 @@ TypeBuilder.prototype.getPointerType = function(baseType) {
   // Don't blow up yet... it is not an error to create a type that doesn't
   // have an id. We can't send it to the NaCl module, but we can use it for
   // type-checking.
-  return new Type(0, name, null, newTypeData);
+  return new Type(0, '', null, newTypeData);
 };
 
 
@@ -640,7 +649,8 @@ Context.prototype.$setField = function(structField, struct_p, value) {
   var dst = this.add(struct_p, structField.offset);
   var pointerType = this.$module_.getPointerType(structField.type);
   if (structField.type.isPointer()) {
-    return this.set(dst.cast(this.$module_.types.void$$), value.cast(this.$module_.types.void$));
+    return this.set(dst.cast(this.$module_.types.void$$),
+                    value.cast(this.$module_.types.void$));
   } else {
     return this.set(dst.cast(pointerType), value);
   }
@@ -653,7 +663,8 @@ Context.prototype.$getField = function(structField, struct_p) {
   var ptr = this.add(struct_p, structField.offset);
   var pointerType = this.$module_.getPointerType(structField.type);
   if (structField.type.isPointer()) {
-    return this.get(ptr.cast(this.$module_.types.void$$)).cast(structField.type);
+    return this.get(ptr.cast(this.$module_.types.void$$)).
+        cast(structField.type);
   } else {
     return this.get(ptr.cast(pointerType));
   }
@@ -805,11 +816,11 @@ Type.prototype.delegateToTypeData_ = function(propName, prop) {
 
 Type.prototype.toString = function() {
   return this.cStr || this.data.toString();
-}
+};
 
 Type.prototype.equals = function(otherType) {
   if (!(otherType instanceof Type)) {
-    throw new Error("Attempting to compare Type with non-Type.");
+    throw new Error('Attempting to compare Type with non-Type.');
   }
   return this.data.equals(otherType.data);
 };
@@ -824,15 +835,27 @@ TypeData.KIND_PEPPER = 3;
 TypeData.KIND_STRUCT = 4;
 TypeData.KIND_FUNCTION = 5;
 
-TypeData.prototype.isVoid = function() { return this.kind == TypeData.KIND_VOID; }
-TypeData.prototype.isPointer = function() { return this.kind == TypeData.KIND_POINTER; }
-TypeData.prototype.isPrimitive = function() { return this.kind == TypeData.KIND_PRIMITIVE; }
-TypeData.prototype.isPepper = function() { return this.kind == TypeData.KIND_PEPPER; }
-TypeData.prototype.isStruct = function() { return this.kind == TypeData.KIND_STRUCT; }
-TypeData.prototype.isFunction = function() { return this.kind == TypeData.KIND_FUNCTION; }
-TypeData.prototype.getJsPrototype = function() { return null; }
+TypeData.prototype.isVoid = function() {
+  return this.kind === TypeData.KIND_VOID;
+};
+TypeData.prototype.isPointer = function() {
+  return this.kind === TypeData.KIND_POINTER;
+};
+TypeData.prototype.isPrimitive = function() {
+  return this.kind === TypeData.KIND_PRIMITIVE;
+};
+TypeData.prototype.isPepper = function() {
+  return this.kind === TypeData.KIND_PEPPER;
+};
+TypeData.prototype.isStruct = function() {
+  return this.kind === TypeData.KIND_STRUCT;
+};
+TypeData.prototype.isFunction = function() {
+  return this.kind === TypeData.KIND_FUNCTION;
+};
+TypeData.prototype.getJsPrototype = function() { return null; };
 
-TypeData.prototype.equals = function(other) { return false; }
+TypeData.prototype.equals = function(other) { return false; };
 
 //// VoidTypeData ////////////////////////////////////////////////////////////
 function VoidTypeData() { TypeData.call(this); }
@@ -883,7 +906,7 @@ PrimitiveTypeData.prototype.sizeof = function() { return this.size; };
 
 PrimitiveTypeData.prototype.toString = function() {
   return PrimitiveTypeData.TO_STR[this.name];
-}
+};
 
 PrimitiveTypeData.prototype.equals = function(other) {
   if (this === other) {
@@ -1077,9 +1100,15 @@ PepperTypeData.prototype = Object.create(TypeData.prototype);
 PepperTypeData.constructor = PepperTypeData;
 PepperTypeData.prototype.kind = TypeData.KIND_PEPPER;
 
-PepperTypeData.prototype.sizeof = function() { return 20;  /* sizeof(PP_Var) */ };
-PepperTypeData.prototype.toString = function() { return this.name; };
-PepperTypeData.prototype.getJsPrototype = function() { return this.jsPrototype; }
+PepperTypeData.prototype.sizeof = function() {
+  return 20;  /* sizeof(PP_Var) */
+};
+PepperTypeData.prototype.toString = function() {
+  return this.name;
+};
+PepperTypeData.prototype.getJsPrototype = function() {
+  return this.jsPrototype;
+};
 
 PepperTypeData.prototype.equals = function(other) {
   if (this === other) {

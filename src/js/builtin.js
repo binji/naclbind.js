@@ -15,7 +15,10 @@
 // DO NOT EDIT, this file is auto-generated from //templates/builtin.js
 
 
-"use strict";
+'use strict';
+
+/* Disable line length warning */
+/* jshint -W101 */
 
 function init(module) {
   var m = module;
@@ -394,3 +397,4 @@ function init(module) {
 module.exports = {
   init: init
 };
+

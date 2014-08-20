@@ -6,10 +6,12 @@
   "dependencies": {},
   "devDependencies": {
     "browserify": "^5.9.1",
+    "jshint": "^2.5.4",
     "mocha": "^1.21.0"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "hint": "jshint src"
   },
   "repository": {
     "type": "git",
