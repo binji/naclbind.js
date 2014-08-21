@@ -40,10 +40,10 @@ describe('Type', function() {
       var cv = type.CONST | type.VOLATILE,
           cvr = type.CONST | type.VOLATILE | type.RESTRICT;
       assert.equal(spell(type.Void(type.CONST)), 'const void');
-      assert.equal(spell(type.Numeric(type.CHAR, type.CONST)), 'const char');
-      assert.equal(spell(type.Numeric(type.INT, type.CONST)), 'const int');
-      assert.equal(spell(type.Numeric(type.INT, cv)), 'const volatile int');
-      assert.equal(spell(type.Numeric(type.FLOAT, cvr)),
+      assert.equal(spell(type.char.qualify(type.CONST)), 'const char');
+      assert.equal(spell(type.int.qualify(type.CONST)), 'const int');
+      assert.equal(spell(type.int.qualify(cv)), 'const volatile int');
+      assert.equal(spell(type.float.qualify(cvr)),
                    'const volatile restrict float');
     });
 
@@ -78,13 +78,12 @@ describe('Type', function() {
     });
 
     it('should correctly spell qualified pointer types', function() {
-      var Kc = type.Numeric(type.CHAR, type.CONST),
+      var Kc = type.char.qualify(type.CONST),
           PKc = type.Pointer(Kc),
           PKPc = type.Pointer(type.Pointer(type.char, type.CONST)),
           PKt = type.Pointer(type.Typedef('foo', type.char, type.CONST)),
           PKPKc = type.Pointer(type.Pointer(Kc, type.CONST)),
-          PKVi = type.Pointer(type.Numeric(type.INT,
-                                           type.CONST | type.VOLATILE));
+          PKVi = type.Pointer(type.int.qualify(type.CONST | type.VOLATILE));
       assert.equal(spell(PKc), 'const char *');
       assert.equal(spell(PKPc), 'char *const *');
       assert.equal(spell(PKt), 'const foo *');
@@ -93,9 +92,9 @@ describe('Type', function() {
     });
 
     it('should correctly spell function types', function() {
-      var PKc = type.Pointer(type.Numeric(type.CHAR, type.CONST)),
+      var PKc = type.Pointer(type.char.qualify(type.CONST)),
           f1 = type.Function(type.int, [type.int, type.int]),
-          f2 = type.Function(type.int, [PKc], 0, type.VARIADIC),
+          f2 = type.Function(type.int, [PKc], type.VARIADIC),
           f3 = type.Pointer(type.Function(type.void, [type.int])),
           f4 = type.Function(f3, [type.int, f3]),
           f5 = type.Function(type.void, []);

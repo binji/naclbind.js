@@ -182,6 +182,9 @@ function Type(kind, cv) {
   this.kind = kind;
   this.cv = cv || 0;
 }
+Type.prototype.qualify = function(cv) {
+  return null;
+};
 Type.prototype.isCompatibleWith = function(that) {
   return false;
 };
@@ -196,6 +199,9 @@ function Void(cv) {
 }
 Void.prototype = Object.create(Type.prototype);
 Void.prototype.constructor = Void;
+Void.prototype.qualify = function(cv) {
+  return Void(this.cv | cv);
+};
 Void.prototype.isCompatibleWith = function(that) {
   return that.kind === VOID;
 };
@@ -210,6 +216,9 @@ function Numeric(kind, cv) {
 }
 Numeric.prototype = Object.create(Type.prototype);
 Numeric.prototype.constructor = Numeric;
+Numeric.prototype.qualify = function(cv) {
+  return Numeric(this.kind, this.cv | cv);
+};
 Numeric.prototype.isCompatibleWith = function(that) {
   return this.kind === that.kind && this.cv === that.cv;
 };
@@ -251,6 +260,9 @@ function Pointer(pointee, cv) {
 }
 Pointer.prototype = Object.create(Type.prototype);
 Pointer.prototype.constructor = Pointer;
+Pointer.prototype.qualify = function(cv) {
+  return Pointer(this.pointee, this.cv | cv);
+};
 Pointer.prototype.isCompatibleWith = function(that) {
   return isPointerCompatibleWith(this, that);
 };
@@ -270,6 +282,9 @@ function Record(tag, fields, isUnion, cv) {
 }
 Record.prototype = Object.create(Type.prototype);
 Record.prototype.constructor = Record;
+Record.prototype.qualify = function(cv) {
+  return Record(this.tag, this.fields, this.isUnion, this.cv | cv);
+};
 Record.prototype.isCompatibleWith = function(that) {
   return this.kind === that.kind &&
          this.tag === that.tag &&
@@ -295,6 +310,9 @@ function Enum(tag, cv) {
 }
 Enum.prototype = Object.create(Type.prototype);
 Enum.prototype.constructor = Enum;
+Enum.prototype.qualify = function(cv) {
+  return Enum(this.tag, this.cv | cv);
+};
 Enum.prototype.isCompatibleWith = function(that) {
   return this.kind === that.kind &&
          this.tag === that.tag &&
@@ -313,6 +331,9 @@ function Typedef(tag, canonical, cv) {
 }
 Typedef.prototype = Object.create(Type.prototype);
 Typedef.prototype.constructor = Typedef;
+Typedef.prototype.qualify = function(cv) {
+  return Typedef(this.tag, this.cv | cv);
+};
 Typedef.prototype.isCompatibleWith = function(that) {
   return this.canonical.isCompatibleWith(that);
 };
@@ -320,11 +341,11 @@ Typedef.prototype.canCastTo = function(that) {
   return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
 };
 
-function FunctionProto(resultType, argTypes, cv, variadic) {
+function FunctionProto(resultType, argTypes, variadic) {
   if (!(this instanceof FunctionProto)) {
-    return new FunctionProto(resultType, argTypes, cv, variadic);
+    return new FunctionProto(resultType, argTypes, variadic);
   }
-  Type.call(this, FUNCTIONPROTO, cv);
+  Type.call(this, FUNCTIONPROTO, 0);
   this.resultType = resultType;
   this.argTypes = argTypes;
   this.variadic = variadic || false;
@@ -332,6 +353,9 @@ function FunctionProto(resultType, argTypes, cv, variadic) {
 }
 FunctionProto.prototype = Object.create(Type.prototype);
 FunctionProto.prototype.constructor = FunctionProto;
+FunctionProto.prototype.qualify = function(cv) {
+  return this;
+};
 FunctionProto.prototype.isCompatibleWith = function(that) {
   var i;
 
@@ -370,6 +394,9 @@ function ConstantArray(elementType, arraySize, cv) {
 }
 ConstantArray.prototype = Object.create(Type.prototype);
 ConstantArray.prototype.constructor = ConstantArray;
+ConstantArray.prototype.qualify = function(cv) {
+  return ConstantArray(this.elementType, this.arraySize, this.cv | cv);
+};
 ConstantArray.prototype.isCompatibleWith = function(that) {
   return isPointerCompatibleWith(this, that);
 };
@@ -387,6 +414,9 @@ function IncompleteArray(elementType, cv) {
 }
 IncompleteArray.prototype = Object.create(Type.prototype);
 IncompleteArray.prototype.constructor = IncompleteArray;
+IncompleteArray.prototype.qualify = function(cv) {
+  return IncompleteArray(this.elementType, this.arraySize, this.cv | cv);
+};
 IncompleteArray.prototype.isCompatibleWith = function(that) {
   return isPointerCompatibleWith(this, that);
 };
