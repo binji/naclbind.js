@@ -195,7 +195,7 @@ Type.prototype.canCastTo = function(that) {
 function Void(cv) {
   if (!(this instanceof Void)) { return new Void(cv); }
   Type.call(this, VOID, cv);
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 Void.prototype = Object.create(Type.prototype);
 Void.prototype.constructor = Void;
@@ -212,7 +212,7 @@ Void.prototype.canCastTo = function(that) {
 function Numeric(kind, cv) {
   if (!(this instanceof Numeric)) { return new Numeric(kind, cv); }
   Type.call(this, kind, cv);
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 Numeric.prototype = Object.create(Type.prototype);
 Numeric.prototype.constructor = Numeric;
@@ -256,7 +256,7 @@ function Pointer(pointee, cv) {
   if (!(this instanceof Pointer)) { return new Pointer(pointee, cv); }
   Type.call(this, POINTER, cv);
   this.pointee = pointee;
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 Pointer.prototype = Object.create(Type.prototype);
 Pointer.prototype.constructor = Pointer;
@@ -278,7 +278,7 @@ function Record(tag, fields, isUnion, cv) {
   this.tag = tag;
   this.fields = fields;
   this.isUnion = isUnion || false;
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 Record.prototype = Object.create(Type.prototype);
 Record.prototype.constructor = Record;
@@ -306,7 +306,7 @@ function Enum(tag, cv) {
   if (!(this instanceof Enum)) { return new Enum(tag, cv); }
   Type.call(this, ENUM, cv);
   this.tag = tag;
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 Enum.prototype = Object.create(Type.prototype);
 Enum.prototype.constructor = Enum;
@@ -327,7 +327,7 @@ function Typedef(tag, canonical, cv) {
   Type.call(this, TYPEDEF, cv);
   this.tag = tag;
   this.canonical = canonical;
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 Typedef.prototype = Object.create(Type.prototype);
 Typedef.prototype.constructor = Typedef;
@@ -349,7 +349,7 @@ function FunctionProto(resultType, argTypes, variadic) {
   this.resultType = resultType;
   this.argTypes = argTypes;
   this.variadic = variadic || false;
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 FunctionProto.prototype = Object.create(Type.prototype);
 FunctionProto.prototype.constructor = FunctionProto;
@@ -390,7 +390,7 @@ function ConstantArray(elementType, arraySize, cv) {
   Type.call(this, CONSTANTARRAY, cv);
   this.elementType = elementType;
   this.arraySize = arraySize;
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 ConstantArray.prototype = Object.create(Type.prototype);
 ConstantArray.prototype.constructor = ConstantArray;
@@ -410,7 +410,7 @@ function IncompleteArray(elementType, cv) {
   }
   Type.call(this, INCOMPLETEARRAY, cv);
   this.elementType = elementType;
-  this.spelling = GetSpelling(this);
+  this.spelling = getSpelling(this);
 }
 IncompleteArray.prototype = Object.create(Type.prototype);
 IncompleteArray.prototype.constructor = IncompleteArray;
@@ -432,7 +432,7 @@ function GetCV(type) {
   return result;
 }
 
-function GetSpelling(type, opt_name, opt_lastKind) {
+function getSpelling(type, opt_name, opt_lastKind) {
   var prec,
       lastPrec,
       spelling,
@@ -460,11 +460,11 @@ function GetSpelling(type, opt_name, opt_lastKind) {
   if (type.kind === TYPEDEF) {
     spelling += type.tag;
     if (name) {
-      spelling +=  ' ' + name;
+      spelling += ' ' + name;
     }
   } else if (type.kind === POINTER) {
     name = '*' + spelling + name;
-    spelling = GetSpelling(type.pointee, name, POINTER);
+    spelling = getSpelling(type.pointee, name, POINTER);
   } else if (type.kind === ENUM) {
     spelling += 'enum ' + type.tag;
     if (name) {
@@ -481,14 +481,14 @@ function GetSpelling(type, opt_name, opt_lastKind) {
     }
   } else if (type.kind === CONSTANTARRAY) {
     name += '[' + type.arraySize + ']';
-    spelling = GetSpelling(type.elementType, name, CONSTANTARRAY);
+    spelling = getSpelling(type.elementType, name, CONSTANTARRAY);
   } else if (type.kind === INCOMPLETEARRAY) {
     name += '[]';
-    spelling = GetSpelling(type.elementType, name, INCOMPLETEARRAY);
+    spelling = getSpelling(type.elementType, name, INCOMPLETEARRAY);
   } else if (type.kind === FUNCTIONPROTO) {
     name += '(';
     if (type.argTypes.length > 0) {
-      argsSpelling = type.argTypes.map(function(a) { return GetSpelling(a); });
+      argsSpelling = type.argTypes.map(function(a) { return getSpelling(a); });
       if (type.variadic) {
         argsSpelling.push('...');
       }
@@ -497,7 +497,7 @@ function GetSpelling(type, opt_name, opt_lastKind) {
       name += 'void';
     }
     name += ')';
-    spelling = GetSpelling(type.resultType, name, FUNCTIONPROTO);
+    spelling = getSpelling(type.resultType, name, FUNCTIONPROTO);
   } else {
     throw new Error('Unknown kind: ' + type.kind);
   }
@@ -591,5 +591,5 @@ module.exports = {
   CAST_INCOMPATIBLE_POINTERS: CAST_INCOMPATIBLE_POINTERS,
 
   // Functions
-  GetSpelling: GetSpelling,
+  getSpelling: getSpelling,
 };

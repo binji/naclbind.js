@@ -13,11 +13,11 @@
 // limitations under the License.
 
 var type = require('../src/js/type'),
-    assert = require('assert');
+    assert = require('assert'),
+    spell = type.getSpelling;
 
 describe('Type', function() {
   describe('Spell', function() {
-    var spell = type.GetSpelling;
     it('should correctly spell primitive types', function() {
       assert.equal(spell(type.void), 'void');
       assert.equal(spell(type.char), 'char');
