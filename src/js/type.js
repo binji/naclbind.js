@@ -383,11 +383,11 @@ FunctionProto.prototype.canCastTo = function(that) {
   return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
 };
 
-function ConstantArray(elementType, arraySize, cv) {
+function ConstantArray(elementType, arraySize) {
   if (!(this instanceof ConstantArray)) {
-    return new ConstantArray(elementType, arraySize, cv);
+    return new ConstantArray(elementType, arraySize);
   }
-  Type.call(this, CONSTANTARRAY, cv);
+  Type.call(this, CONSTANTARRAY, 0);
   this.elementType = elementType;
   this.arraySize = arraySize;
   this.spelling = getSpelling(this);
@@ -395,7 +395,7 @@ function ConstantArray(elementType, arraySize, cv) {
 ConstantArray.prototype = Object.create(Type.prototype);
 ConstantArray.prototype.constructor = ConstantArray;
 ConstantArray.prototype.qualify = function(cv) {
-  return ConstantArray(this.elementType, this.arraySize, this.cv | cv);
+  return this;
 };
 ConstantArray.prototype.isCompatibleWith = function(that) {
   return isPointerCompatibleWith(this, that);
@@ -404,18 +404,18 @@ ConstantArray.prototype.canCastTo = function(that) {
   return canCastPointerTo(this, that);
 };
 
-function IncompleteArray(elementType, cv) {
+function IncompleteArray(elementType) {
   if (!(this instanceof IncompleteArray)) {
-    return new IncompleteArray(elementType, cv);
+    return new IncompleteArray(elementType);
   }
-  Type.call(this, INCOMPLETEARRAY, cv);
+  Type.call(this, INCOMPLETEARRAY, 0);
   this.elementType = elementType;
   this.spelling = getSpelling(this);
 }
 IncompleteArray.prototype = Object.create(Type.prototype);
 IncompleteArray.prototype.constructor = IncompleteArray;
 IncompleteArray.prototype.qualify = function(cv) {
-  return IncompleteArray(this.elementType, this.arraySize, this.cv | cv);
+  return this;
 };
 IncompleteArray.prototype.isCompatibleWith = function(that) {
   return isPointerCompatibleWith(this, that);
