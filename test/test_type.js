@@ -292,5 +292,30 @@ describe('Type', function() {
         });
       });
     });
+
+    describe('Pointer', function() {
+      it('should allow cast of pointer -> same pointer', function() {
+        var v = type.void,
+            c = type.char,
+            e = type.Enum('e'),
+            s = type.Record('s', type.Field('f', type.int, 0)),
+            u = type.Record('s', type.Field('f', type.int, 0), type.UNION),
+            f = type.Function(type.void, type.int);
+        [v, c, e, s, u, f].forEach(function(x) {
+          var p = type.Pointer(x),
+              a = type.Array(x, 2),
+              ia = type.IncompleteArray(x);
+          assert.equal(p.canCastTo(p), type.CAST_OK);
+          assert.equal(p.canCastTo(a), type.CAST_OK);
+          assert.equal(p.canCastTo(ia), type.CAST_OK);
+          assert.equal(a.canCastTo(p), type.CAST_OK);
+          assert.equal(a.canCastTo(a), type.CAST_OK);
+          assert.equal(a.canCastTo(ia), type.CAST_OK);
+          assert.equal(ia.canCastTo(p), type.CAST_OK);
+          assert.equal(ia.canCastTo(a), type.CAST_OK);
+          assert.equal(ia.canCastTo(ia), type.CAST_OK);
+        });
+      });
+    });
   });
 });

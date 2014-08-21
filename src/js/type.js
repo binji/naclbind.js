@@ -144,6 +144,15 @@ function getPointerlikePointee(type) {
   return null;
 }
 
+function isPointerCompatibleWith(from, to) {
+  if (!kindIsPointerlike(to.kind)) {
+    return false;
+  }
+
+  return from.pointee.isCompatibleWith(getPointerlikePointee(to)) &&
+         from.cv === to.cv;
+}
+
 function canCastPointerTo(from, to) {
   var fp = getPointerlikePointee(from),
       tp;
@@ -154,7 +163,8 @@ function canCastPointerTo(from, to) {
     }
 
     // If there is a qualifier in |this| that is not set in |that|, it is an
-    // error.
+    // error. Note that these are C rules; C++ rules for qualifiers are more
+    // restrictive.
     if ((from.cv & ~to.cv) !== 0) {
       return CAST_DISCARD_QUALIFIER;
     }
@@ -172,6 +182,9 @@ function Type(kind, cv) {
   this.kind = kind;
   this.cv = cv || 0;
 }
+Type.prototype.isCompatibleWith = function(that) {
+  return false;
+};
 Type.prototype.canCastTo = function(that) {
   return CAST_ERROR;
 };
@@ -183,8 +196,11 @@ function Void(cv) {
 }
 Void.prototype = Object.create(Type.prototype);
 Void.prototype.constructor = Void;
-Void.prototype.canCastTo = function(that) {
+Void.prototype.isCompatibleWith = function(that) {
   return that.kind === VOID;
+};
+Void.prototype.canCastTo = function(that) {
+  return that.kind === VOID ? CAST_OK : CAST_ERROR;
 };
 
 function Numeric(kind, cv) {
@@ -194,6 +210,9 @@ function Numeric(kind, cv) {
 }
 Numeric.prototype = Object.create(Type.prototype);
 Numeric.prototype.constructor = Numeric;
+Numeric.prototype.isCompatibleWith = function(that) {
+  return this.kind === that.kind && this.cv === that.cv;
+};
 Numeric.prototype.canCastTo = function(that) {
   var thisIsInteger,
       thisRank,
@@ -232,6 +251,9 @@ function Pointer(pointee, cv) {
 }
 Pointer.prototype = Object.create(Type.prototype);
 Pointer.prototype.constructor = Pointer;
+Pointer.prototype.isCompatibleWith = function(that) {
+  return isPointerCompatibleWith(this, that);
+};
 Pointer.prototype.canCastTo = function(that) {
   return canCastPointerTo(this, that);
 };
@@ -248,8 +270,13 @@ function Record(tag, fields, isUnion, cv) {
 }
 Record.prototype = Object.create(Type.prototype);
 Record.prototype.constructor = Record;
+Record.prototype.isCompatibleWith = function(that) {
+  return this.kind === that.kind &&
+         this.tag === that.tag &&
+         this.cv === that.cv;
+};
 Record.prototype.canCastTo = function(that) {
-  return this.isCompatibleWith(that);
+  return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
 };
 
 function Field(name, type, offset) {
@@ -268,12 +295,13 @@ function Enum(tag, cv) {
 }
 Enum.prototype = Object.create(Type.prototype);
 Enum.prototype.constructor = Enum;
+Enum.prototype.isCompatibleWith = function(that) {
+  return this.kind === that.kind &&
+         this.tag === that.tag &&
+         this.cv === that.cv;
+};
 Enum.prototype.canCastTo = function(that) {
-  if (this.constructor !== that.constructor) {
-    return kindIsInteger(that.kind) ? CAST_OK : CAST_ERROR;
-  }
-
-  return this.tag === that.tag ? CAST_OK : CAST_DIFFERENT_ENUMS;
+  return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
 };
 
 function Typedef(tag, canonical, cv) {
@@ -285,8 +313,11 @@ function Typedef(tag, canonical, cv) {
 }
 Typedef.prototype = Object.create(Type.prototype);
 Typedef.prototype.constructor = Typedef;
+Typedef.prototype.isCompatibleWith = function(that) {
+  return this.canonical.isCompatibleWith(that);
+};
 Typedef.prototype.canCastTo = function(that) {
-  return this.isCompatibleWith(that);
+  return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
 };
 
 function FunctionProto(resultType, argTypes, cv, variadic) {
@@ -301,8 +332,31 @@ function FunctionProto(resultType, argTypes, cv, variadic) {
 }
 FunctionProto.prototype = Object.create(Type.prototype);
 FunctionProto.prototype.constructor = FunctionProto;
+FunctionProto.prototype.isCompatibleWith = function(that) {
+  var i;
+
+  if (this.kind !== that.kind) {
+    return false;
+  }
+
+  if (!this.resultType.isCompatibleWith(that.resultType)) {
+    return false;
+  }
+
+  if (this.argTypes.length !== that.argTypes.length) {
+    return false;
+  }
+
+  for (i = 0; i < this.argTypes.length; ++i) {
+    if (!this.argTypes[i].isCompatibleWith(that.argTypes[i])) {
+      return false;
+    }
+  }
+
+  return true;
+};
 FunctionProto.prototype.canCastTo = function(that) {
-  return this.isCompatibleWith(that);
+  return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
 };
 
 function ConstantArray(elementType, arraySize, cv) {
@@ -316,6 +370,9 @@ function ConstantArray(elementType, arraySize, cv) {
 }
 ConstantArray.prototype = Object.create(Type.prototype);
 ConstantArray.prototype.constructor = ConstantArray;
+ConstantArray.prototype.isCompatibleWith = function(that) {
+  return isPointerCompatibleWith(this, that);
+};
 ConstantArray.prototype.canCastTo = function(that) {
   return canCastPointerTo(this, that);
 };
@@ -330,6 +387,9 @@ function IncompleteArray(elementType, cv) {
 }
 IncompleteArray.prototype = Object.create(Type.prototype);
 IncompleteArray.prototype.constructor = IncompleteArray;
+IncompleteArray.prototype.isCompatibleWith = function(that) {
+  return isPointerCompatibleWith(this, that);
+};
 IncompleteArray.prototype.canCastTo = function(that) {
   return canCastPointerTo(this, that);
 };
