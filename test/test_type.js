@@ -14,9 +14,64 @@
 
 var type = require('../src/js/type'),
     assert = require('assert'),
-    spell = type.getSpelling;
+    spell = type.getSpelling,
+    qual = type.describeQualifier,
+    C = type.CONST,
+    CV = type.CONST | type.VOLATILE,
+    CR = type.CONST | type.RESTRICT,
+    CVR = type.CONST | type.VOLATILE | type.RESTRICT,
+    V = type.VOLATILE,
+    VR = type.VOLATILE | type.RESTRICT,
+    R = type.RESTRICT;
 
 describe('Type', function() {
+  describe('is{Less,More}Qualified', function() {
+    it('should work properly for all qualifiers', function() {
+      var OK = [
+            [0, C], [0, V], [0, R], [0, CV], [0, CR], [0, VR], [0, CVR],
+            [C, CV], [C, CR], [C, CVR],
+            [V, CV], [V, VR], [V, CVR],
+            [R, CR], [R, VR], [R, CVR],
+            [CV, CVR],
+            [CR, CVR],
+            [VR, CVR]
+          ],
+          Q = [0, C, V, R, CV, CR, VR, CVR],
+          NotOK = [];
+
+      Q.forEach(function(q1) {
+        Q.forEach(function(q2) {
+          var found = false;
+          OK.forEach(function(x) {
+            if (x[0] === q1 && x[1] === q2) {
+              found = true;
+            }
+          });
+
+          if (!found) {
+            NotOK.push([q1, q2]);
+          }
+        });
+      });
+
+      OK.forEach(function(a) {
+        var q1 = a[0], q2 = a[1];
+        assert(type.isLessQualified(q1, q2),
+               'Expected ' + qual(q1) + ' less qualified than ' + qual(q2));
+        assert(type.isMoreQualified(q2, q1),
+               'Expected ' + qual(q2) + ' more qualified than ' + qual(q1));
+      });
+
+      NotOK.forEach(function(a) {
+        var q1 = a[0], q2 = a[1];
+        assert(!type.isLessQualified(q1, q2),
+               'Expected ' + qual(q1) + ' less qualified than ' + qual(q2));
+        assert(!type.isMoreQualified(q2, q1),
+               'Expected ' + qual(q2) + ' more qualified than ' + qual(q1));
+      });
+    });
+  });
+
   describe('Spell', function() {
     it('should correctly spell primitive types', function() {
       assert.equal(spell(type.void), 'void');
@@ -321,6 +376,85 @@ describe('Type', function() {
           assertCast(ia, p, type.CAST_OK);
           assertCast(ia, a, type.CAST_OK);
           assertCast(ia, ia, type.CAST_OK);
+        });
+      });
+
+      it('should allow cast of pointer -> more qualified pointer', function() {
+        [v, c, e, s, u, f].forEach(function(x) {
+          var p = type.Pointer(x);
+          [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
+            var q1p = p.qualify(q1);
+            [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
+              if (!type.isLessQualified(q1, q2)) return;
+              var q2p = p.qualify(q2);
+              assertCast(q1p, q2p, type.CAST_OK);
+            });
+          });
+        });
+      });
+
+      it('should warn on cast of pointer -> less qualified pointer', function() {
+        // Also warn if casting to a differently qualified pointer, e.g.
+        // const void* => volatile void*
+        [v, c, e, s, u, f].forEach(function(x) {
+          var p = type.Pointer(x);
+          [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
+            var q1p = p.qualify(q1);
+            [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
+              if (type.isLessQualified(q1, q2) || q1 === q2) return;
+              var q2p = p.qualify(q2);
+              assertCast(q1p, q2p, type.CAST_DISCARD_QUALIFIER);
+            });
+          });
+        });
+      });
+
+      it('should allow cast of pointer-like -> qualified pointer', function() {
+        // Arrays cannot be qualified, so test unqualified arrays being cast to
+        // qualified pointers.
+        [v, c, e, s, u, f].forEach(function(x) {
+          var p = type.Pointer(x),
+              a = type.Array(x, 2),
+              ia = type.IncompleteArray(x);
+          [C, CV, CVR, V, VR, R].forEach(function(q) {
+            var qp = p.qualify(q);
+            assertCast(a, qp, type.CAST_OK);
+            assertCast(ia, qp, type.CAST_OK);
+          });
+        });
+      });
+
+      it('should warn on cast of pointer-like -> integral', function() {
+        [v, c, e, s, u, f].forEach(function(x) {
+          var p = type.Pointer(x),
+              a = type.Array(x, 2),
+              ia = type.IncompleteArray(x);
+          assertCast(p, type.int, type.CAST_POINTER_TO_INT);
+          assertCast(a, type.int, type.CAST_POINTER_TO_INT);
+          assertCast(ia, type.int, type.CAST_POINTER_TO_INT);
+        });
+      });
+
+      it('should fail on cast of pointer-like -> float', function() {
+        [v, c, e, s, u, f].forEach(function(x) {
+          var p = type.Pointer(x),
+              a = type.Array(x, 2),
+              ia = type.IncompleteArray(x);
+          assertCast(p, type.float, type.CAST_ERROR);
+          assertCast(p, type.double, type.CAST_ERROR);
+        });
+      });
+
+      it('should fail on cast of pointer-like -> anything else', function() {
+        [v, c, e, s, u, f].forEach(function(x) {
+          var p = type.Pointer(x),
+              a = type.Array(x, 2),
+              ia = type.IncompleteArray(x);
+          [v, e, s, u, f].forEach(function(to) {
+            assertCast(p, to, type.CAST_ERROR);
+            assertCast(a, to, type.CAST_ERROR);
+            assertCast(ia, to, type.CAST_ERROR);
+          });
         });
       });
     });

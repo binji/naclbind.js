@@ -177,6 +177,15 @@ function canCastPointerTo(from, to) {
   }
 }
 
+function isLessQualified(q1, q2) {
+  return (q2 & ~q1) !== 0 && (q1 & q2) === q1;
+}
+
+function isMoreQualified(q1, q2) {
+  return q1 !== q2 && isLessQualified(q2, q1);
+}
+
+
 function Type(kind, cv) {
   if (!(this instanceof Type)) { return new Type(kind, cv); }
   this.kind = kind;
@@ -424,12 +433,25 @@ IncompleteArray.prototype.canCastTo = function(that) {
   return canCastPointerTo(this, that);
 };
 
-function GetCV(type) {
+function getQualifier(cv) {
   var result = '';
-  if (type.cv & IS_CONST) result += 'const ';
-  if (type.cv & IS_VOLATILE) result += 'volatile ';
-  if (type.cv & IS_RESTRICT) result += 'restrict ';
+  if (cv & IS_CONST) result += 'const ';
+  if (cv & IS_VOLATILE) result += 'volatile ';
+  if (cv & IS_RESTRICT) result += 'restrict ';
   return result;
+}
+
+function describeQualifier(cv) {
+  var a;
+  if (cv) {
+    a = [];
+    if (cv & IS_CONST) a.push('const');
+    if (cv & IS_VOLATILE) a.push('volatile');
+    if (cv & IS_RESTRICT) a.push('restrict');
+    return a.join(' ');
+  } else {
+    return 'none';
+  }
 }
 
 function getSpelling(type, opt_name, opt_lastKind) {
@@ -439,7 +461,7 @@ function getSpelling(type, opt_name, opt_lastKind) {
       argsSpelling,
       name;
 
-  spelling = GetCV(type);
+  spelling = getQualifier(type.cv);
   if (type.kind in PRIMITIVE_SPELLING) {
     spelling += PRIMITIVE_SPELLING[type.kind];
     if (opt_name) {
@@ -592,4 +614,7 @@ module.exports = {
 
   // Functions
   getSpelling: getSpelling,
+  describeQualifier: describeQualifier,
+  isLessQualified: isLessQualified,
+  isMoreQualified: isMoreQualified,
 };
