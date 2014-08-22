@@ -1,6 +1,5 @@
+*.pyc
 /.ninja_deps
 /.ninja_log
 /out
-/user-data-dir
-/pnacl
-*.pyc
+/node_modules/*

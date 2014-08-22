@@ -86,7 +86,7 @@ void varRelease(struct PP_Var);
 struct PP_Var varFromUtf8(const char*, uint32_t);
 const char* varToUtf8(struct PP_Var, uint32_t*);
 
-struct PP_Var arrayCreate();
+struct PP_Var arrayCreate(void);
 struct PP_Var arrayGet(struct PP_Var, uint32_t);
 int32_t arraySet(struct PP_Var, uint32_t, struct PP_Var);
 uint32_t arrayGetLength(struct PP_Var);
@@ -97,7 +97,7 @@ int32_t arrayBufferByteLength(struct PP_Var, uint32_t*);
 void* arrayBufferMap(struct PP_Var);
 void arrayBufferUnmap(struct PP_Var);
 
-struct PP_Var dictCreate();
+struct PP_Var dictCreate(void);
 struct PP_Var dictGet(struct PP_Var, struct PP_Var);
 int32_t dictSet(struct PP_Var, struct PP_Var, struct PP_Var);
 void dictDelete(struct PP_Var, struct PP_Var);

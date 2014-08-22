@@ -42,16 +42,16 @@ static int g_queue_size = 0;
  *
  * NOTE: this function assumes g_queue_mutex lock is held.
  * @return non-zero if the queue is empty. */
-static int IsQueueEmpty() { return g_queue_size == 0; }
+static int IsQueueEmpty(void) { return g_queue_size == 0; }
 
 /** Return whether the queue is full.
  *
  * NOTE: this function assumes g_queue_mutex lock is held.
  * @return non-zero if the queue is full. */
-static int IsQueueFull() { return g_queue_size == MAX_QUEUE_SIZE; }
+static int IsQueueFull(void) { return g_queue_size == MAX_QUEUE_SIZE; }
 
 /** Initialize the message queue. */
-void InitializeMessageQueue() {
+void InitializeMessageQueue(void) {
   pthread_mutex_init(&g_queue_mutex, NULL);
   pthread_cond_init(&g_queue_not_empty_cond, NULL);
 }
@@ -91,7 +91,7 @@ int EnqueueMessage(struct PP_Var message) {
  *
  * NOTE: this function assumes g_queue_mutex is _NOT_ held.
  * @return The message at the head of the queue. */
-struct PP_Var DequeueMessage() {
+struct PP_Var DequeueMessage(void) {
   struct PP_Var message;
 
   pthread_mutex_lock(&g_queue_mutex);

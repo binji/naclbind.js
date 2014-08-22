@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-/* DO NOT EDIT, this file is auto-generated from //py/templates/commands.c */
+/* DO NOT EDIT, this file is auto-generated from //templates/commands.c */
 
 
 #include "commands.h"
@@ -1414,5 +1414,4 @@ void Handle_dictHasKey(Command* command) {
   RegisterHandleInt32(command->ret_handle, result);
   printf("dictHasKey(%s, %s) => %d (%d)\n", VarTypeToString(&arg0), VarTypeToString(&arg1), result, command->ret_handle);
 }
-
 

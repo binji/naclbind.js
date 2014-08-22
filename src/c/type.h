@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-/* DO NOT EDIT, this file is auto-generated from //py/templates/type.h */
+/* DO NOT EDIT, this file is auto-generated from //templates/type.h */
 
 
 #ifndef TYPE_H_
@@ -213,4 +213,3 @@ const char* BuiltinTypeToString(Type);
 const char* TypeToString(Type);  // Defined in module.
 
 #endif  // TYPE_H_
-

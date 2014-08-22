@@ -12,18 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-chrome = /opt/google/chrome-unstable/google-chrome-unstable
-nacl_sdk_root = out/nacl_sdk/pepper_canary
-toolchain_dir = $nacl_sdk_root/toolchain
-toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
-pnacl-ar = $toolchain_dir_pnacl/bin/pnacl-ar
-pnacl-cc = $toolchain_dir_pnacl/bin/pnacl-clang
-pnacl-cxx = $toolchain_dir_pnacl/bin/pnacl-clang++
-pnacl-strip = $toolchain_dir_pnacl/bin/pnacl-strip
-pnacl-finalize = $toolchain_dir_pnacl/bin/pnacl-finalize
-pnacl-translate = $toolchain_dir_pnacl/bin/pnacl-translate
-nmf = $nacl_sdk_root/tools/create_nmf.py
-run-py = py/run.py
+root = .
+include common.ninja
 
 ccflags-default = -Wall -Wno-unused-value -Wno-long-long -Werror -pthread
 ccflags-debug = -g -O0
@@ -35,46 +25,53 @@ ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug
 ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
 libs-default = -lnacl_io -lz -lppapi_cpp -lppapi
 
-easy-template = py/easy_template.py
-helper-py = py/helper.py
-commands-py = py/commands.py
-template-glue-c = py/templates/glue.c
-template-glue-js = py/templates/glue.js
-template-app-c = py/templates/app.c
+builtin-json = src/json/builtin.json
+build src/js/builtin.js: template $template-builtin-js | $easy-template $helper-py $commands-py $builtin-json
+  json = $builtin-json
+build src/c/type.h: template $template-type-h | $easy-template $helper-py $commands-py $builtin-json
+  json = $builtin-json
+build src/c/type.c: template $template-type-c | $easy-template $helper-py $commands-py $builtin-json
+  json = $builtin-json
+build src/c/commands.c: template $template-commands-c | $easy-template $helper-py $commands-py $builtin-json
+  json = $builtin-json
 
+build out/obj/builtin_funcs.o: cc src/c/builtin_funcs.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags
+build out/obj/commands.o: cc src/c/commands.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags
+build out/obj/handle.o: cc src/c/handle.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags
+build out/obj/interfaces.o: cc src/c/interfaces.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags
+build out/obj/message.o: cc src/c/message.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags
+build out/obj/queue.o: cc src/c/queue.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags
+build out/obj/type.o: cc src/c/type.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags
+build out/obj/var.o: cc src/c/var.c || src/c/type.h $nacl_sdk_root
+  cc = $pnacl-cc
+  ccflags = $ccflags
+build out/libnaclbind.a: ar out/obj/builtin_funcs.o $
+                         out/obj/commands.o $
+                         out/obj/handle.o $
+                         out/obj/interfaces.o $
+                         out/obj/message.o $
+                         out/obj/queue.o $
+                         out/obj/type.o $
+                         out/obj/var.o $
+                         || $nacl_sdk_root
+  ar = $pnacl-ar
 
-rule cp
-  command = cp $in $out
-  description = COPY $out
-rule cc
-  command = $cc $ccflags -MMD -MF $out.d -c $in -o $out
-  description = CC $out
-  depfile = $out.d
-rule ar
-  command = rm -f $out && $ar rcs $out $in
-  description = AR $out
-rule link
-  command = $cc $in $ldflags $libs -o $out
-  description = LINK $out
-rule finalize
-  command = $pnacl-finalize $in -o $out
-  description = FINALIZE $out
-rule translate
-  command = $pnacl-translate $in --allow-llvm-bitcode-input -arch $arch -o $
-      $out
-  description = TRANSLATE $arch $out
-rule nmf
-  command = $nmf $in -o $out
-  description = NMF $out
-rule template
-  command = $easy-template -j $json $in > $out
-  description = TEMPLATE $out
-rule run
-  pool = console
-  command = $run-py -C $dir -P $page -p 0 -- $chrome --no-first-run --user-data-dir=user-data-dir
-  description = RUN $page
-
-subninja src/build.ninja
-subninja examples/git/build.ninja
-subninja examples/zip/build.ninja
-subninja examples/zlib/build.ninja
+# dist
+build $libnaclbind: cp out/libnaclbind.a
+build dist/naclbind.js: browserify src/js/nacl.js | $
+                                   src/js/builtin.js
+  name = tonacl

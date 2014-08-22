@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-/* DO NOT EDIT, this file is auto-generated from //py/templates/type.c */
+/* DO NOT EDIT, this file is auto-generated from //templates/type.c */
 
 
 #include <stdlib.h>
@@ -135,4 +135,3 @@ const char* BuiltinTypeToString(Type id) {
   }
   return kTypeString[id];
 }
-

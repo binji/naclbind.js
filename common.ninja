@@ -1,0 +1,96 @@
+# Copyright 2014 Ben Smith. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+nacl_sdk_root = $root/out/nacl_sdk/pepper_canary
+toolchain_dir = $nacl_sdk_root/toolchain
+toolchain_dir_pnacl = $toolchain_dir/linux_pnacl
+pnacl-ar = $toolchain_dir_pnacl/bin/pnacl-ar
+pnacl-cc = $toolchain_dir_pnacl/bin/pnacl-clang
+pnacl-cxx = $toolchain_dir_pnacl/bin/pnacl-clang++
+pnacl-strip = $toolchain_dir_pnacl/bin/pnacl-strip
+pnacl-finalize = $toolchain_dir_pnacl/bin/pnacl-finalize
+pnacl-compress = $toolchain_dir_pnacl/bin/pnacl-compress
+pnacl-translate = $toolchain_dir_pnacl/bin/pnacl-translate
+nmf = $nacl_sdk_root/tools/create_nmf.py
+browserify = node_modules/.bin/browserify
+
+ccflags-default = -pthread -I$nacl_sdk_root/include -I$root/src/c
+ccflags-debug = -g -O0
+ccflags-release = -g -O2 -DNDEBUG
+
+ldflags-default = -L$root/dist
+ldflags-debug = -L$nacl_sdk_root/lib/pnacl/Debug
+ldflags-release = -L$nacl_sdk_root/lib/pnacl/Release -O2
+
+easy-template = $root/bin/easy_template.py
+helper-py = $root/bin/helper.py
+commands-py = $root/bin/commands.py
+template-glue-c = $root/templates/glue.c
+template-glue-js = $root/templates/glue.js
+template-app-c = $root/templates/app.c
+
+libnaclbind = $root/dist/libnaclbind.a
+
+nacl-sdk-zip = $root/out/nacl_sdk.zip
+nacl-sdk = $root/out/nacl_sdk/naclsdk
+nacl-sdk-url = http://storage.googleapis.com/nativeclient-mirror/nacl/nacl_sdk/nacl_sdk.zip
+
+# SDK
+rule wget
+  command = rm -f $out && wget -q $url -O $out --no-use-server-timestamps
+  description = WGET $out
+rule unzip
+  command = unzip -DD -qo $in -d $outdir
+  description = UNZIP $in
+rule naclsdk
+  command = $nacl-sdk update $bundle --force && touch out/nacl_sdk/$bundle
+  description = NACLSDK UPDATE $bundle
+  pool = console
+
+build $nacl-sdk-zip: wget
+  url = $nacl-sdk-url
+build $nacl-sdk: unzip $nacl-sdk-zip
+  outdir = $root/out
+build $nacl_sdk_root: naclsdk | $nacl-sdk
+  bundle = pepper_canary
+
+rule cp
+  command = cp $in $out
+  description = COPY $out
+rule cc
+  command = $cc $ccflags -MMD -MF $out.d -c $in -o $out
+  description = CC $out
+  depfile = $out.d
+rule ar
+  command = rm -f $out && $ar rcs $out $in
+  description = AR $out
+rule link
+  command = $cc $in $ldflags $libs -o $out
+  description = LINK $out
+rule finalize
+  command = $pnacl-finalize $in -o $out && $pnacl-compress $out
+  description = FINALIZE $out
+rule translate
+  command = $pnacl-translate $in --allow-llvm-bitcode-input -arch $arch -o $
+      $out
+  description = TRANSLATE $arch $out
+rule nmf
+  command = $nmf $in -o $out
+  description = NMF $out
+rule template
+  command = $easy-template -j $json $in -o $out
+  description = TEMPLATE $out
+rule browserify
+  command = $browserify $in -o $out --standalone $name
+  description = BROWSERIFY $out
