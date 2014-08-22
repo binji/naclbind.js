@@ -633,5 +633,29 @@ describe('Type', function() {
         assertCast(f, type.IncompleteArray(type.int), type.CAST_ERROR);
       });
     });
+
+    describe('Typedef', function() {
+      it('should allow cast of pointer -> same pointer w/ typedef', function() {
+        var Pc = type.Pointer(type.char),
+            PPc = type.Pointer(Pc),
+            t = type.Typedef('t', Pc),
+            Pt = type.Pointer(t);
+        assertCast(Pc, t, type.CAST_OK);
+        assertCast(t, Pc, type.CAST_OK);
+        assertCast(PPc, Pt, type.CAST_OK);
+        assertCast(Pt, PPc, type.CAST_OK);
+      });
+
+      it('should allow qualifiers to propagate though typedef', function() {
+        var Kt = type.Typedef('t', type.char, type.CONST),
+            Kc = type.char.qualify(type.CONST),
+            VKt = type.Typedef('t2', Kt, type.VOLATILE),
+            KVc = type.char.qualify(type.CONST | type.VOLATILE);
+        assertCast(type.Pointer(Kt), type.Pointer(Kc), type.CAST_OK);
+        assertCast(type.Pointer(Kc), type.Pointer(Kt), type.CAST_OK);
+        assertCast(type.Pointer(VKt), type.Pointer(KVc), type.CAST_OK);
+        assertCast(type.Pointer(KVc), type.Pointer(VKt), type.CAST_OK);
+      });
+    });
   });
 });
