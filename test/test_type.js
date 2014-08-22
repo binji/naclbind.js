@@ -188,7 +188,7 @@ describe('Type', function() {
   describe('Cast', function() {
     function spellTypedef(t) {
       if (t.kind === type.TYPEDEF) {
-        return 'typedef of ' + spellTypedef(t.canonical);
+        return 'typedef of ' + spellTypedef(t.alias);
       }
       return spell(t);
     }
@@ -225,7 +225,7 @@ describe('Type', function() {
         var e = type.Enum('e'),
             s = type.Record('s', type.Field('f', type.int, 0)),
             u = type.Record('s', type.Field('f', type.int, 0), type.UNION),
-            f = type.Function(type.void, type.int),
+            f = type.Function(type.void, [type.int]),
             fp = type.Pointer(f),
             p = type.Pointer(type.void),
             a = type.Array(type.char, 2),
@@ -359,7 +359,7 @@ describe('Type', function() {
         var s = type.Record('s', type.Field('f', type.int, 0)),
             u = type.Record('s', type.Field('f', type.int, 0), type.UNION),
             v = type.void,
-            f = type.Function(type.void, type.int);
+            f = type.Function(type.void, [type.int]);
         [s, u, v, f].forEach(function(x) {
           assertCast(type.char, x, type.CAST_ERROR);
           assertCast(type.short, x, type.CAST_ERROR);
@@ -383,7 +383,7 @@ describe('Type', function() {
           e = type.Enum('e'),
           s = type.Record('s', type.Field('f', type.int, 0)),
           u = type.Record('s', type.Field('f', type.int, 0), type.UNION),
-          f = type.Function(type.void, type.int);
+          f = type.Function(type.void, [type.int]);
 
       it('should allow cast of pointer -> same pointer', function() {
         [v, c, e, s, u, f].forEach(function(x) {
