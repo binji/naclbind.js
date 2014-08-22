@@ -517,8 +517,10 @@ function canCastPointer(from, to) {
       tp;
   if (kindIsPointerlike(to.kind)) {
     tp = getPointerlikePointee(to);
-    // Cast to/from void* is always legal.
-    if (fp.kind !== VOID && tp.kind !== VOID && !isCompatibleWith(fp, tp)) {
+    if (fp.kind === VOID && tp.kind === VOID) {
+      // Fall through to cv-check.
+    } else if (fp.kind !== VOID && tp.kind !== VOID &&
+               !isCompatibleWith(fp, tp)) {
       return CAST_INCOMPATIBLE_POINTERS;
     } else if (fp.kind === VOID && tp.kind === FUNCTIONPROTO) {
       return CAST_VOID_POINTER_TO_FUNCTION_POINTER;
@@ -526,10 +528,7 @@ function canCastPointer(from, to) {
       return CAST_FUNCTION_POINTER_TO_VOID_POINTER;
     }
 
-    // If there is a qualifier in |this| that is not set in |that|, it is an
-    // error. Note that these are C rules; C++ rules for qualifiers are more
-    // restrictive.
-    if ((from.cv & ~to.cv) !== 0) {
+    if (isLessQualified(tp.cv, fp.cv)) {
       return CAST_DISCARD_QUALIFIER;
     }
 
