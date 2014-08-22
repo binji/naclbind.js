@@ -369,6 +369,11 @@ function ConstantArray(elementType, arraySize) {
   if (!(this instanceof ConstantArray)) {
     return new ConstantArray(elementType, arraySize);
   }
+
+  if (elementType.kind === VOID) {
+    throw new Error('Cannot create an array of voids.');
+  }
+
   Type.call(this, CONSTANTARRAY, 0);
   this.elementType = elementType;
   this.arraySize = arraySize;
@@ -387,6 +392,11 @@ function IncompleteArray(elementType) {
   if (!(this instanceof IncompleteArray)) {
     return new IncompleteArray(elementType);
   }
+
+  if (elementType.kind === VOID) {
+    throw new Error('Cannot create an array of voids.');
+  }
+
   Type.call(this, INCOMPLETEARRAY, 0);
   this.elementType = elementType;
   this.spelling = getSpelling(this);

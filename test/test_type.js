@@ -101,6 +101,16 @@ describe('Type', function() {
           type.Function(type.void, [], type.VARIADIC);
         });
       });
+
+      it('should throw creating an array of voids', function() {
+        assert.throws(function() {
+          type.Array(type.void, 2);
+        });
+
+        assert.throws(function() {
+          type.IncompleteArray(type.void);
+        });
+      });
     });
   });
 
@@ -422,17 +432,21 @@ describe('Type', function() {
       it('should allow cast of pointer -> same pointer', function() {
         [v, c, e, s, u, f].forEach(function(x) {
           var p = type.Pointer(x),
-              a = type.Array(x, 2),
-              ia = type.IncompleteArray(x);
+              a,
+              ia;
           assertCast(p, p, type.CAST_OK);
-          assertCast(p, a, type.CAST_OK);
-          assertCast(p, ia, type.CAST_OK);
-          assertCast(a, p, type.CAST_OK);
-          assertCast(a, a, type.CAST_OK);
-          assertCast(a, ia, type.CAST_OK);
-          assertCast(ia, p, type.CAST_OK);
-          assertCast(ia, a, type.CAST_OK);
-          assertCast(ia, ia, type.CAST_OK);
+          if (x.kind !== type.VOID) {
+            a = type.Array(x, 2);
+            ia = type.IncompleteArray(x);
+            assertCast(p, a, type.CAST_OK);
+            assertCast(p, ia, type.CAST_OK);
+            assertCast(a, p, type.CAST_OK);
+            assertCast(a, a, type.CAST_OK);
+            assertCast(a, ia, type.CAST_OK);
+            assertCast(ia, p, type.CAST_OK);
+            assertCast(ia, a, type.CAST_OK);
+            assertCast(ia, ia, type.CAST_OK);
+          }
         });
       });
 
@@ -508,7 +522,7 @@ describe('Type', function() {
       it('should allow cast of pointer-like -> qualified pointee', function() {
         // Arrays cannot be qualified, so test unqualified arrays being cast to
         // qualified pointers.
-        [v, c, e, s, u, f].forEach(function(x) {
+        [c, e, s, u, f].forEach(function(x) {
           var p = type.Pointer(x),
               a = type.Array(x, 2),
               ia = type.IncompleteArray(x);
@@ -558,34 +572,37 @@ describe('Type', function() {
 
       it('should warn on cast of pointer-like -> integral', function() {
         [v, c, e, s, u, f].forEach(function(x) {
-          var p = type.Pointer(x),
-              a = type.Array(x, 2),
-              ia = type.IncompleteArray(x);
-          assertCast(p, type.int, type.CAST_POINTER_TO_INT);
-          assertCast(a, type.int, type.CAST_POINTER_TO_INT);
-          assertCast(ia, type.int, type.CAST_POINTER_TO_INT);
+          assertCast(type.Pointer(x), type.int, type.CAST_POINTER_TO_INT);
+          if (x.kind !== type.VOID) {
+            assertCast(type.Array(x, 2), type.int, type.CAST_POINTER_TO_INT);
+            assertCast(type.IncompleteArray(x), type.int, type.CAST_POINTER_TO_INT);
+          }
         });
       });
 
       it('should fail on cast of pointer-like -> float', function() {
         [v, c, e, s, u, f].forEach(function(x) {
-          var p = type.Pointer(x),
-              a = type.Array(x, 2),
-              ia = type.IncompleteArray(x);
+          var p = type.Pointer(x);
           assertCast(p, type.float, type.CAST_ERROR);
           assertCast(p, type.double, type.CAST_ERROR);
+          if (x.kind !== type.VOID) {
+            assertCast(type.Array(x, 2), type.float, type.CAST_ERROR);
+            assertCast(type.Array(x, 2), type.double, type.CAST_ERROR);
+            assertCast(type.IncompleteArray(x), type.float, type.CAST_ERROR);
+            assertCast(type.IncompleteArray(x), type.double, type.CAST_ERROR);
+          }
         });
       });
 
       it('should fail on cast of pointer-like -> anything else', function() {
         [v, c, e, s, u, f].forEach(function(x) {
-          var p = type.Pointer(x),
-              a = type.Array(x, 2),
-              ia = type.IncompleteArray(x);
+          var p = type.Pointer(x);
           [v, e, s, u, f].forEach(function(to) {
             assertCast(p, to, type.CAST_ERROR);
-            assertCast(a, to, type.CAST_ERROR);
-            assertCast(ia, to, type.CAST_ERROR);
+            if (x.kind !== type.VOID) {
+              assertCast(type.Array(x, 2), to, type.CAST_ERROR);
+              assertCast(type.IncompleteArray(x), to, type.CAST_ERROR);
+            }
           });
         });
       });
