@@ -135,6 +135,14 @@ function kindIsPointerlike(kind) {
          kind === INCOMPLETEARRAY;
 }
 
+function getMostCanonical(type) {
+  while (type.kind === TYPEDEF) {
+    type = type.canonical;
+  }
+
+  return type;
+}
+
 function getPointerlikePointee(type) {
   if (type.kind === POINTER) {
     return type.pointee;
@@ -222,6 +230,7 @@ Void.prototype.isCompatibleWith = function(that) {
   return that.kind === VOID;
 };
 Void.prototype.canCastTo = function(that) {
+  that = getMostCanonical(that);
   return that.kind === VOID ? CAST_OK : CAST_ERROR;
 };
 
@@ -244,6 +253,7 @@ Numeric.prototype.canCastTo = function(that) {
       thatRank,
       thisSigned,
       thatSigned;
+  that = getMostCanonical(that);
   if (this.constructor !== that.constructor) {
     thisIsInteger = kindIsInteger(this.kind);
     if (thisIsInteger && kindIsPointerlike(that.kind)) {
@@ -283,7 +293,7 @@ Pointer.prototype.isCompatibleWith = function(that) {
   return isPointerCompatibleWith(this, that);
 };
 Pointer.prototype.canCastTo = function(that) {
-  return canCastPointerTo(this, that);
+  return canCastPointerTo(this, getMostCanonical(that));
 };
 
 function Record(tag, fields, isUnion, cv) {
@@ -308,7 +318,7 @@ Record.prototype.isCompatibleWith = function(that) {
          this.isUnion === that.isUnion;
 };
 Record.prototype.canCastTo = function(that) {
-  return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
+  return this.isCompatibleWith(getMostCanonical(that)) ? CAST_OK : CAST_ERROR;
 };
 
 function Field(name, type, offset) {
@@ -336,6 +346,7 @@ Enum.prototype.isCompatibleWith = function(that) {
          this.cv === that.cv;
 };
 Enum.prototype.canCastTo = function(that) {
+  that = getMostCanonical(that);
   if (this.kind !== that.kind) {
     if (kindIsInteger(that.kind)) {
       return CAST_OK;
@@ -361,13 +372,13 @@ function Typedef(tag, canonical, cv) {
 Typedef.prototype = Object.create(Type.prototype);
 Typedef.prototype.constructor = Typedef;
 Typedef.prototype.qualify = function(cv) {
-  return Typedef(this.tag, this.cv | cv);
+  return Typedef(this.tag, this.canonical, this.cv | cv);
 };
 Typedef.prototype.isCompatibleWith = function(that) {
   return this.canonical.isCompatibleWith(that);
 };
 Typedef.prototype.canCastTo = function(that) {
-  return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
+  return this.canonical.canCastTo(that);
 };
 
 function FunctionProto(resultType, argTypes, variadic) {
@@ -430,7 +441,7 @@ ConstantArray.prototype.isCompatibleWith = function(that) {
   return isPointerCompatibleWith(this, that);
 };
 ConstantArray.prototype.canCastTo = function(that) {
-  return canCastPointerTo(this, that);
+  return canCastPointerTo(this, getMostCanonical(that));
 };
 
 function IncompleteArray(elementType) {
@@ -450,7 +461,7 @@ IncompleteArray.prototype.isCompatibleWith = function(that) {
   return isPointerCompatibleWith(this, that);
 };
 IncompleteArray.prototype.canCastTo = function(that) {
-  return canCastPointerTo(this, that);
+  return canCastPointerTo(this, getMostCanonical(that));
 };
 
 function getQualifier(cv) {

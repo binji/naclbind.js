@@ -186,16 +186,39 @@ describe('Type', function() {
   });
 
   describe('Cast', function() {
-    function assertCast(from, to, expected) {
+    function spellTypedef(t) {
+      if (t.kind === type.TYPEDEF) {
+        return 'typedef of ' + spellTypedef(t.canonical);
+      }
+      return spell(t);
+    }
+
+    function assertCastHelper(from, to, expected) {
       var actual = from.canCastTo(to);
-      var msg = 'Cast from ' + spell(from) + ' -> ' + spell(to) +
-                ': expected: ' + expected + ' actual: ' + actual;
+      var msg = 'Cast from "' + spellTypedef(from) + '" -> "' +
+                                spellTypedef(to) + '": ' +
+                'expected: ' + expected + ' actual: ' + actual;
       assert.equal(actual, expected, msg);
+    }
+
+    function assertCast(from, to, expected) {
+      var tfrom = type.Typedef('from', from),
+          ttfrom = type.Typedef('fromfrom', tfrom),
+          tto = type.Typedef('to', to),
+          ttto = type.Typedef('toto', tto);
+
+      assertCastHelper(from, to, expected);
+      assertCastHelper(from, tto, expected);
+      assertCastHelper(tfrom, to, expected);
+      assertCastHelper(tfrom, tto, expected);
+      assertCastHelper(ttfrom, to, expected);
+      assertCastHelper(from, ttto, expected);
+      assertCastHelper(ttfrom, ttto, expected);
     }
 
     describe('Void', function() {
       it('should allow cast of void -> void', function() {
-        assert.equal(type.void.canCastTo(type.void), type.CAST_OK);
+        assertCast(type.void, type.void, type.CAST_OK);
       });
 
       it('should fail cast of void -> anything else', function() {
