@@ -381,7 +381,7 @@ describe('Type', function() {
 
       it('should allow cast of non-void pointer <-> void pointer', function() {
         var pv = type.Pointer(type.void);
-        [c, e, s, u, f].forEach(function(x) {
+        [c, e, s, u].forEach(function(x) {
           var p = type.Pointer(x),
               a = type.Array(x, 2),
               ia = type.IncompleteArray(x);
@@ -392,6 +392,15 @@ describe('Type', function() {
           assertCast(pv, a, type.CAST_OK);
           assertCast(pv, ia, type.CAST_OK);
         });
+      });
+
+      it('should warn on cast of void pointer <-> function pointer', function() {
+        // This is disallowed by the C spec, but seems to work without warning
+        // in clang + gcc.
+        var pv = type.Pointer(type.void),
+            pf = type.Pointer(f);
+        assertCast(pv, pf, type.CAST_VOID_POINTER_TO_FUNCTION_POINTER);
+        assertCast(pf, pv, type.CAST_FUNCTION_POINTER_TO_VOID_POINTER);
       });
 
       it('should allow cast of pointer -> more qualified pointer', function() {

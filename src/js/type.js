@@ -115,6 +115,8 @@ var INVALID = 0,
     CAST_INT_TO_ENUM = 7,
     CAST_DIFFERENT_ENUMS = 8,
     CAST_INCOMPATIBLE_POINTERS = 9,
+    CAST_FUNCTION_POINTER_TO_VOID_POINTER = 10,
+    CAST_VOID_POINTER_TO_FUNCTION_POINTER = 11,
 
     SPELLING_PRECEDENCE = {};
 
@@ -161,6 +163,10 @@ function canCastPointerTo(from, to) {
     // Cast to/from void* is always legal.
     if (fp.kind !== VOID && tp.kind !== VOID && !fp.isCompatibleWith(tp)) {
       return CAST_INCOMPATIBLE_POINTERS;
+    } else if (fp.kind === VOID && tp.kind === FUNCTIONPROTO) {
+      return CAST_VOID_POINTER_TO_FUNCTION_POINTER;
+    } else if (fp.kind === FUNCTIONPROTO && tp.kind === VOID) {
+      return CAST_FUNCTION_POINTER_TO_VOID_POINTER;
     }
 
     // If there is a qualifier in |this| that is not set in |that|, it is an
@@ -625,6 +631,8 @@ module.exports = {
   CAST_INT_TO_ENUM: CAST_INT_TO_ENUM,
   CAST_DIFFERENT_ENUMS: CAST_DIFFERENT_ENUMS,
   CAST_INCOMPATIBLE_POINTERS: CAST_INCOMPATIBLE_POINTERS,
+  CAST_FUNCTION_POINTER_TO_VOID_POINTER: CAST_FUNCTION_POINTER_TO_VOID_POINTER,
+  CAST_VOID_POINTER_TO_FUNCTION_POINTER: CAST_VOID_POINTER_TO_FUNCTION_POINTER,
 
   // Functions
   getSpelling: getSpelling,
