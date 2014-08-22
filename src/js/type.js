@@ -202,8 +202,16 @@ function isLessQualified(q1, q2) {
   return (q2 & ~q1) !== 0 && (q1 & q2) === q1;
 }
 
+function isLessOrEquallyQualified(q1, q2) {
+  return isLessQualified(q1, q2) || q1 === q2;
+}
+
 function isMoreQualified(q1, q2) {
-  return q1 !== q2 && isLessQualified(q2, q1);
+  return isLessQualified(q2, q1);
+}
+
+function isMoreOrEquallyQualified(q1, q2) {
+  return isLessQualified(q2, q1) || q1 === q2;
 }
 
 
@@ -232,6 +240,9 @@ Void.prototype.constructor = Void;
 Void.prototype.qualify = function(cv) {
   return Void(this.cv | cv);
 };
+Void.prototype.unqualified = function() {
+  return Void();
+};
 
 function Numeric(kind, cv) {
   if (!(this instanceof Numeric)) { return new Numeric(kind, cv); }
@@ -242,6 +253,9 @@ Numeric.prototype = Object.create(Type.prototype);
 Numeric.prototype.constructor = Numeric;
 Numeric.prototype.qualify = function(cv) {
   return Numeric(this.kind, this.cv | cv);
+};
+Numeric.prototype.unqualified = function() {
+  return Numeric(this.kind);
 };
 
 function Pointer(pointee, cv) {
@@ -254,6 +268,9 @@ Pointer.prototype = Object.create(Type.prototype);
 Pointer.prototype.constructor = Pointer;
 Pointer.prototype.qualify = function(cv) {
   return Pointer(this.pointee, this.cv | cv);
+};
+Pointer.prototype.unqualified = function() {
+  return Pointer(this.pointee);
 };
 
 function Record(tag, fields, isUnion, cv) {
@@ -270,6 +287,9 @@ Record.prototype = Object.create(Type.prototype);
 Record.prototype.constructor = Record;
 Record.prototype.qualify = function(cv) {
   return Record(this.tag, this.fields, this.isUnion, this.cv | cv);
+};
+Record.prototype.unqualified = function() {
+  return Record(this.tag, this.fields, this.isUnion);
 };
 
 function Field(name, type, offset) {
@@ -291,6 +311,9 @@ Enum.prototype.constructor = Enum;
 Enum.prototype.qualify = function(cv) {
   return Enum(this.tag, this.cv | cv);
 };
+Enum.prototype.unqualified = function() {
+  return Enum(this.tag);
+};
 
 function Typedef(tag, alias, cv) {
   if (!(this instanceof Typedef)) { return new Typedef(tag, alias, cv); }
@@ -303,6 +326,9 @@ Typedef.prototype = Object.create(Type.prototype);
 Typedef.prototype.constructor = Typedef;
 Typedef.prototype.qualify = function(cv) {
   return Typedef(this.tag, this.alias, this.cv | cv);
+};
+Typedef.prototype.unqualified = function() {
+  return Typedef(this.tag, this.alias);
 };
 
 function FunctionProto(resultType, argTypes, variadic) {
@@ -320,6 +346,9 @@ FunctionProto.prototype.constructor = FunctionProto;
 FunctionProto.prototype.qualify = function(cv) {
   return this;
 };
+FunctionProto.prototype.unqualified = function() {
+  return this;
+};
 
 function ConstantArray(elementType, arraySize) {
   if (!(this instanceof ConstantArray)) {
@@ -335,6 +364,9 @@ ConstantArray.prototype.constructor = ConstantArray;
 ConstantArray.prototype.qualify = function(cv) {
   return this;
 };
+ConstantArray.prototype.unqualified = function() {
+  return this;
+};
 
 function IncompleteArray(elementType) {
   if (!(this instanceof IncompleteArray)) {
@@ -347,6 +379,9 @@ function IncompleteArray(elementType) {
 IncompleteArray.prototype = Object.create(Type.prototype);
 IncompleteArray.prototype.constructor = IncompleteArray;
 IncompleteArray.prototype.qualify = function(cv) {
+  return this;
+};
+IncompleteArray.prototype.unqualified = function() {
   return this;
 };
 
@@ -519,16 +554,18 @@ function canCastPointer(from, to) {
     tp = getPointerlikePointee(to);
     if (fp.kind === VOID && tp.kind === VOID) {
       // Fall through to cv-check.
-    } else if (fp.kind !== VOID && tp.kind !== VOID &&
-               !isCompatibleWith(fp, tp)) {
-      return CAST_INCOMPATIBLE_POINTERS;
     } else if (fp.kind === VOID && tp.kind === FUNCTIONPROTO) {
       return CAST_VOID_POINTER_TO_FUNCTION_POINTER;
     } else if (fp.kind === FUNCTIONPROTO && tp.kind === VOID) {
       return CAST_FUNCTION_POINTER_TO_VOID_POINTER;
+    } else if (fp.kind === VOID || tp.kind === VOID) {
+      // Strangely cv-checks are ignored when casting from/to void*.
+      return CAST_OK;
+    } else if (!isCompatibleWith(fp.unqualified(), tp.unqualified())) {
+      return CAST_INCOMPATIBLE_POINTERS;
     }
 
-    if (isLessQualified(tp.cv, fp.cv)) {
+    if (!isLessOrEquallyQualified(fp.cv, tp.cv)) {
       return CAST_DISCARD_QUALIFIER;
     }
 
@@ -684,4 +721,6 @@ module.exports = {
   describeQualifier: describeQualifier,
   isLessQualified: isLessQualified,
   isMoreQualified: isMoreQualified,
+  isLessOrEquallyQualified: isLessOrEquallyQualified,
+  isMoreOrEquallyQualified: isMoreOrEquallyQualified,
 };

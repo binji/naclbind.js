@@ -25,7 +25,7 @@ var type = require('../src/js/type'),
     R = type.RESTRICT;
 
 describe('Type', function() {
-  describe('is{Less,More}Qualified', function() {
+  describe('is{Less,More}{,OrEqually}Qualified', function() {
     it('should work properly for all qualifiers', function() {
       var OK = [
             [0, C], [0, V], [0, R], [0, CV], [0, CR], [0, VR], [0, CVR],
@@ -57,17 +57,27 @@ describe('Type', function() {
       OK.forEach(function(a) {
         var q1 = a[0], q2 = a[1];
         assert(type.isLessQualified(q1, q2),
-               'Expected ' + qual(q1) + ' less qualified than ' + qual(q2));
+               'Expected ' + qual(q1) + ' < ' + qual(q2));
+        assert(type.isLessOrEquallyQualified(q1, q2),
+               'Expected ' + qual(q1) + ' <= ' + qual(q2));
         assert(type.isMoreQualified(q2, q1),
-               'Expected ' + qual(q2) + ' more qualified than ' + qual(q1));
+               'Expected ' + qual(q2) + ' > ' + qual(q1));
+        assert(type.isMoreOrEquallyQualified(q2, q1),
+               'Expected ' + qual(q2) + ' >= ' + qual(q1));
       });
 
       NotOK.forEach(function(a) {
         var q1 = a[0], q2 = a[1];
         assert(!type.isLessQualified(q1, q2),
-               'Expected ' + qual(q1) + ' less qualified than ' + qual(q2));
+               'Expected ' + qual(q1) + ' !< ' + qual(q2));
         assert(!type.isMoreQualified(q2, q1),
-               'Expected ' + qual(q2) + ' more qualified than ' + qual(q1));
+               'Expected ' + qual(q2) + ' !> ' + qual(q1));
+        if (q1 === q2) {
+          assert(type.isLessOrEquallyQualified(q1, q2),
+                 'Expected ' + qual(q1) + ' <= ' + qual(q2));
+          assert(type.isMoreOrEquallyQualified(q2, q1),
+                 'Expected ' + qual(q2) + ' >= ' + qual(q1));
+        }
       });
     });
   });
@@ -421,7 +431,7 @@ describe('Type', function() {
         [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
           var q1p = type.Pointer(v.qualify(q1));
           [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
-            if (!type.isMoreQualified(q1, q2)) return;
+            if (!type.isLessQualified(q2, q1)) return;
             var q2p = type.Pointer(v.qualify(q2));
             assertCast(q1p, q2p, type.CAST_DISCARD_QUALIFIER);
           });
@@ -451,23 +461,22 @@ describe('Type', function() {
         });
       });
 
-      it.skip('should warn on cast of pointer -> less qualified pointer', function() {
-        // Also warn if casting to a differently qualified pointer, e.g.
+      it('should warn on cast of pointer -> less qualified pointee', function() {
+        // Also warn if casting to a differently qualified pointee, e.g.
         // const void* => volatile void*
-        [v, c, e, s, u, f].forEach(function(x) {
-          var p = type.Pointer(x);
+        [v, c, e, s, u].forEach(function(x) {
           [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
-            var q1p = p.qualify(q1);
+            var q1p = type.Pointer(x.qualify(q1));
             [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
-              if (type.isLessQualified(q1, q2) || q1 === q2) return;
-              var q2p = p.qualify(q2);
+              if (!type.isLessQualified(q2, q1)) return;
+              var q2p = type.Pointer(x.qualify(q2));
               assertCast(q1p, q2p, type.CAST_DISCARD_QUALIFIER);
             });
           });
         });
       });
 
-      it.skip('should allow cast of pointer-like -> qualified pointer', function() {
+      it('should allow cast of pointer-like -> qualified pointee', function() {
         // Arrays cannot be qualified, so test unqualified arrays being cast to
         // qualified pointers.
         [v, c, e, s, u, f].forEach(function(x) {
@@ -475,7 +484,7 @@ describe('Type', function() {
               a = type.Array(x, 2),
               ia = type.IncompleteArray(x);
           [C, CV, CVR, V, VR, R].forEach(function(q) {
-            var qp = p.qualify(q);
+            var qp = type.Pointer(x.qualify(q));
             assertCast(a, qp, type.CAST_OK);
             assertCast(ia, qp, type.CAST_OK);
           });
@@ -507,7 +516,7 @@ describe('Type', function() {
         });
       });
 
-      it('should warn on cast between differently-qualified pointees', function() {
+      it.skip('should warn on cast between differently-qualified pointees', function() {
         [0, C, V, R, CV, CR, VR, CVR].forEach(function (q1) {
           var q1p = type.Pointer(type.Pointer(type.char).qualify(q1));
           [0, C, V, R, CV, CR, VR, CVR].forEach(function (q2) {
