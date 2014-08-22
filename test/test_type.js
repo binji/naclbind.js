@@ -458,5 +458,38 @@ describe('Type', function() {
         });
       });
     });
+
+    describe('Record', function() {
+      var s = type.Record('s', type.Field('f', type.int, 0)),
+          s2 = type.Record('s2', type.Field('f', type.int, 0)),
+          u = type.Record('s', type.Field('f', type.int, 0), type.UNION);
+
+      it('should allow cast to same record', function() {
+        assertCast(s, s, type.CAST_OK);
+        assertCast(u, u, type.CAST_OK);
+      });
+
+      it('should fail on cast of union <-> struct of same tag', function() {
+        // It's not possible to do this in C, but regardless, the cast
+        // shouldn't succeed.
+        assertCast(u, s, type.CAST_ERROR);
+        assertCast(s, u, type.CAST_ERROR);
+      });
+
+      it('should fail on cast of struct -> different tag', function() {
+        assertCast(s, s2, type.CAST_ERROR);
+      });
+
+      it('should fail on cast of record -> anything else', function() {
+        assertCast(s, type.void, type.CAST_ERROR);
+        assertCast(s, type.char, type.CAST_ERROR);
+        assertCast(s, type.int, type.CAST_ERROR);
+        assertCast(s, type.Pointer(type.int), type.CAST_ERROR);
+        assertCast(s, type.Enum('e'), type.CAST_ERROR);
+        assertCast(s, type.Function(type.int, [type.int]), type.CAST_ERROR);
+        assertCast(s, type.Array(type.int, 2), type.CAST_ERROR);
+        assertCast(s, type.IncompleteArray(type.int), type.CAST_ERROR);
+      });
+    });
   });
 });

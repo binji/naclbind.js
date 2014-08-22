@@ -297,7 +297,8 @@ Record.prototype.qualify = function(cv) {
 Record.prototype.isCompatibleWith = function(that) {
   return this.kind === that.kind &&
          this.tag === that.tag &&
-         this.cv === that.cv;
+         this.cv === that.cv &&
+         this.isUnion === that.isUnion;
 };
 Record.prototype.canCastTo = function(that) {
   return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
