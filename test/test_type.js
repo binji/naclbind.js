@@ -217,6 +217,8 @@ describe('Type', function() {
           tto = type.Typedef('to', to),
           ttto = type.Typedef('toto', tto);
 
+      // console.log(spell(from), '=>', spell(to), expected);
+
       assertCastHelper(from, to, expected);
       assertCastHelper(from, tto, expected);
       assertCastHelper(tfrom, to, expected);
@@ -413,17 +415,22 @@ describe('Type', function() {
       });
 
       it('should allow cast of non-void pointer <-> void pointer', function() {
+        // Note that qualifiers are ignored in this case.
         var pv = type.Pointer(type.void);
         [c, e, s, u].forEach(function(x) {
-          var p = type.Pointer(x),
-              a = type.Array(x, 2),
-              ia = type.IncompleteArray(x);
-          assertCast(p, pv, type.CAST_OK);
-          assertCast(a, pv, type.CAST_OK);
-          assertCast(ia, pv, type.CAST_OK);
-          assertCast(pv, p, type.CAST_OK);
-          assertCast(pv, a, type.CAST_OK);
-          assertCast(pv, ia, type.CAST_OK);
+          [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
+            [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
+              var p = type.Pointer(x),
+                  a = type.Array(x, 2),
+                  ia = type.IncompleteArray(x);
+              assertCast(p.qualify(q1), pv.qualify(q2), type.CAST_OK);
+              assertCast(a, pv.qualify(q2), type.CAST_OK);
+              assertCast(ia, pv.qualify(q2), type.CAST_OK);
+              assertCast(pv.qualify(q1), p.qualify(q2), type.CAST_OK);
+              assertCast(pv.qualify(q1), a, type.CAST_OK);
+              assertCast(pv.qualify(q1), ia, type.CAST_OK);
+            });
+          });
         });
       });
 
