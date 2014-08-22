@@ -424,6 +424,42 @@ describe('Type', function() {
         });
       });
 
+      it('should warn on cast of pointer-like to incompatible pointer', function() {
+        [v, c, e, s, u, f].forEach(function(x) {
+          var xp = type.Pointer(x),
+              xa = type.Array(x, 2),
+              xia = type.IncompleteArray(x);
+          [v, c, e, s, u, f].forEach(function(y) {
+            if (x === y) return;
+
+            var yp = type.Pointer(y),
+                ya = type.Array(y, 2),
+                yia = type.IncompleteArray(y);
+
+            assertCast(xp, yp, type.CAST_INCOMPATIBLE_POINTERS);
+            assertCast(xp, ya, type.CAST_INCOMPATIBLE_POINTERS);
+            assertCast(xp, yia, type.CAST_INCOMPATIBLE_POINTERS);
+            assertCast(xa, yp, type.CAST_INCOMPATIBLE_POINTERS);
+            assertCast(xa, ya, type.CAST_INCOMPATIBLE_POINTERS);
+            assertCast(xa, yia, type.CAST_INCOMPATIBLE_POINTERS);
+            assertCast(xia, yp, type.CAST_INCOMPATIBLE_POINTERS);
+            assertCast(xia, ya, type.CAST_INCOMPATIBLE_POINTERS);
+            assertCast(xia, yia, type.CAST_INCOMPATIBLE_POINTERS);
+          });
+        });
+      });
+
+      it('should warn on cast between differently-qualified pointees', function() {
+        [0, C, V, R, CV, CR, VR, CVR].forEach(function (q1) {
+          var q1p = type.Pointer(type.Pointer(type.char).qualify(q1));
+          [0, C, V, R, CV, CR, VR, CVR].forEach(function (q2) {
+            if (q1 === q2) return;
+            var q2p = type.Pointer(type.Pointer(type.char).qualify(q2));
+            assertCast(q1p, q2p, type.CAST_INCOMPATIBLE_POINTERS);
+          });
+        });
+      });
+
       it('should warn on cast of pointer-like -> integral', function() {
         [v, c, e, s, u, f].forEach(function(x) {
           var p = type.Pointer(x),
