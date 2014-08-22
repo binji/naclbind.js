@@ -527,5 +527,48 @@ describe('Type', function() {
         assertCast(s, type.IncompleteArray(type.int), type.CAST_ERROR);
       });
     });
+
+    describe('Enum', function() {
+      var e = type.Enum('E'),
+          e2 = type.Enum('E2');
+
+      it('should allow cast of enum -> same enum', function() {
+        assertCast(e, e, type.CAST_OK);
+      });
+
+      it('should warn on cast of enum -> another enum', function() {
+        // C allows this, but I'd rather warn.
+        assertCast(e, e2, type.CAST_DIFFERENT_ENUMS);
+        assertCast(e2, e, type.CAST_DIFFERENT_ENUMS);
+      });
+
+      it('should allow cast of enum -> integral', function() {
+        assertCast(e, type.bool, type.CAST_OK);
+        assertCast(e, type.char, type.CAST_OK);
+        assertCast(e, type.short, type.CAST_OK);
+        assertCast(e, type.int, type.CAST_OK);
+        assertCast(e, type.long, type.CAST_OK);
+        assertCast(e, type.longlong, type.CAST_OK);
+        assertCast(e, type.uchar, type.CAST_OK);
+        assertCast(e, type.ushort, type.CAST_OK);
+        assertCast(e, type.uint, type.CAST_OK);
+        assertCast(e, type.ulong, type.CAST_OK);
+        assertCast(e, type.ulonglong, type.CAST_OK);
+      });
+
+      it('should fail on cast of enum -> float', function() {
+        assertCast(e, type.float, type.CAST_ERROR);
+        assertCast(e, type.double, type.CAST_ERROR);
+      });
+
+      it('should fail on cast of enum -> anything else', function() {
+        assertCast(e, type.void, type.CAST_ERROR);
+        assertCast(e, type.Pointer(type.int), type.CAST_ERROR);
+        assertCast(e, type.Record('s', type.Field('f', type.int, 0)), type.CAST_ERROR);
+        assertCast(e, type.Function(type.int, [type.int]), type.CAST_ERROR);
+        assertCast(e, type.Array(type.int, 2), type.CAST_ERROR);
+        assertCast(e, type.IncompleteArray(type.int), type.CAST_ERROR);
+      });
+    });
   });
 });

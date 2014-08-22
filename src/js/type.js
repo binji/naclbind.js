@@ -329,7 +329,19 @@ Enum.prototype.isCompatibleWith = function(that) {
          this.cv === that.cv;
 };
 Enum.prototype.canCastTo = function(that) {
-  return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
+  if (this.kind !== that.kind) {
+    if (kindIsInteger(that.kind)) {
+      return CAST_OK;
+    }
+
+    return CAST_ERROR;
+  }
+
+  if (this.tag !== that.tag) {
+    return CAST_DIFFERENT_ENUMS;
+  }
+
+  return CAST_OK;
 };
 
 function Typedef(tag, canonical, cv) {
