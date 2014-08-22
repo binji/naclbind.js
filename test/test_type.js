@@ -516,12 +516,12 @@ describe('Type', function() {
         });
       });
 
-      it.skip('should warn on cast between differently-qualified pointees', function() {
+      it('should warn on cast between differently-qualified pointees', function() {
         [0, C, V, R, CV, CR, VR, CVR].forEach(function (q1) {
-          var q1p = type.Pointer(type.Pointer(type.char).qualify(q1));
+          var q1p = type.Pointer(type.Pointer(type.char.qualify(q1)));
           [0, C, V, R, CV, CR, VR, CVR].forEach(function (q2) {
             if (q1 === q2) return;
-            var q2p = type.Pointer(type.Pointer(type.char).qualify(q2));
+            var q2p = type.Pointer(type.Pointer(type.char.qualify(q2)));
             assertCast(q1p, q2p, type.CAST_INCOMPATIBLE_POINTERS);
           });
         });
