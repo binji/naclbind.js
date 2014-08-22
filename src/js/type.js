@@ -335,6 +335,21 @@ function FunctionProto(resultType, argTypes, variadic) {
   if (!(this instanceof FunctionProto)) {
     return new FunctionProto(resultType, argTypes, variadic);
   }
+
+  if (resultType.kind === CONSTANTARRAY ||
+      resultType.kind === INCOMPLETEARRAY) {
+    throw new Error('Function return type cannot be an array. Got ' +
+                    resultType.spelling);
+  }
+
+  if (!(argTypes instanceof Array)) {
+    throw new Error('argTypes must be an array.');
+  }
+
+  if (variadic && argTypes.length === 0) {
+    throw new Error('Cannot create variadic function with no arguments.');
+  }
+
   Type.call(this, FUNCTIONPROTO, 0);
   this.resultType = resultType;
   this.argTypes = argTypes;

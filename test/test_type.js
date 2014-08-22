@@ -82,6 +82,28 @@ describe('Type', function() {
     });
   });
 
+  describe('Create', function() {
+    describe('Invalid Types', function() {
+      it('should throw creating functions that return arrays', function() {
+        assert.throws(function() {
+          type.Function(type.Array(type.int, 2), []);
+        });
+      });
+
+      it('should throw creating functions with non-array argTypes', function() {
+        assert.throws(function() {
+          type.Function(type.void, type.int);
+        });
+      });
+
+      it('should throw creating variadic functions with 0 args', function() {
+        assert.throws(function() {
+          type.Function(type.void, [], type.VARIADIC);
+        });
+      });
+    });
+  });
+
   describe('Spell', function() {
     it('should correctly spell primitive types', function() {
       assert.equal(spell(type.void), 'void');
