@@ -379,6 +379,21 @@ describe('Type', function() {
         });
       });
 
+      it('should allow cast of non-void pointer <-> void pointer', function() {
+        var pv = type.Pointer(type.void);
+        [c, e, s, u, f].forEach(function(x) {
+          var p = type.Pointer(x),
+              a = type.Array(x, 2),
+              ia = type.IncompleteArray(x);
+          assertCast(p, pv, type.CAST_OK);
+          assertCast(a, pv, type.CAST_OK);
+          assertCast(ia, pv, type.CAST_OK);
+          assertCast(pv, p, type.CAST_OK);
+          assertCast(pv, a, type.CAST_OK);
+          assertCast(pv, ia, type.CAST_OK);
+        });
+      });
+
       it('should allow cast of pointer -> more qualified pointer', function() {
         [v, c, e, s, u, f].forEach(function(x) {
           var p = type.Pointer(x);
@@ -425,11 +440,11 @@ describe('Type', function() {
       });
 
       it('should warn on cast of pointer-like to incompatible pointer', function() {
-        [v, c, e, s, u, f].forEach(function(x) {
+        [c, e, s, u, f].forEach(function(x) {
           var xp = type.Pointer(x),
               xa = type.Array(x, 2),
               xia = type.IncompleteArray(x);
-          [v, c, e, s, u, f].forEach(function(y) {
+          [c, e, s, u, f].forEach(function(y) {
             if (x === y) return;
 
             var yp = type.Pointer(y),

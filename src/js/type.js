@@ -158,7 +158,8 @@ function canCastPointerTo(from, to) {
       tp;
   if (kindIsPointerlike(to.kind)) {
     tp = getPointerlikePointee(to);
-    if (!fp.isCompatibleWith(tp)) {
+    // Cast to/from void* is always legal.
+    if (fp.kind !== VOID && tp.kind !== VOID && !fp.isCompatibleWith(tp)) {
       return CAST_INCOMPATIBLE_POINTERS;
     }
 
