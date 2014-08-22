@@ -594,5 +594,21 @@ describe('Type', function() {
         assertCast(e, type.IncompleteArray(type.int), type.CAST_ERROR);
       });
     });
+
+    describe('Function', function() {
+      it('should fail to cast function -> anything', function() {
+        // Bare functions cannot even be specified in C (only C++). Referencing
+        // a function in C is typed as a function pointer.
+        var f = type.Function(type.int, [type.int]);
+        assertCast(f, f, type.CAST_ERROR);
+        assertCast(f, type.void, type.CAST_ERROR);
+        assertCast(f, type.int, type.CAST_ERROR);
+        assertCast(f, type.Enum('e'), type.CAST_ERROR);
+        assertCast(f, type.Pointer(type.int), type.CAST_ERROR);
+        assertCast(f, type.Record('s', type.Field('f', type.int, 0)), type.CAST_ERROR);
+        assertCast(f, type.Array(type.int, 2), type.CAST_ERROR);
+        assertCast(f, type.IncompleteArray(type.int), type.CAST_ERROR);
+      });
+    });
   });
 });

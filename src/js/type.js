@@ -409,7 +409,7 @@ FunctionProto.prototype.isCompatibleWith = function(that) {
   return true;
 };
 FunctionProto.prototype.canCastTo = function(that) {
-  return this.isCompatibleWith(that) ? CAST_OK : CAST_ERROR;
+  return CAST_ERROR;
 };
 
 function ConstantArray(elementType, arraySize) {
