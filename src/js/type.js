@@ -125,18 +125,31 @@ SPELLING_PRECEDENCE[CONSTANTARRAY] = 2;
 SPELLING_PRECEDENCE[INCOMPLETEARRAY] = 2;
 SPELLING_PRECEDENCE[FUNCTIONPROTO] = 3;
 
-
-function kindIsInteger(kind) {
-  return kind >= BOOL && kind <= LONGLONG;
+function compose(f, g) {
+  return function(x) {
+    return g(f(x));
+  };
 }
 
-function kindIsNumeric(kind) {
-  return kind >= BOOL && kind <= DOUBLE;
+function isVoid(type) {
+  return type.kind === VOID;
 }
 
-function kindIsPointerlike(kind) {
-  return kind === POINTER || kind === CONSTANTARRAY ||
-         kind === INCOMPLETEARRAY;
+function isInteger(type) {
+  return type.kind >= BOOL && type.kind <= LONGLONG;
+}
+
+function isNumeric(type) {
+  return type.kind >= BOOL && type.kind <= DOUBLE;
+}
+
+function isPointerlike(type) {
+  return type.kind === POINTER || type.kind === CONSTANTARRAY ||
+         type.kind === INCOMPLETEARRAY;
+}
+
+function isArray(type) {
+  return type.kind === CONSTANTARRAY || type.kind === INCOMPLETEARRAY;
 }
 
 function hasTypedef(type) {
@@ -336,8 +349,7 @@ function FunctionProto(resultType, argTypes, variadic) {
     return new FunctionProto(resultType, argTypes, variadic);
   }
 
-  if (resultType.kind === CONSTANTARRAY ||
-      resultType.kind === INCOMPLETEARRAY) {
+  if (isArray(getCanonical(resultType))) {
     throw new Error('Function return type cannot be an array. Got ' +
                     resultType.spelling);
   }
@@ -348,6 +360,10 @@ function FunctionProto(resultType, argTypes, variadic) {
 
   if (variadic && argTypes.length === 0) {
     throw new Error('Cannot create variadic function with no arguments.');
+  }
+
+  if (Array.prototype.some.call(argTypes, compose(getCanonical, isVoid))) {
+    throw new Error('Function argument type cannot be void.');
   }
 
   Type.call(this, FUNCTIONPROTO, 0);
@@ -508,7 +524,7 @@ function canCast(from, to) {
   from = getCanonical(from);
   to = getCanonical(to);
 
-  if (kindIsNumeric(from.kind)) {
+  if (isNumeric(from)) {
     return canCastNumeric(from, to);
   }
 
@@ -526,7 +542,7 @@ function canCast(from, to) {
           CAST_OK :
           CAST_ERROR;
     case ENUM:
-      if (kindIsInteger(to.kind)) {
+      if (isInteger(to)) {
         return CAST_OK;
       } else if (to.kind === ENUM) {
         return from.tag === to.tag ? CAST_OK : CAST_DIFFERENT_ENUMS;
@@ -542,19 +558,19 @@ function canCast(from, to) {
 }
 
 function canCastNumeric(from, to) {
-  if (kindIsInteger(from.kind)) {
-    if (kindIsPointerlike(to.kind)) {
+  if (isInteger(from)) {
+    if (isPointerlike(to)) {
       return CAST_INT_TO_POINTER;
     } else if (to.kind === ENUM) {
       return CAST_INT_TO_ENUM;
-    } else if (kindIsNumeric(to.kind)) {
+    } else if (isNumeric(to)) {
       // Fall through to below.
     } else {
       return CAST_ERROR;
     }
   } else {
     // from.kind is float/double.
-    if (!kindIsNumeric(to.kind)) {
+    if (!isNumeric(to)) {
       return CAST_ERROR;
     }
   }
@@ -575,7 +591,7 @@ function canCastNumeric(from, to) {
 function canCastPointer(from, to) {
   var fp = getPointerlikePointee(from),
       tp;
-  if (kindIsPointerlike(to.kind)) {
+  if (isPointerlike(to)) {
     tp = getPointerlikePointee(to);
     if (fp.kind === VOID && tp.kind === VOID) {
       // Fall through to cv-check.
@@ -595,7 +611,7 @@ function canCastPointer(from, to) {
     }
 
     return CAST_OK;
-  } else if (kindIsInteger(to.kind)) {
+  } else if (isInteger(to)) {
     return CAST_POINTER_TO_INT;
   } else {
     return CAST_ERROR;
@@ -608,7 +624,7 @@ function isCompatibleWith(from, to) {
   from = getCanonical(from);
   to = getCanonical(to);
 
-  if (kindIsNumeric(from.kind)) {
+  if (isNumeric(from)) {
     return from.kind === to.kind &&
            from.cv === to.cv;
   }
@@ -619,7 +635,7 @@ function isCompatibleWith(from, to) {
     case POINTER:
     case CONSTANTARRAY:
     case INCOMPLETEARRAY:
-      if (!kindIsPointerlike(to.kind)) {
+      if (!isPointerlike(to)) {
         return false;
       }
 

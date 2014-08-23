@@ -102,6 +102,12 @@ describe('Type', function() {
         });
       });
 
+      it('should throw creating function with void arg types', function() {
+        assert.throws(function() {
+          type.Function(type.void, [type.void]);
+        });
+      });
+
       it('should throw creating an array of voids', function() {
         assert.throws(function() {
           type.Array(type.void, 2);
