@@ -367,6 +367,19 @@ Record.prototype.equals = function(that) {
 
 function Field(name, type, offset) {
   if (!(this instanceof Field)) { return new Field(name, type, offset); }
+
+  if (name !== null && getClass(name) !== 'String') {
+    throw new Error('Field name must be null or string.');
+  }
+
+  if (!(type instanceof Type)) {
+    throw new Error('Field type must of type Type.');
+  }
+
+  if (getClass(offset) !== 'Number') {
+    throw new Error('Field offset must be number.');
+  }
+
   this.name = name;
   this.type = type;
   this.offset = offset;

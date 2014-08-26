@@ -148,6 +148,21 @@ describe('Type', function() {
         assert.throws(function() {
           type.Record('foo', [undefined]);
         });
+
+        // Field name must be string or null (for anonymous)
+        assert.throws(function() {
+          type.Record('foo', [type.Field(1234, type.int, 0)]);
+        });
+
+        // Field must have valid type
+        assert.throws(function() {
+          type.Record('foo', [type.Field('f', null, 0)]);
+        });
+
+        // Field offset must be number
+        assert.throws(function() {
+          type.Record('foo', [type.Field('f', type.int, 'none')]);
+        });
       });
     });
   });
