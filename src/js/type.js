@@ -317,6 +317,11 @@ Numeric.prototype.equals = function(that) {
 
 function Pointer(pointee, cv) {
   if (!(this instanceof Pointer)) { return new Pointer(pointee, cv); }
+
+  if (!(pointee instanceof Type)) {
+    throw new Error('pointee must be of type Type.');
+  }
+
   Type.call(this, POINTER, cv);
   this.pointee = pointee;
   this.spelling = getSpelling(this);

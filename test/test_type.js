@@ -107,6 +107,14 @@ describe('Type', function() {
       });
     });
 
+    describe('Pointer', function() {
+      it('should throw creating pointer with bad pointee', function() {
+        [null, 'int', 100].forEach(function(badPointee) {
+          assert.throws(function() { type.Pointer(badPointee); }, /pointee/);
+        });
+      });
+    });
+
     describe('Function', function() {
       it('should throw creating functions that return arrays', function() {
         assert.throws(function() {
