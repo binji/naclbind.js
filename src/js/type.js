@@ -118,6 +118,10 @@ var INVALID = 0,
     CAST_FUNCTION_POINTER_TO_VOID_POINTER = 10,
     CAST_VOID_POINTER_TO_FUNCTION_POINTER = 11,
 
+    CALL_ERROR = 0,
+    CALL_OK = 1,
+    CALL_WARNING = 2,
+
     SPELLING_PRECEDENCE = {};
 
 SPELLING_PRECEDENCE[POINTER] = 1;
@@ -434,6 +438,23 @@ FunctionProto.prototype.equals = function(that) {
          this.resultType.equals(that.resultType) &&
          everyArrayPair(this.argTypes, that.argTypes, equals) &&
          this.variadic === that.variadic;
+};
+FunctionProto.prototype.canCallWith = function() {
+  if (arguments.length !== this.argTypes.length) {
+    return CALL_ERROR;
+  }
+
+  var i, result;
+  for (i = 0; i < this.argTypes.length; ++i) {
+    result = arguments[i].canCastTo(this.argTypes[i]);
+    if (result === CAST_ERROR) {
+      return CALL_ERROR;
+    } else if (result !== CAST_OK) {
+      return CALL_WARNING;
+    }
+  }
+
+  return CALL_OK;
 };
 
 function ConstantArray(elementType, arraySize) {
@@ -814,6 +835,10 @@ module.exports = {
   CAST_INCOMPATIBLE_POINTERS: CAST_INCOMPATIBLE_POINTERS,
   CAST_FUNCTION_POINTER_TO_VOID_POINTER: CAST_FUNCTION_POINTER_TO_VOID_POINTER,
   CAST_VOID_POINTER_TO_FUNCTION_POINTER: CAST_VOID_POINTER_TO_FUNCTION_POINTER,
+
+  CALL_ERROR : CALL_ERROR,
+  CALL_OK: CALL_OK,
+  CALL_WARNING: CALL_WARNING,
 
   // Functions
   getSpelling: getSpelling,

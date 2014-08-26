@@ -791,4 +791,30 @@ describe('Type', function() {
       });
     });
   });
+
+  describe('CanCallWith', function() {
+    var voidp = type.Pointer(type.void),
+        size_t = type.Typedef('size_t', type.ulong),
+        malloc = type.Function(voidp, [size_t]);
+
+    it('should succeed when argtypes are equal', function() {
+      assert.equal(malloc.canCallWith(size_t), type.CALL_OK);
+      assert.equal(malloc.canCallWith(type.int), type.CALL_OK);
+    });
+
+    it('should warn when argtype cast warns', function() {
+      assert.equal(malloc.canCallWith(type.float), type.CALL_WARNING);
+      assert.equal(malloc.canCallWith(voidp), type.CALL_WARNING);
+    });
+
+    it('should fail when argtype cast fails', function() {
+      var s = type.Record('s', [type.Field('f', type.int, 0)], 4);
+      assert.equal(malloc.canCallWith(s), type.CALL_ERROR);
+    });
+
+    it('should fail when number of args doesn\'t match', function() {
+      assert.equal(malloc.canCallWith(), type.CALL_ERROR);
+      assert.equal(malloc.canCallWith(type.int, type.int), type.CALL_ERROR);
+    });
+  });
 });
