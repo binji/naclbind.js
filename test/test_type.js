@@ -84,7 +84,7 @@ describe('Type', function() {
   });
 
   describe('Create', function() {
-    describe('Qualifiers', function() {
+    describe('Type', function() {
       it('should have valid cv', function() {
         [null, -1, 10, 'const'].forEach(function(badCv) {
           assert.throws(function() { type.Void(badCv); });
@@ -95,6 +95,14 @@ describe('Type', function() {
           });
           assert.throws(function() { type.Enum('e', badCv); });
           assert.throws(function() { type.Typedef('t', type.int, badCv); });
+        });
+      });
+    });
+
+    describe('Numeric', function() {
+      it('should have valid kind', function() {
+        [null, -1, 26, 'int'].forEach(function(badKind) {
+          assert.throws(function() { type.Numeric(badKind); });
         });
       });
     });
