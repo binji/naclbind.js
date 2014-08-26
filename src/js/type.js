@@ -266,6 +266,16 @@ function checkNullOrString(x, varName) {
   }
 }
 
+function checkArray(x, elementType, varName) {
+  if (getClass(x) !== 'Array') {
+    throw new Error(varName + ' must be an array.');
+  }
+
+  if (!(x.every(function(el) { return el instanceof elementType; }))) {
+    throw new Error(varName + ' must be an array of type ' + elementType.name);
+  }
+}
+
 function Type(kind, cv) {
   if (!(this instanceof Type)) { return new Type(kind, cv); }
 
@@ -353,14 +363,7 @@ function Record(tag, fields, isUnion, cv) {
   }
 
   checkNullOrString(tag, 'tag');
-
-  if (!(fields instanceof Array)) {
-    throw new Error('fields must be an Array.');
-  }
-
-  if (!fields.every(function(f) { return f instanceof Field; })) {
-    throw new Error('fields must be an array of Fields.');
-  }
+  checkArray(fields, Field, 'fields');
 
   if (isUnion !== undefined && getClass(isUnion) !== 'Boolean') {
     throw new Error('isUnion must be a Boolean.');
@@ -456,6 +459,7 @@ function FunctionProto(resultType, argTypes, variadic) {
   }
 
   checkType(resultType, 'resultType');
+  checkArray(argTypes, Type, 'argTypes');
 
   if (isArray(getCanonical(resultType))) {
     throw new Error('Function return type cannot be an array. Got ' +

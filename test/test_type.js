@@ -132,6 +132,14 @@ describe('Type', function() {
         });
       });
 
+      it('should throw creating functions with bad argTypes', function() {
+        [undefined, null, 100, 'int'].forEach(function(badType) {
+          assert.throws(function() {
+            type.Function(type.void, [badType]);
+          }, /argTypes/);
+        });
+      });
+
       it('should throw creating functions that return arrays', function() {
         assert.throws(function() {
           type.Function(type.Array(type.int, 2), []);
