@@ -254,6 +254,12 @@ function isMoreOrEquallyQualified(q1, q2) {
   return isLessQualified(q2, q1) || q1 === q2;
 }
 
+function checkNullOrString(x, varName) {
+  if (!(x === null || getClass(x) === 'String')) {
+    throw new Error(varName + ' must be null or string.');
+  }
+}
+
 function Type(kind, cv) {
   if (!(this instanceof Type)) { return new Type(kind, cv); }
 
@@ -344,9 +350,7 @@ function Record(tag, fields, isUnion, cv) {
     return new Record(tag, fields, isUnion, cv);
   }
 
-  if (tag !== null && getClass(tag) !== 'String') {
-    throw new Error('tag must be null or string.');
-  }
+  checkNullOrString(tag, 'tag');
 
   if (!(fields instanceof Array)) {
     throw new Error('fields must be an Array.');
@@ -385,9 +389,7 @@ Record.prototype.equals = function(that) {
 function Field(name, type, offset) {
   if (!(this instanceof Field)) { return new Field(name, type, offset); }
 
-  if (name !== null && getClass(name) !== 'String') {
-    throw new Error('Field name must be null or string.');
-  }
+  checkNullOrString(name, 'name');
 
   if (!(type instanceof Type)) {
     throw new Error('Field type must of type Type.');
@@ -410,6 +412,7 @@ Field.prototype.equals = function(that) {
 
 function Enum(tag, cv) {
   if (!(this instanceof Enum)) { return new Enum(tag, cv); }
+  checkNullOrString(tag, 'tag');
   Type.call(this, ENUM, cv);
   this.tag = tag;
   this.spelling = getSpelling(this);

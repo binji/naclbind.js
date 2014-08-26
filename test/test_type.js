@@ -115,6 +115,14 @@ describe('Type', function() {
       });
     });
 
+    describe('Enum', function() {
+      it('should throw creating enum with bad tag', function() {
+        [undefined, 100].forEach(function(badTag) {
+          assert.throws(function() { type.Enum(badTag); });
+        });
+      });
+    });
+
     describe('Function', function() {
       it('should throw creating functions that return arrays', function() {
         assert.throws(function() {
@@ -156,12 +164,10 @@ describe('Type', function() {
     describe('Record', function() {
       it('should throw creating a record with bad name', function() {
         // Name should be string or null (for anonymous).
-        assert.throws(function() {
-          type.Record(100, [type.Field('f', type.int, 0)]);
-        });
-
-        assert.throws(function() {
-          type.Record(undefined, [type.Field('f', type.int, 0)]);
+        [undefined, 100].forEach(function(badTag) {
+          assert.throws(function() {
+            type.Record(badTag, [type.Field('f', type.int, 0)]);
+          });
         });
       });
 
