@@ -207,10 +207,6 @@ describe('Type', function() {
       assert.equal(spell(f4, 'signal'),
                    'void (*signal(int, void (*)(int)))(int)');
       assert.equal(spell(f5), 'void (void)');
-
-      // Illegal variadic.
-      // var FivzE = type.Function(type.int, [], type.VARIADIC);
-      // assert.equal(spell(FivzE), 'int (...)');
     });
 
     it('should handle spelling precedence', function() {
@@ -225,11 +221,6 @@ describe('Type', function() {
       assert.equal(spell(PA_PFiiE), 'int (*(*)[])(int)');
       assert.equal(spell(PA_PFiiE, 'foo'), 'int (*(*foo)[])(int)');
       assert.equal(spell(PFPFPivEiE), 'int *(*(*)(int))(void)');
-
-      // Illegal return type.
-      // var PFA_iiE = type.Pointer(type.Function(
-      //       type.IncompleteArray(type.int), [type.int]));
-      //assert.equal(spell(PFA_iiE), 'int (*)(int)[]');
     });
   });
 
