@@ -254,9 +254,17 @@ function isMoreOrEquallyQualified(q1, q2) {
   return isLessQualified(q2, q1) || q1 === q2;
 }
 
-
 function Type(kind, cv) {
   if (!(this instanceof Type)) { return new Type(kind, cv); }
+
+  if (cv !== undefined && getClass(cv) !== 'Number') {
+    throw new Error('cv must be undefined or number.');
+  }
+
+  if (cv < 0 || cv > (IS_CONST | IS_VOLATILE | IS_RESTRICT)) {
+    throw new Error('cv value out of range: ' + cv);
+  }
+
   this.kind = kind;
   this.cv = cv || 0;
 }

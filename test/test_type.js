@@ -84,6 +84,21 @@ describe('Type', function() {
   });
 
   describe('Create', function() {
+    describe('Qualifiers', function() {
+      it('should have valid cv', function() {
+        [null, -1, 10, 'const'].forEach(function(badCv) {
+          assert.throws(function() { type.Void(badCv); });
+          assert.throws(function() { type.Numeric(type.INT, badCv); });
+          assert.throws(function() { type.Pointer(type.int, badCv); });
+          assert.throws(function() {
+            type.Record('s', [type.Field('f', type.int, 0)], type.STRUCT, badCv);
+          });
+          assert.throws(function() { type.Enum('e', badCv); });
+          assert.throws(function() { type.Typedef('t', type.int, badCv); });
+        });
+      });
+    });
+
     describe('Function', function() {
       it('should throw creating functions that return arrays', function() {
         assert.throws(function() {
