@@ -131,6 +131,22 @@ function compose(f, g) {
   };
 }
 
+function everyArrayPair(a1, a2, f) {
+  var i;
+
+  if (a1.length !== a2.length) {
+    return false;
+  }
+
+  for (i = 0; i < a1.length; ++a1) {
+    if (!f(a1[i], a2[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function isVoid(type) {
   return type.kind === VOID;
 }
@@ -178,7 +194,7 @@ function getCanonicalHelper(type) {
     case POINTER:
       return Pointer(recurse(type.pointee), type.cv);
     case CONSTANTARRAY:
-      return ConstantArray(recurse(type.elementType), type.size, type.cv);
+      return ConstantArray(recurse(type.elementType), type.arraySize, type.cv);
     case INCOMPLETEARRAY:
       return IncompleteArray(recurse(type.elementType), type.cv);
     case FUNCTIONPROTO:
@@ -242,6 +258,9 @@ Type.prototype.isCompatibleWith = function(that) {
 Type.prototype.canCastTo = function(that) {
   return canCast(this, that);
 };
+Type.prototype.equals = function(that) {
+  return this.kind === that.kind && this.cv === that.cv;
+};
 
 function Void(cv) {
   if (!(this instanceof Void)) { return new Void(cv); }
@@ -255,6 +274,9 @@ Void.prototype.qualify = function(cv) {
 };
 Void.prototype.unqualified = function() {
   return Void();
+};
+Void.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that);
 };
 
 function Numeric(kind, cv) {
@@ -270,6 +292,9 @@ Numeric.prototype.qualify = function(cv) {
 Numeric.prototype.unqualified = function() {
   return Numeric(this.kind);
 };
+Numeric.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that);
+};
 
 function Pointer(pointee, cv) {
   if (!(this instanceof Pointer)) { return new Pointer(pointee, cv); }
@@ -284,6 +309,10 @@ Pointer.prototype.qualify = function(cv) {
 };
 Pointer.prototype.unqualified = function() {
   return Pointer(this.pointee);
+};
+Pointer.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that) &&
+         this.pointee.equals(that.pointee);
 };
 
 function Record(tag, fields, isUnion, cv) {
@@ -304,6 +333,12 @@ Record.prototype.qualify = function(cv) {
 Record.prototype.unqualified = function() {
   return Record(this.tag, this.fields, this.isUnion);
 };
+Record.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that) &&
+         this.tag === that.tag &&
+         everyArrayPair(this.fields, that.fields, Field.prototype.equals) &&
+         this.isUnion === that.isUnion;
+};
 
 function Field(name, type, offset) {
   if (!(this instanceof Field)) { return new Field(name, type, offset); }
@@ -311,6 +346,11 @@ function Field(name, type, offset) {
   this.type = type;
   this.offset = offset;
 }
+Field.prototype.equals = function(that) {
+  return this.name === that.name &&
+         this.type.equals(that.type) &&
+         this.offset === that.offset;
+};
 
 
 function Enum(tag, cv) {
@@ -327,6 +367,10 @@ Enum.prototype.qualify = function(cv) {
 Enum.prototype.unqualified = function() {
   return Enum(this.tag);
 };
+Enum.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that) &&
+         this.tag === that.tag;
+};
 
 function Typedef(tag, alias, cv) {
   if (!(this instanceof Typedef)) { return new Typedef(tag, alias, cv); }
@@ -342,6 +386,11 @@ Typedef.prototype.qualify = function(cv) {
 };
 Typedef.prototype.unqualified = function() {
   return Typedef(this.tag, this.alias);
+};
+Typedef.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that) &&
+         this.tag === that.tag &&
+         this.alias.equals(that.alias);
 };
 
 function FunctionProto(resultType, argTypes, variadic) {
@@ -380,6 +429,12 @@ FunctionProto.prototype.qualify = function(cv) {
 FunctionProto.prototype.unqualified = function() {
   return this;
 };
+FunctionProto.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that) &&
+         this.resultType.equals(that.resultType) &&
+         everyArrayPair(this.argTypes, that.argTypes, equals) &&
+         this.variadic === that.variadic;
+};
 
 function ConstantArray(elementType, arraySize) {
   if (!(this instanceof ConstantArray)) {
@@ -403,6 +458,11 @@ ConstantArray.prototype.qualify = function(cv) {
 ConstantArray.prototype.unqualified = function() {
   return this;
 };
+ConstantArray.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that) &&
+         this.elementType.equals(that.elementType) &&
+         this.arraySize === that.arraySize;
+};
 
 function IncompleteArray(elementType) {
   if (!(this instanceof IncompleteArray)) {
@@ -424,6 +484,10 @@ IncompleteArray.prototype.qualify = function(cv) {
 };
 IncompleteArray.prototype.unqualified = function() {
   return this;
+};
+IncompleteArray.prototype.equals = function(that) {
+  return Type.prototype.equals.call(this, that) &&
+         this.elementType.equals(that.elementType);
 };
 
 function getQualifier(cv) {
@@ -619,8 +683,6 @@ function canCastPointer(from, to) {
 }
 
 function isCompatibleWith(from, to) {
-  var i;
-
   from = getCanonical(from);
   to = getCanonical(to);
 
@@ -652,23 +714,19 @@ function isCompatibleWith(from, to) {
              from.tag === to.tag &&
              from.cv === to.cv;
     case FUNCTIONPROTO:
-      if (!(from.kind === to.kind &&
-            from.argTypes.length === to.argTypes.length &&
-            isCompatibleWith(from.resultType, to.resultType))) {
-        return false;
-      }
-
-      for (i = 0; i < from.argTypes.length; ++i) {
-        if (!isCompatibleWith(from.argTypes[i], to.argTypes[i])) {
-          return false;
-        }
-      }
-
-      return true;
+      return from.kind === to.kind &&
+             from.argTypes.length === to.argTypes.length &&
+             isCompatibleWith(from.resultType, to.resultType) &&
+             everyArrayPair(from, to, isCompatibleWith);
     default:
       throw new Error('canCast: Unknown kind ' + from.kind);
   }
 }
+
+function equals(type1, type2) {
+  return type1.equals(type2);
+}
+
 
 module.exports = {
   // Types
@@ -759,6 +817,7 @@ module.exports = {
 
   // Functions
   getSpelling: getSpelling,
+  getCanonical: getCanonical,
   describeQualifier: describeQualifier,
   isLessQualified: isLessQualified,
   isMoreQualified: isMoreQualified,

@@ -16,6 +16,7 @@ var type = require('../src/js/type'),
     assert = require('assert'),
     spell = type.getSpelling,
     qual = type.describeQualifier,
+    canon = type.getCanonical,
     C = type.CONST,
     CV = type.CONST | type.VOLATILE,
     CR = type.CONST | type.RESTRICT,
@@ -221,6 +222,75 @@ describe('Type', function() {
       assert.equal(spell(PA_PFiiE), 'int (*(*)[])(int)');
       assert.equal(spell(PA_PFiiE, 'foo'), 'int (*(*foo)[])(int)');
       assert.equal(spell(PFPFPivEiE), 'int *(*(*)(int))(void)');
+    });
+  });
+
+  describe('Canonical', function() {
+    it('should ignore types with typedefs', function() {
+      var v = type.void,
+          i = type.int,
+          Pc = type.Pointer(type.char),
+          A2_c = type.Array(type.char, 2),
+          A_c = type.IncompleteArray(type.char),
+          s = type.Record('s', type.Field('f', type.int, 0), 4),
+          e = type.Enum('e'),
+          FiiE = type.Function(type.int, [type.int]);
+      assert.equal(canon(v), v);
+      assert.equal(canon(i), i);
+      assert.equal(canon(Pc), Pc);
+      assert.equal(canon(A2_c), A2_c);
+      assert.equal(canon(A_c), A_c);
+      assert.equal(canon(s), s);
+      assert.equal(canon(e), e);
+      assert.equal(canon(FiiE), FiiE);
+    });
+
+    it('should reduce typedefs of all types', function() {
+      var types = [
+        type.void,
+        type.int,
+        type.Pointer(type.char),
+        type.Array(type.char, 2),
+        type.IncompleteArray(type.char),
+        type.Record('s', type.Field('f', type.int, 0), 4),
+        type.Enum('e'),
+        type.Function(type.int, [type.int])
+      ];
+
+      types.forEach(function(t) {
+        var typedef = type.Typedef('t', t);
+        // console.log(spell(canon(typedef)), ',', spell(t));
+        assert(canon(typedef).equals(t));
+      });
+    });
+
+    it('should reduce typedefs of child types', function() {
+      var t = type.Typedef('t', type.char),
+          tt = type.Typedef('tt', t);
+
+      [t, tt].forEach(function(x) {
+        var Px = type.Pointer(x),
+            A2_x = type.Array(x, 2),
+            A_x = type.IncompleteArray(x),
+            FvxE = type.Function(type.void, [x]),
+            FxvE = type.Function(x, []);
+
+        assert(canon(x).equals(type.char));
+        assert(canon(Px).equals(type.Pointer(type.char)));
+        assert(canon(A2_x).equals(type.Array(type.char, 2)));
+        assert(canon(A_x).equals(type.IncompleteArray(type.char)));
+        assert(canon(FvxE).equals(type.Function(type.void, [type.char])));
+        assert(canon(FxvE).equals(type.Function(type.char, [])));
+      });
+    });
+
+    it('should combine typedef qualifiers', function() {
+      var Kc = type.char.qualify(type.CONST),
+          Kt = type.Typedef('Kt', Kc, type.CONST),
+          Vt = type.Typedef('Vt', Kc, type.VOLATILE);
+
+      assert(canon(Kt).equals(Kc));  // Extra const is ignored.
+      assert(canon(Vt).equals(type.char.qualify(type.CONST | type.VOLATILE)));
     });
   });
 
