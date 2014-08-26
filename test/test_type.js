@@ -178,6 +178,14 @@ describe('Type', function() {
         });
       });
 
+      it('should throw creating an array with bad arraySize', function() {
+        [undefined, null, '100'].forEach(function(badArraySize) {
+          assert.throws(function() {
+            type.Array(type.int, badArraySize);
+          }, /arraySize/);
+        });
+      });
+
       it('should throw creating an array of voids', function() {
         assert.throws(function() {
           type.Array(type.void, 2);

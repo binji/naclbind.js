@@ -276,15 +276,25 @@ function checkArray(x, elementType, varName) {
   }
 }
 
+function checkNonnegativeNumber(x, varName) {
+  if (getClass(x) !== 'Number') {
+    throw new Error(varName + ' must be a number.');
+  }
+
+  if (x < 0) {
+    throw new Error(varName + ' must be greater than 0.');
+  }
+}
+
 function Type(kind, cv) {
   if (!(this instanceof Type)) { return new Type(kind, cv); }
 
-  if (cv !== undefined && getClass(cv) !== 'Number') {
-    throw new Error('cv must be undefined or number.');
-  }
+  if (cv !== undefined) {
+    checkNonnegativeNumber(cv, 'cv');
 
-  if (cv < 0 || cv > (IS_CONST | IS_VOLATILE | IS_RESTRICT)) {
-    throw new Error('cv value out of range: ' + cv);
+    if (cv > (IS_CONST | IS_VOLATILE | IS_RESTRICT)) {
+      throw new Error('cv value out of range: ' + cv);
+    }
   }
 
   this.kind = kind;
@@ -339,7 +349,9 @@ Numeric.prototype.equals = function(that) {
 
 function Pointer(pointee, cv) {
   if (!(this instanceof Pointer)) { return new Pointer(pointee, cv); }
+
   checkType(pointee, 'pointee');
+
   Type.call(this, POINTER, cv);
   this.pointee = pointee;
   this.spelling = getSpelling(this);
@@ -396,10 +408,7 @@ function Field(name, type, offset) {
 
   checkNullOrString(name, 'name');
   checkType(type, 'type');
-
-  if (getClass(offset) !== 'Number') {
-    throw new Error('Field offset must be number.');
-  }
+  checkNonnegativeNumber(offset, 'offset');
 
   this.name = name;
   this.type = type;
@@ -414,7 +423,9 @@ Field.prototype.equals = function(that) {
 
 function Enum(tag, cv) {
   if (!(this instanceof Enum)) { return new Enum(tag, cv); }
+
   checkNullOrString(tag, 'tag');
+
   Type.call(this, ENUM, cv);
   this.tag = tag;
   this.spelling = getSpelling(this);
@@ -464,10 +475,6 @@ function FunctionProto(resultType, argTypes, variadic) {
   if (isArray(getCanonical(resultType))) {
     throw new Error('Function return type cannot be an array. Got ' +
                     resultType.spelling);
-  }
-
-  if (!(argTypes instanceof Array)) {
-    throw new Error('argTypes must be an array.');
   }
 
   if (variadic && argTypes.length === 0) {
@@ -522,6 +529,7 @@ function ConstantArray(elementType, arraySize) {
   }
 
   checkType(elementType, 'elementType');
+  checkNonnegativeNumber(arraySize, 'arraySize');
 
   if (elementType.kind === VOID) {
     throw new Error('Cannot create an array of voids.');
