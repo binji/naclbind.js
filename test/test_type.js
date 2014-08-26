@@ -124,6 +124,14 @@ describe('Type', function() {
     });
 
     describe('Function', function() {
+      it('should throw creating functions with bad resultType', function() {
+        [undefined, null, 100, 'int'].forEach(function(badType) {
+          assert.throws(function() {
+            type.Function(badType, [type.int]);
+          }, /resultType/);
+        });
+      });
+
       it('should throw creating functions that return arrays', function() {
         assert.throws(function() {
           type.Function(type.Array(type.int, 2), []);

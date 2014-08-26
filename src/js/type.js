@@ -254,6 +254,12 @@ function isMoreOrEquallyQualified(q1, q2) {
   return isLessQualified(q2, q1) || q1 === q2;
 }
 
+function checkType(x, varName) {
+  if (!(x instanceof Type)) {
+    throw new Error(varName + ' must be instanceof Type.');
+  }
+}
+
 function checkNullOrString(x, varName) {
   if (!(x === null || getClass(x) === 'String')) {
     throw new Error(varName + ' must be null or string.');
@@ -323,11 +329,7 @@ Numeric.prototype.equals = function(that) {
 
 function Pointer(pointee, cv) {
   if (!(this instanceof Pointer)) { return new Pointer(pointee, cv); }
-
-  if (!(pointee instanceof Type)) {
-    throw new Error('pointee must be of type Type.');
-  }
-
+  checkType(pointee, 'pointee');
   Type.call(this, POINTER, cv);
   this.pointee = pointee;
   this.spelling = getSpelling(this);
@@ -390,10 +392,7 @@ function Field(name, type, offset) {
   if (!(this instanceof Field)) { return new Field(name, type, offset); }
 
   checkNullOrString(name, 'name');
-
-  if (!(type instanceof Type)) {
-    throw new Error('Field type must of type Type.');
-  }
+  checkType(type, 'type');
 
   if (getClass(offset) !== 'Number') {
     throw new Error('Field offset must be number.');
@@ -455,6 +454,8 @@ function FunctionProto(resultType, argTypes, variadic) {
   if (!(this instanceof FunctionProto)) {
     return new FunctionProto(resultType, argTypes, variadic);
   }
+
+  checkType(resultType, 'resultType');
 
   if (isArray(getCanonical(resultType))) {
     throw new Error('Function return type cannot be an array. Got ' +
