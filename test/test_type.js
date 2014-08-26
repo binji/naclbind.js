@@ -166,6 +166,18 @@ describe('Type', function() {
     });
 
     describe('Array', function() {
+      it('should throw creating an array with bad elementType', function() {
+        [undefined, null, 100, 'int'].forEach(function(badType) {
+          assert.throws(function() {
+            type.Array(badType, 2);
+          }, /elementType/);
+
+          assert.throws(function() {
+            type.IncompleteArray(badType);
+          }, /elementType/);
+        });
+      });
+
       it('should throw creating an array of voids', function() {
         assert.throws(function() {
           type.Array(type.void, 2);

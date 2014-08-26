@@ -521,6 +521,8 @@ function ConstantArray(elementType, arraySize) {
     return new ConstantArray(elementType, arraySize);
   }
 
+  checkType(elementType, 'elementType');
+
   if (elementType.kind === VOID) {
     throw new Error('Cannot create an array of voids.');
   }
@@ -548,6 +550,8 @@ function IncompleteArray(elementType) {
   if (!(this instanceof IncompleteArray)) {
     return new IncompleteArray(elementType);
   }
+
+  checkType(elementType, 'elementType');
 
   if (elementType.kind === VOID) {
     throw new Error('Cannot create an array of voids.');
