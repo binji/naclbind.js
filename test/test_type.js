@@ -164,6 +164,17 @@ describe('Type', function() {
           type.Record('foo', [type.Field('f', type.int, 'none')]);
         });
       });
+
+      it('should throw creating a record with bad struct/union', function() {
+        // Should be type.STRUCT/type.UNION (bool)
+        assert.throws(function() {
+          type.Record('foo', [type.Field('f', type.int, 0)], 'struct');
+        });
+
+        assert.throws(function() {
+          type.Record('foo', [type.Field('f', type.int, 0)], null);
+        });
+      });
     });
   });
 

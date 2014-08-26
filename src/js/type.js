@@ -332,15 +332,19 @@ function Record(tag, fields, isUnion, cv) {
   }
 
   if (tag !== null && getClass(tag) !== 'String') {
-    throw new Error('Record tag must be null or string.');
+    throw new Error('tag must be null or string.');
   }
 
   if (!(fields instanceof Array)) {
-    throw new Error('Record fields must be an Array.');
+    throw new Error('fields must be an Array.');
   }
 
   if (!fields.every(function(f) { return f instanceof Field; })) {
-    throw new Error('Record fields must be of type Field.');
+    throw new Error('fields must be an array of Fields.');
+  }
+
+  if (isUnion !== undefined && getClass(isUnion) !== 'Boolean') {
+    throw new Error('isUnion must be a Boolean.');
   }
 
   Type.call(this, RECORD, cv);
