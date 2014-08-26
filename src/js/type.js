@@ -151,6 +151,13 @@ function everyArrayPair(a1, a2, f) {
   return true;
 }
 
+function getClass(x) {
+  //  012345678
+  // "[Object xxx]"
+  var s = Object.prototype.toString.call(x);
+  return s.substring(8, s.length - 1);
+}
+
 function isVoid(type) {
   return type.kind === VOID;
 }
@@ -323,6 +330,19 @@ function Record(tag, fields, isUnion, cv) {
   if (!(this instanceof Record)) {
     return new Record(tag, fields, isUnion, cv);
   }
+
+  if (tag !== null && getClass(tag) !== 'String') {
+    throw new Error('Record tag must be null or string.');
+  }
+
+  if (!(fields instanceof Array)) {
+    throw new Error('Record fields must be an Array.');
+  }
+
+  if (!fields.every(function(f) { return f instanceof Field; })) {
+    throw new Error('Record fields must be of type Field.');
+  }
+
   Type.call(this, RECORD, cv);
   this.tag = tag;
   this.fields = fields;
@@ -340,7 +360,8 @@ Record.prototype.unqualified = function() {
 Record.prototype.equals = function(that) {
   return Type.prototype.equals.call(this, that) &&
          this.tag === that.tag &&
-         everyArrayPair(this.fields, that.fields, Field.prototype.equals) &&
+         everyArrayPair(this.fields, that.fields,
+             function(f1, f2) { return f1.equals(f2); }) &&
          this.isUnion === that.isUnion;
 };
 
