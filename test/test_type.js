@@ -253,48 +253,48 @@ describe('Type', function() {
 
   describe('Spell', function() {
     it('should correctly spell primitive types', function() {
-      assert.equal(spell(type.void), 'void');
-      assert.equal(spell(type.char), 'char');
-      assert.equal(spell(type.uchar), 'unsigned char');
-      assert.equal(spell(type.schar), 'signed char');
-      assert.equal(spell(type.short), 'short');
-      assert.equal(spell(type.ushort), 'unsigned short');
-      assert.equal(spell(type.int), 'int');
-      assert.equal(spell(type.uint), 'unsigned int');
-      assert.equal(spell(type.long), 'long');
-      assert.equal(spell(type.ulong), 'unsigned long');
-      assert.equal(spell(type.longlong), 'long long');
-      assert.equal(spell(type.ulonglong), 'unsigned long long');
-      assert.equal(spell(type.float), 'float');
-      assert.equal(spell(type.double), 'double');
-      assert.equal(spell(type.wchar), 'wchar_t');
+      assert.strictEqual(spell(type.void), 'void');
+      assert.strictEqual(spell(type.char), 'char');
+      assert.strictEqual(spell(type.uchar), 'unsigned char');
+      assert.strictEqual(spell(type.schar), 'signed char');
+      assert.strictEqual(spell(type.short), 'short');
+      assert.strictEqual(spell(type.ushort), 'unsigned short');
+      assert.strictEqual(spell(type.int), 'int');
+      assert.strictEqual(spell(type.uint), 'unsigned int');
+      assert.strictEqual(spell(type.long), 'long');
+      assert.strictEqual(spell(type.ulong), 'unsigned long');
+      assert.strictEqual(spell(type.longlong), 'long long');
+      assert.strictEqual(spell(type.ulonglong), 'unsigned long long');
+      assert.strictEqual(spell(type.float), 'float');
+      assert.strictEqual(spell(type.double), 'double');
+      assert.strictEqual(spell(type.wchar), 'wchar_t');
     });
 
     it('should correctly spell qualified primitive types', function() {
       var cv = type.CONST | type.VOLATILE,
           cvr = type.CONST | type.VOLATILE | type.RESTRICT;
-      assert.equal(spell(type.Void(type.CONST)), 'const void');
-      assert.equal(spell(type.char.qualify(type.CONST)), 'const char');
-      assert.equal(spell(type.int.qualify(type.CONST)), 'const int');
-      assert.equal(spell(type.int.qualify(cv)), 'const volatile int');
-      assert.equal(spell(type.float.qualify(cvr)),
+      assert.strictEqual(spell(type.Void(type.CONST)), 'const void');
+      assert.strictEqual(spell(type.char.qualify(type.CONST)), 'const char');
+      assert.strictEqual(spell(type.int.qualify(type.CONST)), 'const int');
+      assert.strictEqual(spell(type.int.qualify(cv)), 'const volatile int');
+      assert.strictEqual(spell(type.float.qualify(cvr)),
                    'const volatile restrict float');
     });
 
     it('should correctly spell record types', function() {
       var s = type.Record('s', [type.Field('field', type.int, 0)]),
           u = type.Record('u', [type.Field('field', type.int, 0)], type.UNION);
-      assert.equal(spell(s), 'struct s');
-      assert.equal(spell(u), 'union u');
+      assert.strictEqual(spell(s), 'struct s');
+      assert.strictEqual(spell(u), 'union u');
     });
 
     it('should correctly spell enum types', function() {
-      assert.equal(spell(type.Enum('name')), 'enum name');
+      assert.strictEqual(spell(type.Enum('name')), 'enum name');
     });
 
     it('should correctly spell typedef types', function() {
       var t = type.Typedef('foo', type.int);
-      assert.equal(spell(t), 'foo');
+      assert.strictEqual(spell(t), 'foo');
     });
 
     it('should correctly spell pointer types', function() {
@@ -302,13 +302,13 @@ describe('Type', function() {
           e = type.Enum('myEnum'),
           t = type.Typedef('myTypedef', type.int),
           f = type.Function(type.void, [type.int]);
-      assert.equal(spell(type.Pointer(type.void)), 'void *');
-      assert.equal(spell(type.Pointer(type.int)), 'int *');
-      assert.equal(spell(type.Pointer(s)), 'struct myStruct *');
-      assert.equal(spell(type.Pointer(e)), 'enum myEnum *');
-      assert.equal(spell(type.Pointer(t)), 'myTypedef *');
-      assert.equal(spell(type.Pointer(f)), 'void (*)(int)');
-      assert.equal(spell(type.Pointer(type.Pointer(type.int))), 'int **');
+      assert.strictEqual(spell(type.Pointer(type.void)), 'void *');
+      assert.strictEqual(spell(type.Pointer(type.int)), 'int *');
+      assert.strictEqual(spell(type.Pointer(s)), 'struct myStruct *');
+      assert.strictEqual(spell(type.Pointer(e)), 'enum myEnum *');
+      assert.strictEqual(spell(type.Pointer(t)), 'myTypedef *');
+      assert.strictEqual(spell(type.Pointer(f)), 'void (*)(int)');
+      assert.strictEqual(spell(type.Pointer(type.Pointer(type.int))), 'int **');
     });
 
     it('should correctly spell qualified pointer types', function() {
@@ -318,11 +318,11 @@ describe('Type', function() {
           PKt = type.Pointer(type.Typedef('foo', type.char, type.CONST)),
           PKPKc = type.Pointer(type.Pointer(Kc, type.CONST)),
           PKVi = type.Pointer(type.int.qualify(type.CONST | type.VOLATILE));
-      assert.equal(spell(PKc), 'const char *');
-      assert.equal(spell(PKPc), 'char *const *');
-      assert.equal(spell(PKt), 'const foo *');
-      assert.equal(spell(PKPKc), 'const char *const *');
-      assert.equal(spell(PKVi), 'const volatile int *');
+      assert.strictEqual(spell(PKc), 'const char *');
+      assert.strictEqual(spell(PKPc), 'char *const *');
+      assert.strictEqual(spell(PKt), 'const foo *');
+      assert.strictEqual(spell(PKPKc), 'const char *const *');
+      assert.strictEqual(spell(PKVi), 'const volatile int *');
     });
 
     it('should correctly spell function types', function() {
@@ -332,12 +332,12 @@ describe('Type', function() {
           f3 = type.Pointer(type.Function(type.void, [type.int])),
           f4 = type.Function(f3, [type.int, f3]),
           f5 = type.Function(type.void, []);
-      assert.equal(spell(f1), 'int (int, int)');
-      assert.equal(spell(f2), 'int (const char *, ...)');
-      assert.equal(spell(f4), 'void (*(int, void (*)(int)))(int)');
-      assert.equal(spell(f4, 'signal'),
+      assert.strictEqual(spell(f1), 'int (int, int)');
+      assert.strictEqual(spell(f2), 'int (const char *, ...)');
+      assert.strictEqual(spell(f4), 'void (*(int, void (*)(int)))(int)');
+      assert.strictEqual(spell(f4, 'signal'),
                    'void (*signal(int, void (*)(int)))(int)');
-      assert.equal(spell(f5), 'void (void)');
+      assert.strictEqual(spell(f5), 'void (void)');
     });
 
     it('should handle spelling precedence', function() {
@@ -348,10 +348,10 @@ describe('Type', function() {
           A_PFiiE = IA(P(F(i, [i]))),
           PA_PFiiE = P(IA(P(F(i, [i])))),
           PFPFPivEiE = P(F(P(F(P(i), [])), [i]));
-      assert.equal(spell(A_PFiiE), 'int (*[])(int)');
-      assert.equal(spell(PA_PFiiE), 'int (*(*)[])(int)');
-      assert.equal(spell(PA_PFiiE, 'foo'), 'int (*(*foo)[])(int)');
-      assert.equal(spell(PFPFPivEiE), 'int *(*(*)(int))(void)');
+      assert.strictEqual(spell(A_PFiiE), 'int (*[])(int)');
+      assert.strictEqual(spell(PA_PFiiE), 'int (*(*)[])(int)');
+      assert.strictEqual(spell(PA_PFiiE, 'foo'), 'int (*(*foo)[])(int)');
+      assert.strictEqual(spell(PFPFPivEiE), 'int *(*(*)(int))(void)');
     });
   });
 
@@ -365,14 +365,14 @@ describe('Type', function() {
           s = type.Record('s', [type.Field('f', type.int, 0)]),
           e = type.Enum('e'),
           FiiE = type.Function(type.int, [type.int]);
-      assert.equal(canon(v), v);
-      assert.equal(canon(i), i);
-      assert.equal(canon(Pc), Pc);
-      assert.equal(canon(A2_c), A2_c);
-      assert.equal(canon(A_c), A_c);
-      assert.equal(canon(s), s);
-      assert.equal(canon(e), e);
-      assert.equal(canon(FiiE), FiiE);
+      assert.strictEqual(canon(v), v);
+      assert.strictEqual(canon(i), i);
+      assert.strictEqual(canon(Pc), Pc);
+      assert.strictEqual(canon(A2_c), A2_c);
+      assert.strictEqual(canon(A_c), A_c);
+      assert.strictEqual(canon(s), s);
+      assert.strictEqual(canon(e), e);
+      assert.strictEqual(canon(FiiE), FiiE);
     });
 
     it('should reduce typedefs of all types', function() {
@@ -436,7 +436,7 @@ describe('Type', function() {
       var msg = 'Cast from "' + spellTypedef(from) + '" -> "' +
                                 spellTypedef(to) + '": ' +
                 'expected: ' + expected + ' actual: ' + actual;
-      assert.equal(actual, expected, msg);
+      assert.strictEqual(actual, expected, msg);
     }
 
     function assertCast(from, to, expected) {
@@ -927,23 +927,23 @@ describe('Type', function() {
         malloc = type.Function(voidp, [size_t]);
 
     it('should succeed when argtypes are equal', function() {
-      assert.equal(malloc.canCallWith(size_t), type.CALL_OK);
-      assert.equal(malloc.canCallWith(type.int), type.CALL_OK);
+      assert.strictEqual(malloc.canCallWith(size_t), type.CALL_OK);
+      assert.strictEqual(malloc.canCallWith(type.int), type.CALL_OK);
     });
 
     it('should warn when argtype cast warns', function() {
-      assert.equal(malloc.canCallWith(type.float), type.CALL_WARNING);
-      assert.equal(malloc.canCallWith(voidp), type.CALL_WARNING);
+      assert.strictEqual(malloc.canCallWith(type.float), type.CALL_WARNING);
+      assert.strictEqual(malloc.canCallWith(voidp), type.CALL_WARNING);
     });
 
     it('should fail when argtype cast fails', function() {
       var s = type.Record('s', [type.Field('f', type.int, 0)]);
-      assert.equal(malloc.canCallWith(s), type.CALL_ERROR);
+      assert.strictEqual(malloc.canCallWith(s), type.CALL_ERROR);
     });
 
     it('should fail when number of args doesn\'t match', function() {
-      assert.equal(malloc.canCallWith(), type.CALL_ERROR);
-      assert.equal(malloc.canCallWith(type.int, type.int), type.CALL_ERROR);
+      assert.strictEqual(malloc.canCallWith(), type.CALL_ERROR);
+      assert.strictEqual(malloc.canCallWith(type.int, type.int), type.CALL_ERROR);
     });
   });
 });

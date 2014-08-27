@@ -105,22 +105,25 @@ var INVALID = 0,
     STRUCT = false,
     UNION = true,
 
-    CAST_ERROR = 0,
-    CAST_OK = 1,
-    CAST_TRUNCATE = 2,
-    CAST_SIGNED_UNSIGNED = 3,
-    CAST_INT_TO_POINTER = 4,
-    CAST_POINTER_TO_INT = 5,
-    CAST_DISCARD_QUALIFIER = 6,
-    CAST_INT_TO_ENUM = 7,
-    CAST_DIFFERENT_ENUMS = 8,
-    CAST_INCOMPATIBLE_POINTERS = 9,
-    CAST_FUNCTION_POINTER_TO_VOID_POINTER = 10,
-    CAST_VOID_POINTER_TO_FUNCTION_POINTER = 11,
+    // Success
+    CAST_OK = 0,
+    // Warning
+    CAST_TRUNCATE = -1,
+    CAST_SIGNED_UNSIGNED = -2,
+    CAST_INT_TO_POINTER = -3,
+    CAST_POINTER_TO_INT = -4,
+    CAST_DISCARD_QUALIFIER = -5,
+    CAST_INT_TO_ENUM = -6,
+    CAST_DIFFERENT_ENUMS = -7,
+    CAST_INCOMPATIBLE_POINTERS = -8,
+    CAST_FUNCTION_POINTER_TO_VOID_POINTER = -9,
+    CAST_VOID_POINTER_TO_FUNCTION_POINTER = -10,
+    // Failure
+    CAST_ERROR = -11,
 
-    CALL_ERROR = 0,
-    CALL_OK = 1,
-    CALL_WARNING = 2,
+    CALL_OK = 0,
+    CALL_WARNING = -1,
+    CALL_ERROR = -2,
 
     SPELLING_PRECEDENCE = {};
 
@@ -686,7 +689,7 @@ function canCast(from, to) {
 
   switch (from.kind) {
     case VOID:
-      return to.kind === VOID;
+      return to.kind === VOID ? CAST_OK : CAST_ERROR;
     case POINTER:
     case CONSTANTARRAY:
     case INCOMPLETEARRAY:
