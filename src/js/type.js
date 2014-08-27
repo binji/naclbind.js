@@ -106,7 +106,9 @@ var INVALID = 0,
     UNION = true,
 
     // Success
-    CAST_OK = 0,
+    CAST_OK_EXACT = 2,
+    CAST_OK_PROMOTION = 1,
+    CAST_OK_CONVERSION = 0,
     // Warning
     CAST_TRUNCATE = -1,
     CAST_SIGNED_UNSIGNED = -2,
@@ -180,6 +182,18 @@ function isPointerlike(type) {
 
 function isArray(type) {
   return type.kind === CONSTANTARRAY || type.kind === INCOMPLETEARRAY;
+}
+
+function isCastOK(result) {
+  return result >= 0;
+}
+
+function isCastWarning(result) {
+  return result < 0 && result > CAST_ERROR;
+}
+
+function isCastError(result) {
+  return result === CAST_ERROR;
 }
 
 function hasTypedef(type) {
@@ -516,9 +530,9 @@ FunctionProto.prototype.canCallWith = function() {
   var i, result;
   for (i = 0; i < this.argTypes.length; ++i) {
     result = arguments[i].canCastTo(this.argTypes[i]);
-    if (result === CAST_ERROR) {
+    if (isCastError(result)) {
       return CALL_ERROR;
-    } else if (result !== CAST_OK) {
+    } else if (isCastWarning(result)) {
       return CALL_WARNING;
     }
   }
@@ -689,7 +703,7 @@ function canCast(from, to) {
 
   switch (from.kind) {
     case VOID:
-      return to.kind === VOID ? CAST_OK : CAST_ERROR;
+      return to.kind === VOID ? CAST_OK_EXACT : CAST_ERROR;
     case POINTER:
     case CONSTANTARRAY:
     case INCOMPLETEARRAY:
@@ -698,13 +712,13 @@ function canCast(from, to) {
       return from.kind === to.kind &&
              from.tag === to.tag &&
              from.isUnion === to.isUnion ?
-          CAST_OK :
+          CAST_OK_EXACT :
           CAST_ERROR;
     case ENUM:
       if (isInteger(to)) {
-        return CAST_OK;
+        return CAST_OK_CONVERSION;
       } else if (to.kind === ENUM) {
-        return from.tag === to.tag ? CAST_OK : CAST_DIFFERENT_ENUMS;
+        return from.tag === to.tag ? CAST_OK_EXACT : CAST_DIFFERENT_ENUMS;
       } else {
         return CAST_ERROR;
       }
@@ -744,7 +758,7 @@ function canCastNumeric(from, to) {
     return CAST_SIGNED_UNSIGNED;
   }
 
-  return CAST_OK;
+  return from.kind === to.kind ? CAST_OK_EXACT : CAST_OK_PROMOTION;
 }
 
 function canCastPointer(from, to) {
@@ -760,7 +774,7 @@ function canCastPointer(from, to) {
       return CAST_FUNCTION_POINTER_TO_VOID_POINTER;
     } else if (fp.kind === VOID || tp.kind === VOID) {
       // Strangely cv-checks are ignored when casting from/to void*.
-      return CAST_OK;
+      return CAST_OK_CONVERSION;
     } else if (!isCompatibleWith(fp.unqualified(), tp.unqualified())) {
       return CAST_INCOMPATIBLE_POINTERS;
     }
@@ -769,7 +783,7 @@ function canCastPointer(from, to) {
       return CAST_DISCARD_QUALIFIER;
     }
 
-    return CAST_OK;
+    return CAST_OK_EXACT;
   } else if (isInteger(to)) {
     return CAST_POINTER_TO_INT;
   } else {
@@ -897,8 +911,9 @@ module.exports = {
   CHAR: CHAR_S,
 
   // Cast results
-  CAST_ERROR: CAST_ERROR,
-  CAST_OK: CAST_OK,
+  CAST_OK_EXACT: CAST_OK_EXACT,
+  CAST_OK_PROMOTION: CAST_OK_PROMOTION,
+  CAST_OK_CONVERSION: CAST_OK_CONVERSION,
   CAST_TRUNCATE: CAST_TRUNCATE,
   CAST_SIGNED_UNSIGNED: CAST_SIGNED_UNSIGNED,
   CAST_INT_TO_POINTER: CAST_INT_TO_POINTER,
@@ -909,6 +924,7 @@ module.exports = {
   CAST_INCOMPATIBLE_POINTERS: CAST_INCOMPATIBLE_POINTERS,
   CAST_FUNCTION_POINTER_TO_VOID_POINTER: CAST_FUNCTION_POINTER_TO_VOID_POINTER,
   CAST_VOID_POINTER_TO_FUNCTION_POINTER: CAST_VOID_POINTER_TO_FUNCTION_POINTER,
+  CAST_ERROR: CAST_ERROR,
 
   CALL_ERROR : CALL_ERROR,
   CALL_OK: CALL_OK,
@@ -918,6 +934,9 @@ module.exports = {
   getSpelling: getSpelling,
   getCanonical: getCanonical,
   describeQualifier: describeQualifier,
+  isCastOK: isCastOK,
+  isCastWarning: isCastWarning,
+  isCastError: isCastError,
   isLessQualified: isLessQualified,
   isMoreQualified: isMoreQualified,
   isLessOrEquallyQualified: isLessOrEquallyQualified,

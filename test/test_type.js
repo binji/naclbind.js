@@ -458,7 +458,7 @@ describe('Type', function() {
 
     describe('Void', function() {
       it('should allow cast of void -> void', function() {
-        assertCast(type.void, type.void, type.CAST_OK);
+        assertCast(type.void, type.void, type.CAST_OK_EXACT);
       });
 
       it('should fail cast of void -> anything else', function() {
@@ -496,38 +496,37 @@ describe('Type', function() {
 
     describe('Numeric', function() {
       it('should allow cast of numeric -> larger numeric', function() {
-        assertCast(type.bool, type.char, type.CAST_OK);
-        assertCast(type.char, type.short, type.CAST_OK);
-        assertCast(type.short, type.int, type.CAST_OK);
-        assertCast(type.int, type.long, type.CAST_OK);
-        assertCast(type.long, type.longlong, type.CAST_OK);
-        assertCast(type.uchar, type.ushort, type.CAST_OK);
-        assertCast(type.ushort, type.uint, type.CAST_OK);
-        assertCast(type.uint, type.ulong, type.CAST_OK);
-        assertCast(type.ulong, type.ulonglong, type.CAST_OK);
-        assertCast(type.float, type.double, type.CAST_OK);
+        assertCast(type.bool, type.char, type.CAST_OK_PROMOTION);
+        assertCast(type.char, type.short, type.CAST_OK_PROMOTION);
+        assertCast(type.short, type.int, type.CAST_OK_PROMOTION);
+        assertCast(type.int, type.long, type.CAST_OK_PROMOTION);
+        assertCast(type.long, type.longlong, type.CAST_OK_PROMOTION);
+        assertCast(type.uchar, type.ushort, type.CAST_OK_PROMOTION);
+        assertCast(type.ushort, type.uint, type.CAST_OK_PROMOTION);
+        assertCast(type.uint, type.ulong, type.CAST_OK_PROMOTION);
+        assertCast(type.ulong, type.ulonglong, type.CAST_OK_PROMOTION);
+        assertCast(type.float, type.double, type.CAST_OK_PROMOTION);
       });
 
       it('should allow cast of unsigned -> larger signed', function() {
-        assertCast(type.uchar, type.short, type.CAST_OK);
-        assertCast(type.ushort, type.int, type.CAST_OK);
-        assertCast(type.uint, type.long, type.CAST_OK);
-        assertCast(type.ulong, type.longlong, type.CAST_OK);
+        assertCast(type.uchar, type.short, type.CAST_OK_PROMOTION);
+        assertCast(type.ushort, type.int, type.CAST_OK_PROMOTION);
+        assertCast(type.uint, type.long, type.CAST_OK_PROMOTION);
+        assertCast(type.ulong, type.longlong, type.CAST_OK_PROMOTION);
       });
 
       it('should warn on cast of unsigned <-> equal-sized signed', function() {
-        var signedUnsigned = type.CAST_SIGNED_UNSIGNED;
-        assertCast(type.uchar, type.char, signedUnsigned);
-        assertCast(type.ushort, type.short, signedUnsigned);
-        assertCast(type.uint, type.int, signedUnsigned);
-        assertCast(type.ulong, type.long, signedUnsigned);
-        assertCast(type.ulonglong, type.longlong, signedUnsigned);
+        assertCast(type.uchar, type.char, type.CAST_SIGNED_UNSIGNED);
+        assertCast(type.ushort, type.short, type.CAST_SIGNED_UNSIGNED);
+        assertCast(type.uint, type.int, type.CAST_SIGNED_UNSIGNED);
+        assertCast(type.ulong, type.long, type.CAST_SIGNED_UNSIGNED);
+        assertCast(type.ulonglong, type.longlong, type.CAST_SIGNED_UNSIGNED);
 
-        assertCast(type.char, type.uchar, signedUnsigned);
-        assertCast(type.short, type.ushort, signedUnsigned);
-        assertCast(type.int, type.uint, signedUnsigned);
-        assertCast(type.long, type.ulong, signedUnsigned);
-        assertCast(type.longlong, type.ulonglong, signedUnsigned);
+        assertCast(type.char, type.uchar, type.CAST_SIGNED_UNSIGNED);
+        assertCast(type.short, type.ushort, type.CAST_SIGNED_UNSIGNED);
+        assertCast(type.int, type.uint, type.CAST_SIGNED_UNSIGNED);
+        assertCast(type.long, type.ulong, type.CAST_SIGNED_UNSIGNED);
+        assertCast(type.longlong, type.ulonglong, type.CAST_SIGNED_UNSIGNED);
       });
 
       it('should warn on cast of numeric -> smaller numeric', function() {
@@ -630,18 +629,18 @@ describe('Type', function() {
           var p = type.Pointer(x),
               a,
               ia;
-          assertCast(p, p, type.CAST_OK);
+          assertCast(p, p, type.CAST_OK_EXACT);
           if (x.kind !== type.VOID) {
             a = type.Array(x, 2);
             ia = type.IncompleteArray(x);
-            assertCast(p, a, type.CAST_OK);
-            assertCast(p, ia, type.CAST_OK);
-            assertCast(a, p, type.CAST_OK);
-            assertCast(a, a, type.CAST_OK);
-            assertCast(a, ia, type.CAST_OK);
-            assertCast(ia, p, type.CAST_OK);
-            assertCast(ia, a, type.CAST_OK);
-            assertCast(ia, ia, type.CAST_OK);
+            assertCast(p, a, type.CAST_OK_EXACT);
+            assertCast(p, ia, type.CAST_OK_EXACT);
+            assertCast(a, p, type.CAST_OK_EXACT);
+            assertCast(a, a, type.CAST_OK_EXACT);
+            assertCast(a, ia, type.CAST_OK_EXACT);
+            assertCast(ia, p, type.CAST_OK_EXACT);
+            assertCast(ia, a, type.CAST_OK_EXACT);
+            assertCast(ia, ia, type.CAST_OK_EXACT);
           }
         });
       });
@@ -655,12 +654,12 @@ describe('Type', function() {
               var p = type.Pointer(x),
                   a = type.Array(x, 2),
                   ia = type.IncompleteArray(x);
-              assertCast(p.qualify(q1), pv.qualify(q2), type.CAST_OK);
-              assertCast(a, pv.qualify(q2), type.CAST_OK);
-              assertCast(ia, pv.qualify(q2), type.CAST_OK);
-              assertCast(pv.qualify(q1), p.qualify(q2), type.CAST_OK);
-              assertCast(pv.qualify(q1), a, type.CAST_OK);
-              assertCast(pv.qualify(q1), ia, type.CAST_OK);
+              assertCast(p.qualify(q1), pv.qualify(q2), type.CAST_OK_CONVERSION);
+              assertCast(a, pv.qualify(q2), type.CAST_OK_CONVERSION);
+              assertCast(ia, pv.qualify(q2), type.CAST_OK_CONVERSION);
+              assertCast(pv.qualify(q1), p.qualify(q2), type.CAST_OK_CONVERSION);
+              assertCast(pv.qualify(q1), a, type.CAST_OK_CONVERSION);
+              assertCast(pv.qualify(q1), ia, type.CAST_OK_CONVERSION);
             });
           });
         });
@@ -694,7 +693,7 @@ describe('Type', function() {
             [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
               if (!type.isLessQualified(q1, q2)) return;
               var q2p = p.qualify(q2);
-              assertCast(q1p, q2p, type.CAST_OK);
+              assertCast(q1p, q2p, type.CAST_OK_EXACT);
             });
           });
         });
@@ -724,8 +723,8 @@ describe('Type', function() {
               ia = type.IncompleteArray(x);
           [C, CV, CVR, V, VR, R].forEach(function(q) {
             var qp = type.Pointer(x.qualify(q));
-            assertCast(a, qp, type.CAST_OK);
-            assertCast(ia, qp, type.CAST_OK);
+            assertCast(a, qp, type.CAST_OK_EXACT);
+            assertCast(ia, qp, type.CAST_OK_EXACT);
           });
         });
       });
@@ -810,8 +809,8 @@ describe('Type', function() {
           u = type.Record('s', [type.Field('f', type.int, 0)], type.UNION);
 
       it('should allow cast to same record', function() {
-        assertCast(s, s, type.CAST_OK);
-        assertCast(u, u, type.CAST_OK);
+        assertCast(s, s, type.CAST_OK_EXACT);
+        assertCast(u, u, type.CAST_OK_EXACT);
       });
 
       it('should fail on cast of union <-> struct of same tag', function() {
@@ -842,7 +841,7 @@ describe('Type', function() {
           e2 = type.Enum('E2');
 
       it('should allow cast of enum -> same enum', function() {
-        assertCast(e, e, type.CAST_OK);
+        assertCast(e, e, type.CAST_OK_EXACT);
       });
 
       it('should warn on cast of enum -> another enum', function() {
@@ -852,17 +851,17 @@ describe('Type', function() {
       });
 
       it('should allow cast of enum -> integral', function() {
-        assertCast(e, type.bool, type.CAST_OK);
-        assertCast(e, type.char, type.CAST_OK);
-        assertCast(e, type.short, type.CAST_OK);
-        assertCast(e, type.int, type.CAST_OK);
-        assertCast(e, type.long, type.CAST_OK);
-        assertCast(e, type.longlong, type.CAST_OK);
-        assertCast(e, type.uchar, type.CAST_OK);
-        assertCast(e, type.ushort, type.CAST_OK);
-        assertCast(e, type.uint, type.CAST_OK);
-        assertCast(e, type.ulong, type.CAST_OK);
-        assertCast(e, type.ulonglong, type.CAST_OK);
+        assertCast(e, type.bool, type.CAST_OK_CONVERSION);
+        assertCast(e, type.char, type.CAST_OK_CONVERSION);
+        assertCast(e, type.short, type.CAST_OK_CONVERSION);
+        assertCast(e, type.int, type.CAST_OK_CONVERSION);
+        assertCast(e, type.long, type.CAST_OK_CONVERSION);
+        assertCast(e, type.longlong, type.CAST_OK_CONVERSION);
+        assertCast(e, type.uchar, type.CAST_OK_CONVERSION);
+        assertCast(e, type.ushort, type.CAST_OK_CONVERSION);
+        assertCast(e, type.uint, type.CAST_OK_CONVERSION);
+        assertCast(e, type.ulong, type.CAST_OK_CONVERSION);
+        assertCast(e, type.ulonglong, type.CAST_OK_CONVERSION);
       });
 
       it('should fail on cast of enum -> float', function() {
@@ -902,10 +901,10 @@ describe('Type', function() {
             PPc = type.Pointer(Pc),
             t = type.Typedef('t', Pc),
             Pt = type.Pointer(t);
-        assertCast(Pc, t, type.CAST_OK);
-        assertCast(t, Pc, type.CAST_OK);
-        assertCast(PPc, Pt, type.CAST_OK);
-        assertCast(Pt, PPc, type.CAST_OK);
+        assertCast(Pc, t, type.CAST_OK_EXACT);
+        assertCast(t, Pc, type.CAST_OK_EXACT);
+        assertCast(PPc, Pt, type.CAST_OK_EXACT);
+        assertCast(Pt, PPc, type.CAST_OK_EXACT);
       });
 
       it('should allow qualifiers to propagate though typedef', function() {
@@ -913,10 +912,10 @@ describe('Type', function() {
             Kc = type.char.qualify(type.CONST),
             VKt = type.Typedef('t2', Kt, type.VOLATILE),
             KVc = type.char.qualify(type.CONST | type.VOLATILE);
-        assertCast(type.Pointer(Kt), type.Pointer(Kc), type.CAST_OK);
-        assertCast(type.Pointer(Kc), type.Pointer(Kt), type.CAST_OK);
-        assertCast(type.Pointer(VKt), type.Pointer(KVc), type.CAST_OK);
-        assertCast(type.Pointer(KVc), type.Pointer(VKt), type.CAST_OK);
+        assertCast(type.Pointer(Kt), type.Pointer(Kc), type.CAST_OK_EXACT);
+        assertCast(type.Pointer(Kc), type.Pointer(Kt), type.CAST_OK_EXACT);
+        assertCast(type.Pointer(VKt), type.Pointer(KVc), type.CAST_OK_EXACT);
+        assertCast(type.Pointer(KVc), type.Pointer(VKt), type.CAST_OK_EXACT);
       });
     });
   });
