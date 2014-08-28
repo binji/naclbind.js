@@ -522,22 +522,9 @@ FunctionProto.prototype.equals = function(that) {
          everyArrayPair(this.argTypes, that.argTypes, equals) &&
          this.variadic === that.variadic;
 };
-FunctionProto.prototype.canCallWith = function() {
-  if (arguments.length !== this.argTypes.length) {
-    return CALL_ERROR;
-  }
-
-  var i, result;
-  for (i = 0; i < this.argTypes.length; ++i) {
-    result = arguments[i].canCastTo(this.argTypes[i]);
-    if (isCastError(result)) {
-      return CALL_ERROR;
-    } else if (isCastWarning(result)) {
-      return CALL_WARNING;
-    }
-  }
-
-  return CALL_OK;
+FunctionProto.prototype.isViableForCall = function(argTypes) {
+  return this.argTypes.length === argTypes.length ||
+         (this.argTypes.length < argTypes.length && this.variadic);
 };
 
 function ConstantArray(elementType, arraySize) {
@@ -832,8 +819,86 @@ function isCompatibleWith(from, to) {
   }
 }
 
+function getCastRank(from, to) {
+  var result = canCast(from, to);
+  if (isCastWarning(result) || isCastError(result)) {
+    return -1;
+  }
+  return result;
+}
+
 function equals(type1, type2) {
   return type1.equals(type2);
+}
+
+function getFunctionCallRank(fnType, argTypes) {
+  var result = [],
+      castRank = null,
+      i;
+  // TODO(binji): handle variadic
+  for (i = 0; i < argTypes.length; ++i) {
+    castRank = getCastRank(argTypes[i], fnType.argTypes[i]);
+    if (castRank < 0) {
+      return null;
+    }
+
+    result.push(castRank);
+  }
+  return result;
+}
+
+function compareFunctionCallRanks(fnRank1, fnRank2) {
+  var result = 0,
+      i;
+  for (i = 0; i < fnRank1.length; ++i) {
+    if (fnRank1[i] < fnRank2[i]) {
+      if (result > 0) {
+        return 0;
+      }
+      result = -1;
+    } else if (fnRank1[i] > fnRank2[i]) {
+      if (result < 0) {
+        return 0;
+      }
+      result = 1;
+    }
+  }
+
+  return result;
+}
+
+function getBestViableFunction(fnTypes, argTypes) {
+  var bestFn = null,
+      bestRank,
+      isValid = false;
+  fnTypes.forEach(function(fnType) {
+    var cmpResult,
+        rank;
+    if (!fnType.isViableForCall(argTypes)) {
+      return;
+    }
+
+    rank = getFunctionCallRank(fnType, argTypes);
+    if (!rank) {
+      return;
+    }
+
+    if (bestFn) {
+      cmpResult = compareFunctionCallRanks(rank, bestRank);
+      if (cmpResult === 0) {
+        isValid = false;
+        return;
+      } else if (cmpResult < 0) {
+        return;
+      }
+    }
+
+    bestFn = fnType;
+    bestRank = rank;
+    isValid = true;
+  });
+
+  return isValid ? bestFn : null;
 }
 
 
@@ -931,14 +996,15 @@ module.exports = {
   CALL_WARNING: CALL_WARNING,
 
   // Functions
-  getSpelling: getSpelling,
-  getCanonical: getCanonical,
   describeQualifier: describeQualifier,
+  getBestViableFunction: getBestViableFunction,
+  getCanonical: getCanonical,
+  getSpelling: getSpelling,
+  isCastError: isCastError,
   isCastOK: isCastOK,
   isCastWarning: isCastWarning,
-  isCastError: isCastError,
-  isLessQualified: isLessQualified,
-  isMoreQualified: isMoreQualified,
   isLessOrEquallyQualified: isLessOrEquallyQualified,
+  isLessQualified: isLessQualified,
   isMoreOrEquallyQualified: isMoreOrEquallyQualified,
+  isMoreQualified: isMoreQualified,
 };

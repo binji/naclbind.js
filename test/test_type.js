@@ -17,6 +17,7 @@ var type = require('../src/js/type'),
     spell = type.getSpelling,
     qual = type.describeQualifier,
     canon = type.getCanonical,
+    viable = type.getBestViableFunction,
     C = type.CONST,
     CV = type.CONST | type.VOLATILE,
     CR = type.CONST | type.RESTRICT,
@@ -920,29 +921,115 @@ describe('Type', function() {
     });
   });
 
-  describe('CanCallWith', function() {
-    var voidp = type.Pointer(type.void),
-        size_t = type.Typedef('size_t', type.ulong),
-        malloc = type.Function(voidp, [size_t]);
+  describe('BestViable', function() {
+    function assertFunctionEqual(actual, expected) {
+      var aSpell = actual ? spell(actual) : 'null';
+      var eSpell = expected ? spell(expected) : 'null';
+      var msg = 'Expected: "' + eSpell + '" Actual: "' + aSpell + '".';
+      assert.strictEqual(actual, expected, msg);
+    }
 
-    it('should succeed when argtypes are equal', function() {
-      assert.strictEqual(malloc.canCallWith(size_t), type.CALL_OK);
-      assert.strictEqual(malloc.canCallWith(type.int), type.CALL_OK);
+    it('should work if there is 1 overload w/ an exact match', function() {
+      var fn0 = type.Function(type.void, [type.int]),
+          fns = [fn0];
+      assertFunctionEqual(type.getBestViableFunction(fns, [type.int]), fn0);
     });
 
-    it('should warn when argtype cast warns', function() {
-      assert.strictEqual(malloc.canCallWith(type.float), type.CALL_WARNING);
-      assert.strictEqual(malloc.canCallWith(voidp), type.CALL_WARNING);
+    it('should work if there are 2 overloads w/ an exact match', function() {
+      var Pi = type.Pointer(type.int),
+          fn0 = type.Function(type.void, [type.int]),
+          fn1 = type.Function(type.void, [Pi]),
+          fns = [fn0, fn1];
+      assertFunctionEqual(type.getBestViableFunction(fns, [type.int]), fn0);
+      assertFunctionEqual(type.getBestViableFunction(fns, [Pi]), fn1);
     });
 
-    it('should fail when argtype cast fails', function() {
-      var s = type.Record('s', [type.Field('f', type.int, 0)]);
-      assert.strictEqual(malloc.canCallWith(s), type.CALL_ERROR);
+    it('should prefer an exact match over a promotion', function() {
+      var fn0 = type.Function(type.void, [type.int]),
+          fn1 = type.Function(type.void, [type.short]),
+          fns = [fn0, fn1];
+      assertFunctionEqual(type.getBestViableFunction(fns, [type.int]), fn0);
+      assertFunctionEqual(type.getBestViableFunction(fns, [type.short]), fn1);
     });
 
-    it('should fail when number of args doesn\'t match', function() {
-      assert.strictEqual(malloc.canCallWith(), type.CALL_ERROR);
-      assert.strictEqual(malloc.canCallWith(type.int, type.int), type.CALL_ERROR);
+    it('should choose a promotion if it is available', function() {
+      var fn0 = type.Function(type.void, [type.int]),
+          fn1 = type.Function(type.void, [type.Pointer(type.int)]),
+          fns = [fn0, fn1];
+      assertFunctionEqual(type.getBestViableFunction(fns, [type.short]), fn0);
+    });
+
+    it('should prefer an exact match over a conversion', function() {
+      var e = type.Enum('e'),
+          fn0 = type.Function(type.void, [e]),
+          fn1 = type.Function(type.void, [type.int]),
+          fns = [fn0, fn1];
+      assertFunctionEqual(type.getBestViableFunction(fns, [e]), fn0);
+    });
+
+    it('should choose a conversion if it is available', function() {
+      var e = type.Enum('e'),
+          fn0 = type.Function(type.void, [type.int]),
+          fns = [fn0];
+      assertFunctionEqual(type.getBestViableFunction(fns, [e]), fn0);
+    });
+
+    it('should work with multiple arguments', function() {
+      var i = type.int,
+          c = type.char,
+          Pi = type.Pointer(i),
+          fn0 = type.Function(type.void, [i, c]),
+          fn1 = type.Function(type.void, [i, Pi]),
+          fns = [fn0, fn1];
+      assertFunctionEqual(type.getBestViableFunction(fns, [i, c]), fn0);
+      assertFunctionEqual(type.getBestViableFunction(fns, [i, Pi]), fn1);
+    });
+
+    it('should ignore functions that aren\'t viable', function() {
+      var i = type.int,
+          c = type.char,
+          fn0 = type.Function(type.void, [i, i]),
+          fn1 = type.Function(type.void, [i, i, i, i]),  // Not viable
+          fns = [fn0, fn1];
+      assertFunctionEqual(type.getBestViableFunction(fns, [i, i]), fn0);
+      assertFunctionEqual(type.getBestViableFunction(fns, [i, c]), fn0);
+    });
+
+    it('should allow multiple promotions/conversions', function() {
+      var i = type.int,
+          Pv = type.Pointer(type.void),
+          Pi = type.Pointer(i),
+          c = type.char,
+          fn0 = type.Function(type.void, [Pi, i]),
+          fns = [fn0];
+      assertFunctionEqual(type.getBestViableFunction(fns, [Pv, c]), fn0);
+    });
+
+    it('should allow multiple promotions/conversions', function() {
+      var i = type.int,
+          Pv = type.Pointer(type.void),
+          Pi = type.Pointer(i),
+          c = type.char,
+          fn0 = type.Function(type.void, [Pi, i]),
+          fns = [fn0];
+      assertFunctionEqual(type.getBestViableFunction(fns, [Pv, c]), fn0);
+    });
+
+    it('should fail if there are no viable functions', function() {
+      var i = type.int,
+          fn0 = type.Function(type.void, [i, i]),
+          fns = [fn0];
+      assertFunctionEqual(type.getBestViableFunction(fns, []), null);
+      assertFunctionEqual(type.getBestViableFunction(fns, [i]), null);
+    });
+
+    it('should fail if no function is best', function() {
+      var i = type.int,
+          c = type.char,
+          fn0 = type.Function(type.void, [c, i]),
+          fn1 = type.Function(type.void, [i, c]),
+          fns = [fn0, fn1];
+      assertFunctionEqual(type.getBestViableFunction(fns, [c, c]), null);
     });
   });
 });
