@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+var utils = require('./utils.js');
+
 // Matches LLVM TypeKind names (but not values).
 var INVALID = 0,
     UNEXPOSED = 1,
@@ -39,6 +41,35 @@ var INVALID = 0,
     FUNCTIONPROTO = 23,
     CONSTANTARRAY = 24,
     INCOMPLETEARRAY = 25,
+
+    KIND_NAME = {
+      0: 'INVALID',
+      1: 'UNEXPOSED',
+      2: 'VOID',
+      3: 'BOOL',
+      4: 'CHAR_U',
+      5: 'UCHAR',
+      6: 'USHORT',
+      7: 'UINT',
+      8: 'ULONG',
+      9: 'ULONGLONG',
+      10: 'CHAR_S',
+      11: 'SCHAR',
+      12: 'WCHAR',
+      13: 'SHORT',
+      14: 'INT',
+      15: 'LONG',
+      16: 'LONGLONG',
+      17: 'FLOAT',
+      18: 'DOUBLE',
+      19: 'POINTER',
+      20: 'RECORD',
+      21: 'ENUM',
+      22: 'TYPEDEF',
+      23: 'FUNCTIONPROTO',
+      24: 'CONSTANTARRAY',
+      25: 'INCOMPLETEARRAY'
+    },
 
     PRIMITIVE_SPELLING = {
       2: 'void',
@@ -134,33 +165,14 @@ SPELLING_PRECEDENCE[CONSTANTARRAY] = 2;
 SPELLING_PRECEDENCE[INCOMPLETEARRAY] = 2;
 SPELLING_PRECEDENCE[FUNCTIONPROTO] = 3;
 
-function compose(f, g) {
-  return function(x) {
-    return g(f(x));
-  };
-}
 
-function everyArrayPair(a1, a2, f) {
-  var i;
-
-  if (a1.length !== a2.length) {
-    return false;
+function checkType(x, varName, optKind) {
+  if (!(x instanceof Type)) {
+    throw new Error(varName + ' must be instanceof Type.');
   }
-
-  for (i = 0; i < a1.length; ++a1) {
-    if (!f(a1[i], a2[i])) {
-      return false;
-    }
+  if (optKind && x.kind !== optKind) {
+    throw new Error(varName + ' must be Type with kind ' + KIND_NAME[optKind]);
   }
-
-  return true;
-}
-
-function getClass(x) {
-  //  012345678
-  // "[Object xxx]"
-  var s = Object.prototype.toString.call(x);
-  return s.substring(8, s.length - 1);
 }
 
 function isVoid(type) {
@@ -271,43 +283,11 @@ function isMoreOrEquallyQualified(q1, q2) {
   return isLessQualified(q2, q1) || q1 === q2;
 }
 
-function checkType(x, varName) {
-  if (!(x instanceof Type)) {
-    throw new Error(varName + ' must be instanceof Type.');
-  }
-}
-
-function checkNullOrString(x, varName) {
-  if (!(x === null || getClass(x) === 'String')) {
-    throw new Error(varName + ' must be null or string.');
-  }
-}
-
-function checkArray(x, elementType, varName) {
-  if (getClass(x) !== 'Array') {
-    throw new Error(varName + ' must be an array.');
-  }
-
-  if (!(x.every(function(el) { return el instanceof elementType; }))) {
-    throw new Error(varName + ' must be an array of type ' + elementType.name);
-  }
-}
-
-function checkNonnegativeNumber(x, varName) {
-  if (getClass(x) !== 'Number') {
-    throw new Error(varName + ' must be a number.');
-  }
-
-  if (x < 0) {
-    throw new Error(varName + ' must be greater than 0.');
-  }
-}
-
 function Type(kind, cv) {
   if (!(this instanceof Type)) { return new Type(kind, cv); }
 
   if (cv !== undefined) {
-    checkNonnegativeNumber(cv, 'cv');
+    utils.checkNonnegativeNumber(cv, 'cv');
 
     if (cv > (IS_CONST | IS_VOLATILE | IS_RESTRICT)) {
       throw new Error('cv value out of range: ' + cv);
@@ -391,10 +371,10 @@ function Record(tag, fields, isUnion, cv) {
     return new Record(tag, fields, isUnion, cv);
   }
 
-  checkNullOrString(tag, 'tag');
-  checkArray(fields, Field, 'fields');
+  utils.checkNullOrString(tag, 'tag');
+  utils.checkArray(fields, Field, 'fields');
 
-  if (isUnion !== undefined && getClass(isUnion) !== 'Boolean') {
+  if (isUnion !== undefined && utils.getClass(isUnion) !== 'Boolean') {
     throw new Error('isUnion must be a Boolean.');
   }
 
@@ -415,7 +395,7 @@ Record.prototype.unqualified = function() {
 Record.prototype.equals = function(that) {
   return Type.prototype.equals.call(this, that) &&
          this.tag === that.tag &&
-         everyArrayPair(this.fields, that.fields,
+         utils.everyArrayPair(this.fields, that.fields,
              function(f1, f2) { return f1.equals(f2); }) &&
          this.isUnion === that.isUnion;
 };
@@ -423,9 +403,9 @@ Record.prototype.equals = function(that) {
 function Field(name, type, offset) {
   if (!(this instanceof Field)) { return new Field(name, type, offset); }
 
-  checkNullOrString(name, 'name');
+  utils.checkNullOrString(name, 'name');
   checkType(type, 'type');
-  checkNonnegativeNumber(offset, 'offset');
+  utils.checkNonnegativeNumber(offset, 'offset');
 
   this.name = name;
   this.type = type;
@@ -441,7 +421,7 @@ Field.prototype.equals = function(that) {
 function Enum(tag, cv) {
   if (!(this instanceof Enum)) { return new Enum(tag, cv); }
 
-  checkNullOrString(tag, 'tag');
+  utils.checkNullOrString(tag, 'tag');
 
   Type.call(this, ENUM, cv);
   this.tag = tag;
@@ -487,7 +467,7 @@ function FunctionProto(resultType, argTypes, variadic) {
   }
 
   checkType(resultType, 'resultType');
-  checkArray(argTypes, Type, 'argTypes');
+  utils.checkArray(argTypes, Type, 'argTypes');
 
   if (isArray(getCanonical(resultType))) {
     throw new Error('Function return type cannot be an array. Got ' +
@@ -498,7 +478,8 @@ function FunctionProto(resultType, argTypes, variadic) {
     throw new Error('Cannot create variadic function with no arguments.');
   }
 
-  if (Array.prototype.some.call(argTypes, compose(getCanonical, isVoid))) {
+  if (Array.prototype.some.call(argTypes,
+                                utils.compose(getCanonical, isVoid))) {
     throw new Error('Function argument type cannot be void.');
   }
 
@@ -519,7 +500,7 @@ FunctionProto.prototype.unqualified = function() {
 FunctionProto.prototype.equals = function(that) {
   return Type.prototype.equals.call(this, that) &&
          this.resultType.equals(that.resultType) &&
-         everyArrayPair(this.argTypes, that.argTypes, equals) &&
+         utils.everyArrayPair(this.argTypes, that.argTypes, equals) &&
          this.variadic === that.variadic;
 };
 FunctionProto.prototype.isViableForCall = function(argTypes) {
@@ -533,7 +514,7 @@ function ConstantArray(elementType, arraySize) {
   }
 
   checkType(elementType, 'elementType');
-  checkNonnegativeNumber(arraySize, 'arraySize');
+  utils.checkNonnegativeNumber(arraySize, 'arraySize');
 
   if (elementType.kind === VOID) {
     throw new Error('Cannot create an array of voids.');
@@ -813,7 +794,7 @@ function isCompatibleWith(from, to) {
       return from.kind === to.kind &&
              from.argTypes.length === to.argTypes.length &&
              isCompatibleWith(from.resultType, to.resultType) &&
-             everyArrayPair(from, to, isCompatibleWith);
+             utils.everyArrayPair(from, to, isCompatibleWith);
     default:
       throw new Error('canCast: Unknown kind ' + from.kind);
   }
@@ -996,6 +977,7 @@ module.exports = {
   CALL_WARNING: CALL_WARNING,
 
   // Functions
+  checkType: checkType,
   describeQualifier: describeQualifier,
   getBestViableFunction: getBestViableFunction,
   getCanonical: getCanonical,
