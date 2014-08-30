@@ -849,37 +849,38 @@ function compareFunctionCallRanks(fnRank1, fnRank2) {
 }
 
 function getBestViableFunction(fnTypes, argTypes) {
-  var bestFn = null,
+  var bestFnIdx = -1,
       bestRank,
-      isValid = false;
-  fnTypes.forEach(function(fnType) {
+      isValid = false,
+      i;
+  for (i = 0; i < fnTypes.length; ++i) {
     var cmpResult,
         rank;
-    if (!fnType.isViableForCall(argTypes)) {
-      return;
+    if (!fnTypes[i].isViableForCall(argTypes)) {
+      continue;
     }
 
-    rank = getFunctionCallRank(fnType, argTypes);
+    rank = getFunctionCallRank(fnTypes[i], argTypes);
     if (!rank) {
-      return;
+      continue;
     }
 
-    if (bestFn) {
+    if (bestFnIdx !== -1) {
       cmpResult = compareFunctionCallRanks(rank, bestRank);
       if (cmpResult === 0) {
         isValid = false;
-        return;
+        continue;
       } else if (cmpResult < 0) {
-        return;
+        continue;
       }
     }
 
-    bestFn = fnType;
+    bestFnIdx = i;
     bestRank = rank;
     isValid = true;
-  });
+  }
 
-  return isValid ? bestFn : null;
+  return isValid ? bestFnIdx : -1;
 }
 
 

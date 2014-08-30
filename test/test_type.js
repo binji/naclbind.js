@@ -922,17 +922,19 @@ describe('Type', function() {
   });
 
   describe('BestViable', function() {
-    function assertFunctionEqual(actual, expected) {
-      var aSpell = actual ? spell(actual) : 'null';
-      var eSpell = expected ? spell(expected) : 'null';
-      var msg = 'Expected: "' + eSpell + '" Actual: "' + aSpell + '".';
+    function assertBestViable(fns, argTypes, expected) {
+      var actual = type.getBestViableFunction(fns, argTypes);
+      var aSpell = actual >= 0 ? spell(fns[actual]) : 'null';
+      var eSpell = expected >= 0 ? spell(fns[expected]) : 'null';
+      var msg = 'Expected: "' + eSpell + '" (' + expected + ') ' +
+                'Actual: "' + aSpell + '" (' + actual + ').';
       assert.strictEqual(actual, expected, msg);
     }
 
     it('should work if there is 1 overload w/ an exact match', function() {
       var fn0 = type.Function(type.void, [type.int]),
           fns = [fn0];
-      assertFunctionEqual(type.getBestViableFunction(fns, [type.int]), fn0);
+      assertBestViable(fns, [type.int], 0);
     });
 
     it('should work if there are 2 overloads w/ an exact match', function() {
@@ -940,23 +942,23 @@ describe('Type', function() {
           fn0 = type.Function(type.void, [type.int]),
           fn1 = type.Function(type.void, [Pi]),
           fns = [fn0, fn1];
-      assertFunctionEqual(type.getBestViableFunction(fns, [type.int]), fn0);
-      assertFunctionEqual(type.getBestViableFunction(fns, [Pi]), fn1);
+      assertBestViable(fns, [type.int], 0);
+      assertBestViable(fns, [Pi], 1);
     });
 
     it('should prefer an exact match over a promotion', function() {
       var fn0 = type.Function(type.void, [type.int]),
           fn1 = type.Function(type.void, [type.short]),
           fns = [fn0, fn1];
-      assertFunctionEqual(type.getBestViableFunction(fns, [type.int]), fn0);
-      assertFunctionEqual(type.getBestViableFunction(fns, [type.short]), fn1);
+      assertBestViable(fns, [type.int], 0);
+      assertBestViable(fns, [type.short], 1);
     });
 
     it('should choose a promotion if it is available', function() {
       var fn0 = type.Function(type.void, [type.int]),
           fn1 = type.Function(type.void, [type.Pointer(type.int)]),
           fns = [fn0, fn1];
-      assertFunctionEqual(type.getBestViableFunction(fns, [type.short]), fn0);
+      assertBestViable(fns, [type.short], 0);
     });
 
     it('should prefer an exact match over a conversion', function() {
@@ -964,14 +966,14 @@ describe('Type', function() {
           fn0 = type.Function(type.void, [e]),
           fn1 = type.Function(type.void, [type.int]),
           fns = [fn0, fn1];
-      assertFunctionEqual(type.getBestViableFunction(fns, [e]), fn0);
+      assertBestViable(fns, [e], 0);
     });
 
     it('should choose a conversion if it is available', function() {
       var e = type.Enum('e'),
           fn0 = type.Function(type.void, [type.int]),
           fns = [fn0];
-      assertFunctionEqual(type.getBestViableFunction(fns, [e]), fn0);
+      assertBestViable(fns, [e], 0);
     });
 
     it('should work with multiple arguments', function() {
@@ -981,8 +983,8 @@ describe('Type', function() {
           fn0 = type.Function(type.void, [i, c]),
           fn1 = type.Function(type.void, [i, Pi]),
           fns = [fn0, fn1];
-      assertFunctionEqual(type.getBestViableFunction(fns, [i, c]), fn0);
-      assertFunctionEqual(type.getBestViableFunction(fns, [i, Pi]), fn1);
+      assertBestViable(fns, [i, c], 0);
+      assertBestViable(fns, [i, Pi], 1);
     });
 
     it('should ignore functions that aren\'t viable', function() {
@@ -991,8 +993,8 @@ describe('Type', function() {
           fn0 = type.Function(type.void, [i, i]),
           fn1 = type.Function(type.void, [i, i, i, i]),  // Not viable
           fns = [fn0, fn1];
-      assertFunctionEqual(type.getBestViableFunction(fns, [i, i]), fn0);
-      assertFunctionEqual(type.getBestViableFunction(fns, [i, c]), fn0);
+      assertBestViable(fns, [i, i], 0);
+      assertBestViable(fns, [i, c], 0);
     });
 
     it('should allow multiple promotions/conversions', function() {
@@ -1002,7 +1004,7 @@ describe('Type', function() {
           c = type.char,
           fn0 = type.Function(type.void, [Pi, i]),
           fns = [fn0];
-      assertFunctionEqual(type.getBestViableFunction(fns, [Pv, c]), fn0);
+      assertBestViable(fns, [Pv, c], 0);
     });
 
     it('should allow multiple promotions/conversions', function() {
@@ -1012,15 +1014,15 @@ describe('Type', function() {
           c = type.char,
           fn0 = type.Function(type.void, [Pi, i]),
           fns = [fn0];
-      assertFunctionEqual(type.getBestViableFunction(fns, [Pv, c]), fn0);
+      assertBestViable(fns, [Pv, c], 0);
     });
 
     it('should fail if there are no viable functions', function() {
       var i = type.int,
           fn0 = type.Function(type.void, [i, i]),
           fns = [fn0];
-      assertFunctionEqual(type.getBestViableFunction(fns, []), null);
-      assertFunctionEqual(type.getBestViableFunction(fns, [i]), null);
+      assertBestViable(fns, [], -1);
+      assertBestViable(fns, [i], -1);
     });
 
     it('should fail if no function is best', function() {
@@ -1029,7 +1031,7 @@ describe('Type', function() {
           fn0 = type.Function(type.void, [c, i]),
           fn1 = type.Function(type.void, [i, c]),
           fns = [fn0, fn1];
-      assertFunctionEqual(type.getBestViableFunction(fns, [c, c]), null);
+      assertBestViable(fns, [c, c], -1);
     });
   });
 });
