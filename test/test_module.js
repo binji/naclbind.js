@@ -125,4 +125,18 @@ describe('Module', function() {
       ]
     });
   });
+
+  it('should allow creation of another context', function() {
+    var m = module.Module(),
+        c = m.$createContext(),
+        h;
+
+    m.$setContext(c);
+    h = m.$handle(1000);
+
+    assert.strictEqual(h.id, 1);
+    assert.strictEqual(h.context, c);
+    assert.strictEqual(c.handles.length, 1);
+    assert.strictEqual(c.handles[0].id, 1);
+  });
 });

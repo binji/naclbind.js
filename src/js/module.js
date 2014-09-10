@@ -121,6 +121,9 @@ Module.prototype.$defineFunction = function(name, functions) {
 Module.prototype.$createContext = function() {
   return new Context(this.$handles_);
 };
+Module.prototype.$setContext = function(context) {
+  this.$context = context;
+};
 Module.prototype.$initMessage_ = function() {
   this.$message_ = {handles: {}, commands:[]};
 };
