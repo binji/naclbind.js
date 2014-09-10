@@ -1,6 +1,6 @@
 var assert = require('assert');
 
-function TestEmbedElement(nmf, mimeType) {
+function EmbedForTesting(nmf, mimeType) {
   this.loaded = false;
   this.nmf = nmf;
   this.mimeType = mimeType;
@@ -10,7 +10,7 @@ function TestEmbedElement(nmf, mimeType) {
   this.exitStatus = undefined;
 }
 
-TestEmbedElement.prototype.fireEvent = function(message, e) {
+EmbedForTesting.prototype.fireEvent = function(message, e) {
   var callbacks = this.listeners[message];
   if (!callbacks) {
     return;
@@ -21,7 +21,7 @@ TestEmbedElement.prototype.fireEvent = function(message, e) {
   }
 };
 
-TestEmbedElement.prototype.addEventListener_ = function(message, callback) {
+EmbedForTesting.prototype.addEventListener_ = function(message, callback) {
   if (!this.listeners[message]) {
     this.listeners[message] = [];
   }
@@ -29,56 +29,56 @@ TestEmbedElement.prototype.addEventListener_ = function(message, callback) {
   this.listeners[message].push(callback);
 };
 
-TestEmbedElement.prototype.load = function() {
+EmbedForTesting.prototype.load = function() {
   this.loaded = true;
   this.fireEvent('load', null);
 };
 
-TestEmbedElement.prototype.message = function(msg) {
+EmbedForTesting.prototype.message = function(msg) {
   var event = {data: msg};
   this.fireEvent('message', event);
 };
 
-TestEmbedElement.prototype.error = function(error) {
+EmbedForTesting.prototype.error = function(error) {
   this.lastError = error;
   this.fireEvent('error', null);
 };
 
-TestEmbedElement.prototype.exit = function(exitStatus) {
+EmbedForTesting.prototype.exit = function(exitStatus) {
   this.exitStatus = exitStatus;
   this.fireEvent('crash', null);
 };
 
-TestEmbedElement.prototype.crash = function() {
+EmbedForTesting.prototype.crash = function() {
   this.exit(-1);
 };
 
-TestEmbedElement.prototype.addLoadListener = function(callback) {
+EmbedForTesting.prototype.addLoadListener = function(callback) {
   this.addEventListener_('load', callback);
 };
 
-TestEmbedElement.prototype.addMessageListener = function(callback) {
+EmbedForTesting.prototype.addMessageListener = function(callback) {
   this.addEventListener_('message', callback);
 };
 
-TestEmbedElement.prototype.addErrorListener = function(callback) {
+EmbedForTesting.prototype.addErrorListener = function(callback) {
   this.addEventListener_('error', callback);
 };
 
-TestEmbedElement.prototype.addCrashListener = function(callback) {
+EmbedForTesting.prototype.addCrashListener = function(callback) {
   this.addEventListener_('crash', callback);
 };
 
-TestEmbedElement.prototype.appendToBody = function() {
+EmbedForTesting.prototype.appendToBody = function() {
 };
 
-TestEmbedElement.prototype.setPostMessageCallback = function(callback) {
+EmbedForTesting.prototype.setPostMessageCallback = function(callback) {
   this.postMessageCallback = callback;
 }
 
-TestEmbedElement.prototype.postMessage = function(msg) {
+EmbedForTesting.prototype.postMessage = function(msg) {
   assert(this.postMessageCallback);
   this.postMessageCallback(msg);
 };
 
-module.exports = TestEmbedElement;
+module.exports = EmbedForTesting;
