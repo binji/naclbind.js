@@ -954,6 +954,14 @@ describe('Type', function() {
       assertBestViable(fns, [type.short], 1);
     });
 
+    it('should prefer a int/float promotion over conversion', function() {
+      var fn0 = type.Function(type.void, [type.int]),
+          fn1 = type.Function(type.void, [type.double]),
+          fns = [fn0, fn1];
+      assertBestViable(fns, [type.char], 0);
+      assertBestViable(fns, [type.float], 1);
+    });
+
     it('should choose a promotion if it is available', function() {
       var fn0 = type.Function(type.void, [type.int]),
           fn1 = type.Function(type.void, [type.Pointer(type.int)]),

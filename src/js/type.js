@@ -699,6 +699,10 @@ function canCast(from, to) {
 }
 
 function canCastNumeric(from, to) {
+  if (from.kind === to.kind) {
+    return CAST_OK_EXACT;
+  }
+
   if (isInteger(from)) {
     if (isPointerlike(to)) {
       return CAST_INT_TO_POINTER;
@@ -726,7 +730,9 @@ function canCastNumeric(from, to) {
     return CAST_SIGNED_UNSIGNED;
   }
 
-  return from.kind === to.kind ? CAST_OK_EXACT : CAST_OK_PROMOTION;
+  return isInteger(from) === isInteger(to) ?
+      CAST_OK_PROMOTION :
+      CAST_OK_CONVERSION;
 }
 
 function canCastPointer(from, to) {
