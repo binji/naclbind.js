@@ -48,4 +48,41 @@ describe('Module', function() {
       ]
     });
   });
+
+  it('should allow creation of handles', function() {
+    var m = module.Module(),
+        h1,
+        h2;
+
+    h1 = m.$handle(4);
+    h2 = m.$handle(4, type.float);
+
+    assert.strictEqual(h1.type, type.schar);
+    assert.strictEqual(h2.type, type.float);
+
+    assert.deepEqual(m.$getMessage(), {
+      handles: {
+        1: 4,
+        2: 4
+      },
+      commands: []
+    });
+  });
+
+  it('should allow use of explicitly-created handles', function() {
+    var addType = type.Function(type.int, [type.int, type.int]),
+        m = module.Module(),
+        h;
+
+    m.$defineFunction('add', [module.Function(1, addType)]);
+    h = m.$handle(4);
+    m.add(h, h);
+
+    assert.deepEqual(m.$getMessage(), {
+      handles: { 1: 4 },
+      commands: [
+        {id: 1, args: [1, 1], ret: 2}
+      ]
+    });
+  });
 });

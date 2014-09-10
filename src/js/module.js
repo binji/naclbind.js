@@ -59,8 +59,13 @@ function objectToType(obj) {
   }
 }
 
-function objectToHandle(context, obj) {
-  var type = objectToType(obj);
+function objectToHandle(context, obj, type) {
+  if (type === undefined) {
+    type = objectToType(obj);
+  } else {
+    // TODO(binji): check that obj and type are compatible.
+  }
+
   return context.createHandle(type, obj);
 }
 
@@ -122,14 +127,22 @@ Module.prototype.$initMessage_ = function() {
 Module.prototype.$getMessage = function() {
   return this.$message_;
 };
+Module.prototype.$handle = function(value, type) {
+  var handle = objectToHandle(this.$context, value, type);
+  this.$registerHandleWithValue_(handle);
+  return handle;
+};
+Module.prototype.$registerHandleWithValue_ = function(handle) {
+  if (handle.value === null) {
+    return;
+  }
+
+  this.$message_.handles[handle.id] = handle.value;
+};
 Module.prototype.$registerHandlesWithValues_ = function(handles) {
   var i;
   for (i = 0; i < handles.length; ++i) {
-    if (handles[i].value === null) {
-      continue;
-    }
-
-    this.$message_.handles[handles[i].id] = handles[i].value;
+    this.$registerHandleWithValue_(handles[i]);
   }
 };
 Module.prototype.$pushCommand_ = function(id, argHandles, retHandle) {
