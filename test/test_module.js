@@ -105,26 +105,17 @@ describe('Module', function() {
     });
   });
 
-  it('should look like dis', function() {
+  it('should allow handle pipelining', function() {
     var voidp = type.Pointer(type.void),
         intp = type.Pointer(type.int),
         mallocType = type.Function(voidp, [type.uint]),
         getIntType = type.Function(type.int, [intp]),
-        m = module.Module(),
-        p,
-        x;
+        m = module.Module();
 
     m.$defineFunction('malloc', [module.Function(1, mallocType)]);
     m.$defineFunction('get', [module.Function(2, getIntType)]);
 
-    p = m.malloc(4).cast(intp);
-
-    assert.deepEqual(m.$getMessage(), {
-      handles: { 1: 4 },
-      commands: [ {id: 1, args: [1], ret: 2} ]
-    });
-
-    x = m.get(p);
+    m.get(m.malloc(4).cast(intp));
 
     assert.deepEqual(m.$getMessage(), {
       handles: { 1: 4 },
