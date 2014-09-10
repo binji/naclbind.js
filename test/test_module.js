@@ -17,34 +17,53 @@ var assert = require('assert'),
     type = require('../src/js/type.js');
 
 describe('Module', function() {
-  it('should look like dis', function() {
-    var voidp = type.Pointer(type.void),
-        intp = type.Pointer(type.int),
-        mallocType = type.Function(voidp, [type.uint]),
-        getIntType = type.Function(type.int, [intp]),
-        m = module.Module(),
-        p,
-        x;
-
-    m.$defineFunction('malloc', [module.Function(1, mallocType)]);
-    m.$defineFunction('get', [module.Function(2, getIntType)]);
-
+  it('should start with an empty message', function() {
+    var m = module.Module();
     assert.deepEqual(m.$getMessage(), {handles:{}, commands:[]});
+  });
 
-    p = m.malloc(4).cast(intp);
+  it('should work for a simple function type', function() {
+    var addType = type.Function(type.int, [type.int, type.int]),
+        m = module.Module();
+
+    m.$defineFunction('add', [module.Function(1, addType)]);
+
+    m.add(3, 4);
 
     assert.deepEqual(m.$getMessage(), {
-      handles: { 1: 4 },
-      commands: [ {id: 1, args: [1], ret: 2} ]
-    });
-
-    x = m.get(p);
-
-    assert.deepEqual(m.$getMessage(), {
-      handles: { 1: 4 },
+      handles: {
+        1: 3,
+        2: 4
+      },
       commands: [
-        {id: 1, args: [1], ret: 2},
-        {id: 2, args: [2], ret: 3}
+        {id: 1, args: [1, 2], ret: 3}
+      ]
+    });
+  });
+
+  it('should work for an overloaded function', function() {
+    var addIntType = type.Function(type.int, [type.int, type.int]),
+        addFloatType = type.Function(type.float, [type.float, type.float]),
+        m = module.Module();
+
+    m.$defineFunction('add', [
+        module.Function(1, addIntType),
+        module.Function(2, addFloatType)
+    ]);
+
+    m.add(3, 4);
+    m.add(3.5, 4);
+
+    assert.deepEqual(m.$getMessage(), {
+      handles: {
+        1: 3,
+        2: 4,
+        4: 3.5,
+        5: 4
+      },
+      commands: [
+        {id: 1, args: [1, 2], ret: 3},
+        {id: 2, args: [4, 5], ret: 6}
       ]
     });
   });
@@ -82,6 +101,36 @@ describe('Module', function() {
       handles: { 1: 4 },
       commands: [
         {id: 1, args: [1, 1], ret: 2}
+      ]
+    });
+  });
+
+  it('should look like dis', function() {
+    var voidp = type.Pointer(type.void),
+        intp = type.Pointer(type.int),
+        mallocType = type.Function(voidp, [type.uint]),
+        getIntType = type.Function(type.int, [intp]),
+        m = module.Module(),
+        p,
+        x;
+
+    m.$defineFunction('malloc', [module.Function(1, mallocType)]);
+    m.$defineFunction('get', [module.Function(2, getIntType)]);
+
+    p = m.malloc(4).cast(intp);
+
+    assert.deepEqual(m.$getMessage(), {
+      handles: { 1: 4 },
+      commands: [ {id: 1, args: [1], ret: 2} ]
+    });
+
+    x = m.get(p);
+
+    assert.deepEqual(m.$getMessage(), {
+      handles: { 1: 4 },
+      commands: [
+        {id: 1, args: [1], ret: 2},
+        {id: 2, args: [2], ret: 3}
       ]
     });
   });
