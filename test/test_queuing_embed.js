@@ -55,4 +55,20 @@ describe('QueuingEmbed', function() {
     qe.postMessage({test: 'world'});
     e.load();
   });
+
+  it('should delegate to internal embed', function(done) {
+    var e = Embed('nmf', 'application/x-pnacl'),
+        qe = QueuingEmbed(e);
+
+    qe.addLoadListener(function() {});
+    qe.addMessageListener(function() {});
+    qe.addErrorListener(function() {});
+    qe.addCrashListener(function() {
+      assert.equal(qe.exitStatus, 1);
+      done();
+    });
+    qe.appendToBody();
+    qe.load();
+    qe.exit(1);
+  });
 });

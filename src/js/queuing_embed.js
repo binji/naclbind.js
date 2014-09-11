@@ -21,6 +21,8 @@ function QueuingEmbed(embed) {
   this.queuedMessages_ = [];
   this.embed_.addLoadListener(this.onLoad_.bind(this));
   this.loaded_ = false;
+
+  this.delegateTo_(this.embed_);
 }
 
 QueuingEmbed.prototype.onLoad_ = function(e) {
@@ -42,25 +44,55 @@ QueuingEmbed.prototype.postQueuedMessages_ = function() {
   this.queuedMessages_ = null;
 };
 
-QueuingEmbed.prototype.addLoadListener = function(callback) {
-  this.embed_.addLoadListener(callback);
+QueuingEmbed.prototype.delegateTo_ = function(that) {
+  var p,
+      proto,
+      desc;
+
+  for (p in this.embed_) {
+    // If this name is already defined, skip.
+    if (p in this) {
+      continue;
+    }
+
+    // Delegate functions.
+    if (typeof that[p] === 'function') {
+      this[p] = makeFunctionDelegate(that, p);
+      continue;
+    }
+
+    // Delegate non-function properties.
+    proto = that;
+    while (proto && !proto.hasOwnProperty(p)) {
+      proto = Object.getPrototypeOf(proto);
+    }
+
+    if (!proto) {
+      continue;
+    }
+
+    desc = Object.getOwnPropertyDescriptor(proto, p);
+    delete desc.value;
+    desc.get = makeGetDelegate(that, p);
+    if (desc.writable) {
+      delete desc.writable;
+      desc.set = makeSetDelegate(that, p);
+    }
+    Object.defineProperty(this, p, desc);
+  }
 };
 
-QueuingEmbed.prototype.addMessageListener = function(callback) {
-  this.embed_.addMessageListener(callback);
-};
+function makeFunctionDelegate(embed, propertyName) {
+  return function() { return embed[propertyName].apply(embed, arguments); };
+}
 
-QueuingEmbed.prototype.addErrorListener = function(callback) {
-  this.embed_.addErrorListener(callback);
-};
+function makeGetDelegate(embed, propertyName) {
+  return function() { return embed[propertyName]; };
+}
 
-QueuingEmbed.prototype.addCrashListener = function(callback) {
-  this.embed_.addCrashListener(callback);
-};
-
-QueuingEmbed.prototype.appendToBody = function() {
-  this.embed_.appendToBody();
-};
+function makeSetDelegate(embed, propertyName) {
+  return function(value) { embed[propertyName] = value; };
+}
 
 QueuingEmbed.prototype.postMessage = function(msg) {
   if (!this.loaded_) {
@@ -70,15 +102,5 @@ QueuingEmbed.prototype.postMessage = function(msg) {
 
   this.embed_.postMessage(msg);
 };
-
-Object.defineProperty(QueuingEmbed.prototype, 'lastError', {
-  get: function() { return this.element.lastError; },
-  enumerable: true
-});
-
-Object.defineProperty(QueuingEmbed.prototype, 'exitStatus', {
-  get: function() { return this.element.exitStatus; },
-  enumerable: true
-});
 
 module.exports = QueuingEmbed;
