@@ -13,6 +13,7 @@
 // limitations under the License.
 
 function Embed(nmf, mimeType) {
+  if (!(this instanceof Embed)) { return new Embed(nmf, mimeType); }
   this.nmf = nmf;
   this.mimeType = mimeType;
   this.element = document.createElement('embed');

@@ -1,6 +1,9 @@
 var assert = require('assert');
 
 function EmbedForTesting(nmf, mimeType) {
+  if (!(this instanceof EmbedForTesting)) {
+    return new EmbedForTesting(nmf, mimeType);
+  }
   this.loaded = false;
   this.nmf = nmf;
   this.mimeType = mimeType;
