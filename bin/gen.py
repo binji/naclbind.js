@@ -678,9 +678,13 @@ def main(args):
   parser.add_option('-W', '--whitelist-symbol', action='append', default=[])
   parser.add_option('-b', '--blacklist-file', action='append', default=[])
   parser.add_option('-B', '--blacklist-symbol', action='append', default=[])
+  parser.add_option('-t', '--template')
   options, args = parser.parse_args(args)
   if options.verbose:
     logging.getLogger().setLevel(logging.INFO)
+
+  if not options.template:
+    parser.error('--template argument required')
 
   tu = CreateTranslationUnit(args)
   if not tu:
@@ -700,7 +704,7 @@ def main(args):
   collector = Collector(acceptor, tu)
   collector.Collect()
 
-  with open('../templates/glue.js') as f:
+  with open(options.template) as f:
     template = f.read()
 
   # See http://stackoverflow.com/a/14620633
