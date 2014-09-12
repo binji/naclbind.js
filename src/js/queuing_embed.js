@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+var utils = require('./utils');
+
 function QueuingEmbed(embed) {
   if (!(this instanceof QueuingEmbed)) {
     return new QueuingEmbed(embed);
@@ -20,9 +22,11 @@ function QueuingEmbed(embed) {
 
   this.queuedMessages_ = [];
   this.embed_.addLoadListener(this.onLoad_.bind(this));
+  this.embed_.addMessageListener(this.onMessage_.bind(this));
   this.loaded_ = false;
 
-  this.delegateTo_(this.embed_);
+  this.nextId_ = 1;
+  this.idCallbackMap_ = [];
 }
 
 QueuingEmbed.prototype.onLoad_ = function(e) {
@@ -36,6 +40,34 @@ QueuingEmbed.prototype.onLoad_ = function(e) {
   this.loaded_ = true;
 };
 
+QueuingEmbed.prototype.onMessage_ = function(e) {
+  var msg = e.data,
+      jsonMsg,
+      id,
+      callback;
+
+  if (typeof(msg) !== 'object') {
+    jsonMsg = JSON.stringify(msg);
+    throw new Error('Unexpected value from module: ' + jsonMsg);
+  }
+
+  id = msg.id;
+  if (!(utils.isNumber(id) && utils.isInteger(id))) {
+    jsonMsg = JSON.stringify(msg);
+    throw new Error('Received message with bad id: ' + jsonMsg);
+  }
+
+  callback = this.idCallbackMap_[id];
+  if (utils.getClass(callback) !== 'Function') {
+    jsonMsg = JSON.stringify(msg);
+    throw new Error('No callback associated with id: ' + id + ' for msg: ' +
+                    jsonMsg);
+  }
+
+  callback(msg);
+  delete this.idCallbackMap_[id];
+};
+
 QueuingEmbed.prototype.postQueuedMessages_ = function() {
   var i;
   for (i = 0; i < this.queuedMessages_.length; ++i) {
@@ -44,63 +76,22 @@ QueuingEmbed.prototype.postQueuedMessages_ = function() {
   this.queuedMessages_ = null;
 };
 
-QueuingEmbed.prototype.delegateTo_ = function(that) {
-  var p,
-      proto,
-      desc;
+QueuingEmbed.prototype.postMessage = function(msg, callback) {
+  var id = this.nextId_++;
 
-  for (p in this.embed_) {
-    // If this name is already defined, skip.
-    if (p in this) {
-      continue;
-    }
+  this.idCallbackMap_[id] = callback;
+  msg.id = id;
 
-    // Delegate functions.
-    if (typeof that[p] === 'function') {
-      this[p] = makeFunctionDelegate(that, p);
-      continue;
-    }
-
-    // Delegate non-function properties.
-    proto = that;
-    while (proto && !proto.hasOwnProperty(p)) {
-      proto = Object.getPrototypeOf(proto);
-    }
-
-    if (!proto) {
-      continue;
-    }
-
-    desc = Object.getOwnPropertyDescriptor(proto, p);
-    delete desc.value;
-    desc.get = makeGetDelegate(that, p);
-    if (desc.writable) {
-      delete desc.writable;
-      desc.set = makeSetDelegate(that, p);
-    }
-    Object.defineProperty(this, p, desc);
-  }
-};
-
-function makeFunctionDelegate(embed, propertyName) {
-  return function() { return embed[propertyName].apply(embed, arguments); };
-}
-
-function makeGetDelegate(embed, propertyName) {
-  return function() { return embed[propertyName]; };
-}
-
-function makeSetDelegate(embed, propertyName) {
-  return function(value) { embed[propertyName] = value; };
-}
-
-QueuingEmbed.prototype.postMessage = function(msg) {
   if (!this.loaded_) {
     this.queuedMessages_.push(msg);
     return;
   }
 
   this.embed_.postMessage(msg);
+};
+
+QueuingEmbed.prototype.appendToBody = function() {
+  this.embed_.appendToBody();
 };
 
 module.exports = QueuingEmbed;

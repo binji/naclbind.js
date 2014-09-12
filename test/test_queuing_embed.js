@@ -16,9 +16,13 @@ var assert = require('assert'),
     QueuingEmbed = require('../src/js/queuing_embed'),
     Embed = require('./embed_for_testing');
 
+function createEmbed() {
+  return Embed('nmf', 'application/x-nacl');
+}
+
 describe('QueuingEmbed', function() {
   it('should not post messages before loaded', function() {
-    var e = Embed('nmf', 'application/x-pnacl'),
+    var e = createEmbed(),
         qe = QueuingEmbed(e);
 
     e.setPostMessageCallback(function() {
@@ -29,17 +33,18 @@ describe('QueuingEmbed', function() {
   });
 
   it('should post all messages after load', function(done) {
-    var e = Embed('nmf', 'application/x-pnacl'),
+    var e = createEmbed(),
         qe = QueuingEmbed(e),
         loaded = false,
-        callCount = 0;
+        callCount = 0,
+        notCalled = function() { assert.ok(false, 'Shouldn\'t be called'); }
 
     e.setPostMessageCallback(function(msg) {
       assert.equal(loaded, true, 'postMessage called before embed loaded');
       if (callCount === 0) {
-        assert.deepEqual(msg, {test: 'hello'});
+        assert.deepEqual(msg, {id: 1, test: 'hello'});
       } else if (callCount === 1) {
-        assert.deepEqual(msg, {test: 'world'});
+        assert.deepEqual(msg, {id: 2, test: 'world'});
         done();
       } else {
         assert.ok(false, 'postMessage called too many times');
@@ -51,24 +56,49 @@ describe('QueuingEmbed', function() {
       loaded = true;
     });
 
-    qe.postMessage({test: 'hello'});
-    qe.postMessage({test: 'world'});
+    qe.postMessage({test: 'hello'}, notCalled);
+    qe.postMessage({test: 'world'}, notCalled);
     e.load();
   });
 
-  it('should delegate to internal embed', function(done) {
-    var e = Embed('nmf', 'application/x-pnacl'),
+  it('should call callback when message is posted from module', function(done) {
+    var e = createEmbed(),
         qe = QueuingEmbed(e);
 
-    qe.addLoadListener(function() {});
-    qe.addMessageListener(function() {});
-    qe.addErrorListener(function() {});
-    qe.addCrashListener(function() {
-      assert.equal(qe.exitStatus, 1);
+    e.setPostMessageCallback(function(msg) {
+      assert.deepEqual(msg, {id: 1, msg: 'ping'});
+      // When we get a ping, respond with a pong.
+      e.message({id: 1, msg: 'pong'});
+    });
+
+    e.load();
+    qe.postMessage({msg: 'ping'}, function(msg) {
+      assert.deepEqual(msg, {id: 1, msg: 'pong'});
       done();
     });
-    qe.appendToBody();
-    qe.load();
-    qe.exit(1);
+  });
+
+  it('should use incrementing ids for messages', function(done) {
+    var e = createEmbed(),
+        qe = QueuingEmbed(e),
+        n = 1;
+
+    e.setPostMessageCallback(function(msg) {
+      assert.deepEqual(msg, {id: n});
+      e.message({id: n});
+    });
+
+    e.load();
+
+    qe.postMessage({}, function onMessage(msg) {
+      assert.deepEqual(msg, {id: n});
+      if (msg.id >= 100) {
+        done();
+        return;
+      }
+
+      ++n;
+      qe.postMessage({}, onMessage);
+    });
   });
 });

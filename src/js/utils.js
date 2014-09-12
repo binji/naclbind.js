@@ -67,6 +67,10 @@ function checkNonnegativeNumber(x, varName) {
   }
 }
 
+function isNumber(n) {
+  return n === +n;
+}
+
 function isInteger(n) {
   return n === (n | 0);
 }
@@ -89,6 +93,7 @@ module.exports = {
   compose: compose,
   everyArrayPair: everyArrayPair,
   getClass: getClass,
+  isNumber: isNumber,
   isInteger: isInteger,
   isFloat: isFloat,
 
