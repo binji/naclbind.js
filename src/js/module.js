@@ -127,7 +127,12 @@ Module.prototype.$createContext = function() {
   return new Context(this.$handles_);
 };
 Module.prototype.$initMessage_ = function() {
-  this.$message_ = {getHandles: [], setHandles: {}, commands:[]};
+  this.$message_ = {
+    setHandles: {},
+    getHandles: [],
+    destroyHandles: [],
+    commands:[]
+  };
 };
 Module.prototype.$getMessage = function() {
   return this.$message_;
@@ -176,6 +181,16 @@ Module.prototype.$commit = function(handles, callback) {
   });
   this.$initMessage_();
 };
+Module.prototype.$destroyHandles = function(context) {
+  var c = context || this.$context,
+      handles = c.handles,
+      i;
+  for (i = 0; i < handles.length; ++i) {
+    this.$message_.destroyHandles.push(handles[i].id);
+  }
+
+  c.destroyHandles();
+};
 
 function IdFunction(id, fnType) {
   if (!(this instanceof IdFunction)) { return new IdFunction(id, fnType); }
@@ -214,6 +229,9 @@ Context.prototype.createHandle = function(type, value, id) {
 Context.prototype.registerHandle = function(handle) {
   this.handleList.registerHandle(handle);
   this.handles.push(handle);
+};
+Context.prototype.destroyHandles = function() {
+  this.handles = [];
 };
 
 function Handle(context, type, value, id) {

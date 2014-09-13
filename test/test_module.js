@@ -20,8 +20,9 @@ var assert = require('assert'),
     emptyMessage;
 
 emptyMessage = {
-  getHandles: [],
   setHandles: {},
+  getHandles: [],
+  destroyHandles: [],
   commands: []
 };
 
@@ -45,6 +46,7 @@ describe('Module', function() {
         1: 3,
         2: 4
       },
+      destroyHandles: [],
       commands: [
         {id: 1, args: [1, 2], ret: 3}
       ]
@@ -72,6 +74,7 @@ describe('Module', function() {
         4: 3.5,
         5: 4
       },
+      destroyHandles: [],
       commands: [
         {id: 1, args: [1, 2], ret: 3},
         {id: 2, args: [4, 5], ret: 6}
@@ -96,6 +99,7 @@ describe('Module', function() {
         1: 4,
         2: 4
       },
+      destroyHandles: [],
       commands: []
     });
   });
@@ -112,6 +116,7 @@ describe('Module', function() {
     assert.deepEqual(m.$getMessage(), {
       getHandles: [],
       setHandles: { 1: 4 },
+      destroyHandles: [],
       commands: [
         {id: 1, args: [1, 1], ret: 2}
       ]
@@ -133,6 +138,7 @@ describe('Module', function() {
     assert.deepEqual(m.$getMessage(), {
       getHandles: [],
       setHandles: { 1: 4 },
+      destroyHandles: [],
       commands: [
         {id: 1, args: [1], ret: 2},
         {id: 2, args: [2], ret: 3}
@@ -170,6 +176,7 @@ describe('Module', function() {
           id: 1,
           getHandles: [3],
           setHandles: {1: 3, 2: 4},
+          destroyHandles: [],
           commands: [ {id: 1, args: [1, 2], ret: 3} ]
         });
 
@@ -233,6 +240,71 @@ describe('Module', function() {
       // Change context back to default. The commit callback should still have
       // c.
       m.$context = oldC;
+    });
+  });
+
+  describe('$destroyHandles', function() {
+    it('should only destroy handles that are in the context', function() {
+      var m = module.Module(),
+          c = m.$createContext();
+
+      // Created in default context.
+      m.$handle(1);
+      m.$handle(2);
+      m.$context = c;
+      // Created in context |c|.
+      m.$handle(3);
+      m.$handle(4);
+
+      // Destroy handles in current context.
+      m.$destroyHandles();
+      assert.deepEqual(m.$getMessage().destroyHandles, [3, 4]);
+    });
+
+    it('should destroy handles from passed-in context', function() {
+      var m = module.Module(),
+          oldC = m.$context,
+          c = m.$createContext();
+
+      m.$handle(1);
+      m.$handle(2);
+      m.$context = c;
+      m.$handle(3);
+      m.$handle(4);
+
+      m.$destroyHandles(oldC);
+      assert.deepEqual(m.$getMessage().destroyHandles, [1, 2]);
+    });
+
+    it('should remove handles from the context immediately', function() {
+      var m = module.Module(),
+          c = m.$context;
+
+      m.$handle(1);
+      assert.strictEqual(c.handles.length, 1);
+
+      m.$destroyHandles();
+      assert.strictEqual(c.handles.length, 0);
+    });
+
+    it('should not destroy handles created after', function() {
+      var m = module.Module();
+
+      m.$handle(1);
+      m.$destroyHandles();
+      m.$handle(2);
+      assert.deepEqual(m.$getMessage().destroyHandles, [1]);
+      assert.strictEqual(m.$context.handles.length, 1);
+    });
+
+    it('should accumulate handles to destroy', function() {
+      var m = module.Module();
+
+      m.$handle(1);
+      m.$destroyHandles();
+      m.$handle(2);
+      m.$destroyHandles();
+      assert.deepEqual(m.$getMessage().destroyHandles, [1, 2]);
     });
   });
 });
