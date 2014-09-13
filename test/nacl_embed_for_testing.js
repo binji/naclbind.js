@@ -31,9 +31,12 @@ NaClEmbedForTesting.prototype.fireEvent = function(message, e) {
     return;
   }
 
-  for (var i = 0; i < callbacks.length; ++i) {
-    callbacks[i](e);
-  }
+  // Run on the next tick to more closely emulate a real embed.
+  process.nextTick(function() {
+    for (var i = 0; i < callbacks.length; ++i) {
+      callbacks[i](e);
+    }
+  });
 };
 
 NaClEmbedForTesting.prototype.addEventListener_ = function(message, callback) {

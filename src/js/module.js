@@ -170,6 +170,7 @@ Module.prototype.$commit = function(handles, callback) {
   this.$embed_.postMessage(this.$message_, function(msg) {
     callback.apply(null, msg.values);
   });
+  this.$initMessage_();
 };
 
 function IdFunction(id, fnType) {

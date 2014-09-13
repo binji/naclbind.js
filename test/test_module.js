@@ -16,13 +16,19 @@ var assert = require('assert'),
     module = require('../src/js/module'),
     type = require('../src/js/type'),
     NaClEmbed = require('./nacl_embed_for_testing'),
-    Embed = require('../src/js/embed');
+    Embed = require('../src/js/embed'),
+    emptyMessage;
+
+emptyMessage = {
+  getHandles: [],
+  setHandles: {},
+  commands: []
+};
 
 describe('Module', function() {
   it('should start with an empty message', function() {
     var m = module.Module();
-    assert.deepEqual(m.$getMessage(),
-                     {getHandles:[], setHandles:{}, commands:[]});
+    assert.deepEqual(m.$getMessage(), emptyMessage);
   });
 
   it('should work for a simple function type', function() {
@@ -175,6 +181,8 @@ describe('Module', function() {
         assert.strictEqual(hVal, 7);
         done();
       });
+
+      assert.deepEqual(m.$getMessage(), emptyMessage);
     });
 
     it('should unwrap multiple handles', function(done) {
