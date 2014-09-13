@@ -12,53 +12,86 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-function Embed(nmf, mimeType) {
-  if (!(this instanceof Embed)) { return new Embed(nmf, mimeType); }
-  this.nmf = nmf;
-  this.mimeType = mimeType;
-  this.element = document.createElement('embed');
-  this.element.setAttribute('width', '0');
-  this.element.setAttribute('height', '0');
-  this.element.setAttribute('src', this.nmf);
-  this.element.setAttribute('type', this.mimeType);
+var utils = require('./utils');
+
+function Embed(naclEmbed) {
+  if (!(this instanceof Embed)) {
+    return new Embed(naclEmbed);
+  }
+  this.embed_ = naclEmbed;
+
+  this.queuedMessages_ = [];
+  this.embed_.addLoadListener(this.onLoad_.bind(this));
+  this.embed_.addMessageListener(this.onMessage_.bind(this));
+  this.loaded_ = false;
+
+  this.nextId_ = 1;
+  this.idCallbackMap_ = [];
 }
 
-Embed.prototype.addEventListener_ = function(message, callback) {
-  this.element.addEventListener(message, callback, false);
+Embed.prototype.onLoad_ = function(e) {
+  // Wait till the next time through the eventloop to allow other 'load'
+  // listeners to be called.
+  var self = this;
+  process.nextTick(function() {
+    self.postQueuedMessages_();
+  });
+
+  this.loaded_ = true;
 };
 
-Embed.prototype.addLoadListener = function(callback) {
-  this.addEventListener_('load', callback);
+Embed.prototype.onMessage_ = function(e) {
+  var msg = e.data,
+      jsonMsg,
+      id,
+      callback;
+
+  if (typeof(msg) !== 'object') {
+    jsonMsg = JSON.stringify(msg);
+    throw new Error('Unexpected value from module: ' + jsonMsg);
+  }
+
+  id = msg.id;
+  if (!(utils.isNumber(id) && utils.isInteger(id))) {
+    jsonMsg = JSON.stringify(msg);
+    throw new Error('Received message with bad id: ' + jsonMsg);
+  }
+
+  callback = this.idCallbackMap_[id];
+  if (utils.getClass(callback) !== 'Function') {
+    jsonMsg = JSON.stringify(msg);
+    throw new Error('No callback associated with id: ' + id + ' for msg: ' +
+                    jsonMsg);
+  }
+
+  callback(msg);
+  delete this.idCallbackMap_[id];
 };
 
-Embed.prototype.addMessageListener = function(callback) {
-  this.addEventListener_('message', callback);
+Embed.prototype.postQueuedMessages_ = function() {
+  var i;
+  for (i = 0; i < this.queuedMessages_.length; ++i) {
+    this.embed_.postMessage(this.queuedMessages_[i]);
+  }
+  this.queuedMessages_ = null;
 };
 
-Embed.prototype.addErrorListener = function(callback) {
-  this.addEventListener_('error', callback);
-};
+Embed.prototype.postMessage = function(msg, callback) {
+  var id = this.nextId_++;
 
-Embed.prototype.addCrashListener = function(callback) {
-  this.addEventListener_('crash', callback);
+  this.idCallbackMap_[id] = callback;
+  msg.id = id;
+
+  if (!this.loaded_) {
+    this.queuedMessages_.push(msg);
+    return;
+  }
+
+  this.embed_.postMessage(msg);
 };
 
 Embed.prototype.appendToBody = function() {
-  document.body.appendChild(this.element);
+  this.embed_.appendToBody();
 };
-
-Embed.prototype.postMessage = function(msg) {
-  this.element.postMessage(msg);
-};
-
-Object.defineProperty(Embed.prototype, 'lastError', {
-  get: function() { return this.element.lastError; },
-  enumerable: true
-});
-
-Object.defineProperty(Embed.prototype, 'exitStatus', {
-  get: function() { return this.element.exitStatus; },
-  enumerable: true
-});
 
 module.exports = Embed;
