@@ -126,9 +126,6 @@ Module.prototype.$defineFunction = function(name, functions) {
 Module.prototype.$createContext = function() {
   return new Context(this.$handles_);
 };
-Module.prototype.$setContext = function(context) {
-  this.$context = context;
-};
 Module.prototype.$initMessage_ = function() {
   this.$message_ = {getHandles: [], setHandles: {}, commands:[]};
 };
@@ -166,9 +163,16 @@ Module.prototype.$pushCommand_ = function(id, argHandles, retHandle) {
   this.$message_.commands.push(command);
 };
 Module.prototype.$commit = function(handles, callback) {
+  var self = this,
+      context = this.$context;
   this.$message_.getHandles = handlesToIds(handles);
   this.$embed_.postMessage(this.$message_, function(msg) {
+    // Call the callback with the same context as was set when $commit() was
+    // called, then reset to the previous value.
+    var oldContext = self.$context;
+    self.$context = context;
     callback.apply(null, msg.values);
+    self.$context = oldContext;
   });
   this.$initMessage_();
 };

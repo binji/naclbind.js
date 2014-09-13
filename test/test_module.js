@@ -145,7 +145,7 @@ describe('Module', function() {
         c = m.$createContext(),
         h;
 
-    m.$setContext(c);
+    m.$context = c;
     h = m.$handle(1000);
 
     assert.strictEqual(h.id, 1);
@@ -208,6 +208,31 @@ describe('Module', function() {
         assert.strictEqual(h2Val, 12);
         done();
       });
+    });
+
+    it('should pass current context to commit callback', function(done) {
+      var ne = NaClEmbed(),
+          e = Embed(ne),
+          m = module.Module(e),
+          c = m.$createContext(),
+          oldC;
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        ne.message({id: 1});
+      });
+
+      oldC = m.$context;
+      m.$context = c;
+
+      m.$commit([], function() {
+        assert.strictEqual(m.$context, c);
+        done();
+      });
+
+      // Change context back to default. The commit callback should still have
+      // c.
+      m.$context = oldC;
     });
   });
 });
