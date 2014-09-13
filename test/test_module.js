@@ -13,13 +13,16 @@
 // limitations under the License.
 
 var assert = require('assert'),
-    module = require('../src/js/module.js'),
-    type = require('../src/js/type.js');
+    module = require('../src/js/module'),
+    type = require('../src/js/type'),
+    NaClEmbed = require('./nacl_embed_for_testing'),
+    Embed = require('../src/js/embed');
 
 describe('Module', function() {
   it('should start with an empty message', function() {
     var m = module.Module();
-    assert.deepEqual(m.$getMessage(), {handles:{}, commands:[]});
+    assert.deepEqual(m.$getMessage(),
+                     {getHandles:[], setHandles:{}, commands:[]});
   });
 
   it('should work for a simple function type', function() {
@@ -31,7 +34,8 @@ describe('Module', function() {
     m.add(3, 4);
 
     assert.deepEqual(m.$getMessage(), {
-      handles: {
+      getHandles: [],
+      setHandles: {
         1: 3,
         2: 4
       },
@@ -55,7 +59,8 @@ describe('Module', function() {
     m.add(3.5, 4);
 
     assert.deepEqual(m.$getMessage(), {
-      handles: {
+      getHandles: [],
+      setHandles: {
         1: 3,
         2: 4,
         4: 3.5,
@@ -80,7 +85,8 @@ describe('Module', function() {
     assert.strictEqual(h2.type, type.float);
 
     assert.deepEqual(m.$getMessage(), {
-      handles: {
+      getHandles: [],
+      setHandles: {
         1: 4,
         2: 4
       },
@@ -98,7 +104,8 @@ describe('Module', function() {
     m.add(h, h);
 
     assert.deepEqual(m.$getMessage(), {
-      handles: { 1: 4 },
+      getHandles: [],
+      setHandles: { 1: 4 },
       commands: [
         {id: 1, args: [1, 1], ret: 2}
       ]
@@ -118,7 +125,8 @@ describe('Module', function() {
     m.get(m.malloc(4).cast(intp));
 
     assert.deepEqual(m.$getMessage(), {
-      handles: { 1: 4 },
+      getHandles: [],
+      setHandles: { 1: 4 },
       commands: [
         {id: 1, args: [1], ret: 2},
         {id: 2, args: [2], ret: 3}
@@ -138,5 +146,60 @@ describe('Module', function() {
     assert.strictEqual(h.context, c);
     assert.strictEqual(c.handles.length, 1);
     assert.strictEqual(c.handles[0].id, 1);
+  });
+
+  describe('$commit', function() {
+    it('should call callback and extract value from handle', function(done) {
+      var ne = NaClEmbed(),
+          e = Embed(ne),
+          m = module.Module(e),
+          addType = type.Function(type.int, [type.int, type.int]),
+          h;
+
+      m.$defineFunction('add', [module.Function(1, addType)]);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        assert.deepEqual(msg, {
+          id: 1,
+          getHandles: [3],
+          setHandles: {1: 3, 2: 4},
+          commands: [ {id: 1, args: [1, 2], ret: 3} ]
+        });
+
+        ne.message({id: 1, values: [7]});
+      });
+
+      h = m.add(3, 4);
+      m.$commit([h], function(hVal) {
+        assert.strictEqual(hVal, 7);
+        done();
+      });
+    });
+
+    it('should unwrap multiple handles', function(done) {
+      var ne = NaClEmbed(),
+          e = Embed(ne),
+          m = module.Module(e),
+          addType = type.Function(type.int, [type.int, type.int]),
+          h1,
+          h2;
+
+      m.$defineFunction('add', [module.Function(1, addType)]);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        assert.deepEqual(msg.getHandles, [3, 5]);
+        ne.message({id: 1, values: [7, 12]});
+      });
+
+      h1 = m.add(3, 4);
+      h2 = m.add(h1, 5);
+      m.$commit([h1, h2], function(h1Val, h2Val) {
+        assert.strictEqual(h1Val, 7);
+        assert.strictEqual(h2Val, 12);
+        done();
+      });
+    });
   });
 });

@@ -75,8 +75,13 @@ function argsToHandles(context, args) {
   });
 }
 
-function Module() {
-  if (!(this instanceof Module)) { return new Module(); }
+function handlesToIds(handles) {
+  return Array.prototype.map.call(handles, function(h) { return h.id; });
+}
+
+function Module(embed) {
+  if (!(this instanceof Module)) { return new Module(embed); }
+  this.$embed_ = embed || null;
   this.$handles_ = new HandleList();
   this.$functions_ = {};
   this.$context = this.$createContext();
@@ -125,7 +130,7 @@ Module.prototype.$setContext = function(context) {
   this.$context = context;
 };
 Module.prototype.$initMessage_ = function() {
-  this.$message_ = {handles: {}, commands:[]};
+  this.$message_ = {getHandles: [], setHandles: {}, commands:[]};
 };
 Module.prototype.$getMessage = function() {
   return this.$message_;
@@ -140,7 +145,7 @@ Module.prototype.$registerHandleWithValue_ = function(handle) {
     return;
   }
 
-  this.$message_.handles[handle.id] = handle.value;
+  this.$message_.setHandles[handle.id] = handle.value;
 };
 Module.prototype.$registerHandlesWithValues_ = function(handles) {
   var i;
@@ -151,7 +156,7 @@ Module.prototype.$registerHandlesWithValues_ = function(handles) {
 Module.prototype.$pushCommand_ = function(id, argHandles, retHandle) {
   var command = {
     id: id,
-    args: argHandles.map(function(x) { return x.id; })
+    args: handlesToIds(argHandles)
   };
 
   if (retHandle) {
@@ -159,6 +164,12 @@ Module.prototype.$pushCommand_ = function(id, argHandles, retHandle) {
   }
 
   this.$message_.commands.push(command);
+};
+Module.prototype.$commit = function(handles, callback) {
+  this.$message_.getHandles = handlesToIds(handles);
+  this.$embed_.postMessage(this.$message_, function(msg) {
+    callback.apply(null, msg.values);
+  });
 };
 
 function IdFunction(id, fnType) {

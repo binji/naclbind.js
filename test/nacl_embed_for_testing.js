@@ -14,13 +14,11 @@
 
 var assert = require('assert');
 
-function NaClEmbedForTesting(nmf, mimeType) {
+function NaClEmbedForTesting() {
   if (!(this instanceof NaClEmbedForTesting)) {
-    return new NaClEmbedForTesting(nmf, mimeType);
+    return new NaClEmbedForTesting();
   }
   this.loaded = false;
-  this.nmf = nmf;
-  this.mimeType = mimeType;
   this.listeners = {};
   this.postMessageCallback = null;
   this.lastError = undefined;

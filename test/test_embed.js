@@ -16,13 +16,9 @@ var assert = require('assert'),
     Embed = require('../src/js/embed'),
     NaClEmbed = require('./nacl_embed_for_testing');
 
-function createNaClEmbed() {
-  return NaClEmbed('nmf', 'application/x-nacl');
-}
-
 describe('Embed', function() {
   it('should not post messages before loaded', function() {
-    var ne = createNaClEmbed(),
+    var ne = NaClEmbed(),
         e = Embed(ne);
 
     ne.setPostMessageCallback(function() {
@@ -33,7 +29,7 @@ describe('Embed', function() {
   });
 
   it('should post all messages after load', function(done) {
-    var ne = createNaClEmbed(),
+    var ne = NaClEmbed(),
         e = Embed(ne),
         loaded = false,
         callCount = 0,
@@ -62,7 +58,7 @@ describe('Embed', function() {
   });
 
   it('should call callback when message is posted from module', function(done) {
-    var ne = createNaClEmbed(),
+    var ne = NaClEmbed(),
         e = Embed(ne);
 
     ne.setPostMessageCallback(function(msg) {
@@ -79,7 +75,7 @@ describe('Embed', function() {
   });
 
   it('should use incrementing ids for messages', function(done) {
-    var ne = createNaClEmbed(),
+    var ne = NaClEmbed(),
         e = Embed(ne),
         n = 1;
 
