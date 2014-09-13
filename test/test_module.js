@@ -307,4 +307,42 @@ describe('Module', function() {
       assert.deepEqual(m.$getMessage().destroyHandles, [1, 2]);
     });
   });
+
+  describe('$commitDestroy', function() {
+    it('should be equivalent to calling destroy then commit', function(done) {
+      var ne = NaClEmbed(),
+          e = Embed(ne),
+          m = module.Module(e);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        assert.deepEqual(msg.destroyHandles, [1]);
+        ne.message({id: 1});
+      });
+
+      m.$handle(1);
+      m.$commitDestroy([], function() {
+        done();
+      });
+    });
+
+    it('should allow getting a handle that is being destroyed', function(done) {
+      var ne = NaClEmbed(),
+          e = Embed(ne),
+          m = module.Module(e),
+          h;
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        assert.deepEqual(msg.destroyHandles, [1]);
+        ne.message({id: 1, values: [1]});
+      });
+
+      h = m.$handle(1);
+      m.$commitDestroy([h], function(hVal) {
+        assert.strictEqual(hVal, 1);
+        done();
+      });
+    });
+  });
 });

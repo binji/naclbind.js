@@ -191,6 +191,10 @@ Module.prototype.$destroyHandles = function(context) {
 
   c.destroyHandles();
 };
+Module.prototype.$commitDestroy = function(handles, callback) {
+  this.$destroyHandles();
+  this.$commit(handles, callback);
+};
 
 function IdFunction(id, fnType) {
   if (!(this instanceof IdFunction)) { return new IdFunction(id, fnType); }
