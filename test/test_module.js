@@ -347,7 +347,31 @@ describe('Module', function() {
   });
 
   describe('Handle', function() {
-    describe('finalizer', function() {
+    describe('cast', function() {
+      it('should create a new handle with the same id', function() {
+        var m = module.Module(),
+            h1,
+            h2;
+
+        h1 = m.$handle(1);
+        h2 = h1.cast(type.long);
+
+        assert.strictEqual(h1.id, h2.id);
+        assert.deepEqual(h2.type, type.long);
+      });
+
+      it('should throw if the cast is invalid', function() {
+        var m = module.Module(),
+            h;
+
+        h = m.$handle(1);
+        assert.throws(function() {
+          h.cast(type.Function(type.void, []));
+        }, /Invalid cast/);
+      });
+    });
+
+    describe('setFinalizer', function() {
       it('should be called when the handle is destroyed', function(done) {
         var m = module.Module(),
             h;

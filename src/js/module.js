@@ -265,14 +265,14 @@ function Handle(context, type, value, id) {
   this.finalizer = null;
   this.context = context;
 }
-Handle.prototype.cast = function(type) {
-  var castResult = this.type.canCastTo(type);
+Handle.prototype.cast = function(toType) {
+  var castResult = this.type.canCastTo(toType);
   if (castResult === type.CAST_ERROR) {
     throw new Error('Invalid cast: ' + this.type.spelling + ' to ' +
-                    type.spelling + '.');
+                    toType.spelling + '.');
   }
 
-  return this.context.handleList.createHandle(this.context, type, this.value,
+  return this.context.handleList.createHandle(this.context, toType, this.value,
                                               this.id);
 };
 Handle.prototype.setFinalizer = function(callback) {
