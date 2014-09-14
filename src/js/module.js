@@ -210,11 +210,22 @@ function HandleList() {
   this.idToHandle_ = {};
 }
 HandleList.prototype.createHandle = function(context, type, value, id) {
+  var register = false,
+      handle;
+
   if (id === undefined) {
     id = this.nextId_++;
+    register = true;
   }
 
-  return new Handle(context, type, value, id);
+  handle = new Handle(context, type, value, id);
+  // Only register a handle if it was created without a given id (i.e. it was
+  // not created as the result of a cast).
+  if (register) {
+    context.registerHandle(handle);
+  }
+
+  return handle;
 };
 HandleList.prototype.get = function(id) {
   return this.idToHandle_[id];
@@ -235,6 +246,15 @@ Context.prototype.registerHandle = function(handle) {
   this.handles.push(handle);
 };
 Context.prototype.destroyHandles = function() {
+  // Call all finalizers. Run them in reverse order of the handle creation.
+  var i,
+      h;
+  for (i = this.handles.length - 1; i >= 0; --i) {
+    h = this.handles[i];
+    if (h.finalizer) {
+      h.finalizer(h);
+    }
+  }
   this.handles = [];
 };
 
@@ -242,8 +262,8 @@ function Handle(context, type, value, id) {
   this.id = id;
   this.type = type;
   this.value = value || null;
+  this.finalizer = null;
   this.context = context;
-  this.context.registerHandle(this);
 }
 Handle.prototype.cast = function(type) {
   var castResult = this.type.canCastTo(type);
@@ -254,6 +274,15 @@ Handle.prototype.cast = function(type) {
 
   return this.context.handleList.createHandle(this.context, type, this.value,
                                               this.id);
+};
+Handle.prototype.setFinalizer = function(callback) {
+  // Get the "root" handle, i.e. the one not created by casting.
+  var root = this.context.handleList.get(this.id);
+  if (root.finalizer) {
+    throw new Error('Handle ' + root.id + ' already has finalizer.');
+  }
+
+  root.finalizer = callback.bind(root);
 };
 
 

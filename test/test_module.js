@@ -345,4 +345,128 @@ describe('Module', function() {
       });
     });
   });
+
+  describe('Handle', function() {
+    describe('finalizer', function() {
+      it('should be called when the handle is destroyed', function(done) {
+        var m = module.Module(),
+            h;
+
+        h = m.$handle(1);
+        h.setFinalizer(function(handle) {
+          assert.strictEqual(handle, h);
+          done();
+        });
+
+        m.$destroyHandles();
+      });
+
+      it('should be called in reverse order of creation', function(done) {
+        var m = module.Module(),
+            finalizer,
+            count = 0,
+            h1,
+            h2,
+            h3,
+            h4;
+
+        finalizer = function(handle) {
+          switch (count++) {
+            case 0:
+              assert.equal(handle.id, 2);
+              break;
+            case 1:
+              assert.equal(handle.id, 1);
+              break;
+            case 2:
+              assert.equal(handle.id, 4);
+              break;
+            case 3:
+              assert.equal(handle.id, 3);
+              done();
+              break;
+          }
+        };
+
+        h1 = m.$handle(1);
+        h1.setFinalizer(finalizer);
+        h2 = m.$handle(2);
+        h2.setFinalizer(finalizer);
+        m.$destroyHandles();
+
+        // Should always be in reverse handle order, even if finalizers are
+        // added in the opposite order.
+
+        h3 = m.$handle(3);
+        h4 = m.$handle(4);
+        h4.setFinalizer(finalizer);
+        h3.setFinalizer(finalizer);
+        m.$destroyHandles();
+      });
+
+      it('should only be called once', function() {
+        var m = module.Module(),
+            count = 0,
+            h1,
+            h2;
+
+        h1 = m.$handle(1);
+        h1.setFinalizer(function() { count++; });
+        h2 = h1.cast(type.int);
+        m.$destroyHandles();
+        assert.strictEqual(count, 1);
+        assert.deepEqual(m.$getMessage().destroyHandles, [1]);
+      });
+
+      it('should throw if setFinalizer is called more than once', function() {
+        var m = module.Module(),
+            dummy = function() {},
+            h1,
+            h2,
+            h3;
+
+        h1 = m.$handle(1);
+        h1.setFinalizer(dummy);
+
+        assert.throws(function() {
+          h1.setFinalizer(dummy);
+        }, /already has finalizer/);
+
+        h2 = h1.cast(type.int);
+        assert.throws(function() {
+          h2.setFinalizer(dummy);
+        }, /already has finalizer/);
+
+        h3 = h2.cast(type.float);
+        assert.throws(function() {
+          h3.setFinalizer(dummy);
+        }, /already has finalizer/);
+      });
+
+      it('should allow function calls from the finalizer', function() {
+        var voidp = type.Pointer(type.void),
+            mallocType = type.Function(voidp, [type.uint]),
+            freeType = type.Function(type.void, [voidp]),
+            m = module.Module(),
+            h;
+
+        m.$defineFunction('malloc', [module.Function(1, mallocType)]);
+        m.$defineFunction('free', [module.Function(2, freeType)]);
+
+        h = m.malloc(4);
+        h.setFinalizer(function(x) { m.free(x); });
+        m.$destroyHandles();
+
+        assert.deepEqual(m.$getMessage(), {
+          getHandles: [],
+          setHandles: { 1: 4 },
+          destroyHandles: [1, 2],
+          commands: [
+            {id: 1, args: [1], ret: 2},
+            {id: 2, args: [2]}
+          ]
+        });
+      });
+    });
+  });
 });
