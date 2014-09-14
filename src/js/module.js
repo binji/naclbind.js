@@ -13,7 +13,8 @@
 // limitations under the License.
 
 var type = require('./type'),
-    utils = require('./utils');
+    utils = require('./utils'),
+    ERROR_IF_ID = 0;
 
 function numberToType(n) {
   if (!isFinite(n) || !utils.isInteger(n)) {
@@ -69,9 +70,13 @@ function objectToHandle(context, obj, type) {
   return context.createHandle(type, obj);
 }
 
+function argToHandle(context, arg) {
+  return (arg instanceof Handle) ? arg: objectToHandle(context, arg);
+}
+
 function argsToHandles(context, args) {
   return Array.prototype.map.call(args, function(arg) {
-    return (arg instanceof Handle) ?  arg : objectToHandle(context, arg);
+    return argToHandle(context, arg);
   });
 }
 
@@ -195,11 +200,26 @@ Module.prototype.$commitDestroy = function(handles, callback) {
   this.$destroyHandles();
   this.$commit(handles, callback);
 };
+Module.prototype.$errorIf = function(arg) {
+  var handle = argToHandle(this.$context, arg),
+      hType = handle.type;
+
+  if (hType.canCastTo(type.int) === type.CAST_ERROR) {
+    throw new Error('$errorIf failed, invalid type: ' + hType.spelling);
+  }
+
+  this.$registerHandleWithValue_(handle);
+  this.$pushCommand_(ERROR_IF_ID, [handle]);
+};
 
 function IdFunction(id, fnType) {
   if (!(this instanceof IdFunction)) { return new IdFunction(id, fnType); }
   utils.checkNonnegativeNumber(id);
   type.checkType(fnType, 'type', type.FUNCTIONPROTO);
+
+  if (id === ERROR_IF_ID) {
+    throw new Error('Illegal id, reserved for $errorIf: ' + ERROR_IF_ID);
+  }
 
   this.id = id;
   this.type = fnType;
@@ -292,4 +312,6 @@ module.exports = {
 
   numberToType: numberToType,
   objectToType: objectToType,
+
+  ERROR_IF_ID: ERROR_IF_ID,
 };

@@ -32,6 +32,14 @@ describe('Module', function() {
     assert.deepEqual(m.$getMessage(), emptyMessage);
   });
 
+  it('should throw when defining a function with id ERROR_IF_ID', function() {
+    var fnType = type.Function(type.void, []);
+
+    assert.throws(function() {
+      module.Function(module.ERROR_IF_ID, fnType);
+    }, /\$errorIf/);
+  });
+
   it('should work for a simple function type', function() {
     var addType = type.Function(type.int, [type.int, type.int]),
         m = module.Module();
@@ -343,6 +351,36 @@ describe('Module', function() {
         assert.strictEqual(hVal, 1);
         done();
       });
+    });
+  });
+
+  describe('$errorIf', function() {
+    it('should add a command with id of ERROR_IF_ID', function() {
+      var m = module.Module();
+
+      m.$errorIf(1);
+      assert.deepEqual(m.$getMessage(), {
+        getHandles: [],
+        setHandles: {1: 1},
+        destroyHandles: [],
+        commands: [
+          {id: module.ERROR_IF_ID, args: [1]}
+        ]
+      });
+    });
+
+    it('should throw if called with non-convertible to int value', function() {
+      var m = module.Module(),
+          rec = type.Record('rec', [type.Field('f', type.int, 0)], type.STRUCT),
+          h;
+
+      // TODO(binji): this should be illegal. Come up with a better way to get
+      // a value that isn't convertible to an int...
+      h = m.$handle(null, rec);
+
+      assert.throws(function() {
+        m.$errorIf(h);
+      }, /invalid type/);
     });
   });
 
