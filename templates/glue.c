@@ -27,7 +27,7 @@ static void Handle_{{fn.spelling}}(Command* command) {
 [[      elif pointee.kind == TypeKind.VOID:]]
   ARG_VOIDP({{i}});
 [[      elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
-  // UNSUPPORTED: {{arg.spelling}}
+  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
   void* arg{{i}} = NULL;
 [[      else:]]
   ARG_VOIDP_CAST({{i}}, {{arg.spelling}});
@@ -52,10 +52,13 @@ static void Handle_{{fn.spelling}}(Command* command) {
 [[    elif arg.kind == TypeKind.ENUM:]]
   ARG_INT_CAST({{i}}, {{arg.spelling}});
 [[    elif arg.kind == TypeKind.CONSTANTARRAY:]]
-  // UNSUPPORTED: {{arg.spelling}}
+  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
   void* arg{{i}} = NULL;
 [[    else:]]
-  // UNSUPPORTED: {{arg.spelling}}
+  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
+[[  ]]
+[[  if fn.type.is_function_variadic():]]
+  // UNSUPPORTED: variadic function.
 [[  ]]
 [[  result_type = fn.type.get_result().get_canonical()]]
 [[  if result_type.kind != TypeKind.VOID:]]
@@ -87,7 +90,7 @@ static void Handle_{{fn.spelling}}(Command* command) {
 [[    elif result_type.kind == TypeKind.POINTER:]]
   RegisterHandleVoidp(command->ret_handle, result);
 [[    else:]]
-  // UNSUPPORTED: {{result_type.spelling}}
+  // UNSUPPORTED: {{result_type.kind}} {{result_type.spelling}}
   RegisterHandleVoidp(command->ret_handle, NULL);
 [[  else:]]
   {{fn.spelling}}({{', '.join('arg%d' % i for i in range(len(arguments)))}});

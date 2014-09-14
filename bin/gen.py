@@ -575,12 +575,27 @@ class Type(object):
 
     if self.IsPrimitive():
       return True
-    return t1 == t2
 
-    # They must be different, but how?
-    print '%s:%r %s:%r' % (t1.kind, t1.spelling, t2.kind, t2.spelling)
-    assert False
-    return False
+    if t1.spelling == '':
+      import pdb; pdb.set_trace()
+
+    if t1.kind == TypeKind.ENUM:
+      return t1.spelling == t2.spelling
+    elif t1.kind == TypeKind.RECORD:
+      return t1.spelling == t2.spelling
+    elif t1.kind == TypeKind.POINTER:
+      return self.get_pointee() == other.get_pointee()
+    elif t1.kind == TypeKind.CONSTANTARRAY:
+      return (
+          self.get_array_element_type() == other.get_array_element_type() and
+          t1.get_array_size() == t2.get_array_size())
+    elif t1.kind == TypeKind.FUNCTIONPROTO:
+      return t1 == t2
+    elif t1.kind in (TypeKind.TYPEDEF, TypeKind.UNEXPOSED):
+      return self.get_canonical() == other.get_canonical()
+    else:
+      print t1.kind, t1.spelling, t2.spelling
+      import pdb; pdb.set_trace()
 
   def __ne__(self, other):
     return not self.__eq__(other)
@@ -633,6 +648,7 @@ class Collector(object):
 
   def _VisitType(self, t):
     t = Type(t)
+
     if t in self.types:
       return
 
