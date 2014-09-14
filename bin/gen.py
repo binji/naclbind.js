@@ -358,10 +358,26 @@ def GetJsQualifiedArgWithComma(t):
     return ', ' + q
   return q
 
+anonymous_names = {}
 
 VALID_SPELLING_PARTS = ('struct', 'union', 'enum', 'const', 'volatile',
                         'restrict')
-def SpellingBaseName(spelling):
+KIND_TO_ANON = {
+  TypeKind.ENUM.value: 'enum',
+  TypeKind.RECORD.value: 'record'
+}
+def SpellingBaseName(t):
+  if t.get_declaration().spelling == '':
+    if t.spelling in anonymous_names:
+      return anonymous_names[t.spelling]
+
+    count = len(anonymous_names)
+    name = '__anon_%s_%d' % (KIND_TO_ANON[t.kind.value], count)
+    anonymous_names[t.spelling] = name
+    return name
+
+  spelling = t.spelling
+
   parts = spelling.split(' ')
   if not all(p in VALID_SPELLING_PARTS for p in parts[:-1]):
     print 'Spelling: %r, Bad parts: %r' % (
@@ -392,7 +408,7 @@ def GetJsInline_Pointer(t):
                                  GetJsQualifiedArgWithComma(t))
 
 def GetJsInline_Record(t):
-  return 'Tags.%s' % SpellingBaseName(t.spelling)
+  return 'Tags.%s' % SpellingBaseName(t)
 
 def GetJsInline_FunctionProto(t):
   return 'Type.Function(%s, [%s])' % (
@@ -400,17 +416,17 @@ def GetJsInline_FunctionProto(t):
       ', '.join(GetJsInline(a) for a in t.argument_types()))
 
 def GetJsInline_Typedef(t):
-  return 'Types.%s' % SpellingBaseName(t.spelling)
+  return 'Types.%s' % SpellingBaseName(t)
 
 def GetJsInline_Enum(t):
-  return 'Types.%s' % SpellingBaseName(t.spelling)
+  return 'Types.%s' % SpellingBaseName(t)
 
 def GetJsInline_Unexposed(t):
   can = t.get_canonical()
   if can.kind != TypeKind.UNEXPOSED:
     return GetJsInline(can)
 
-  return 'Types.%s' % SpellingBaseName(t.spelling)
+  return 'Types.%s' % SpellingBaseName(t)
 
 def GetJsInline_ConstantArray(t):
   return 'Type.Array(%s, %d%s)' % (
@@ -480,9 +496,9 @@ def Mangle(t, canonical=True):
     if canonical:
       ret += Mangle(t.get_canonical())
     else:
-      ret += MangleName(SpellingBaseName(t.spelling))
+      ret += MangleName(SpellingBaseName(t))
   elif t.kind in (TypeKind.RECORD, TypeKind.ENUM):
-    ret += MangleName(SpellingBaseName(t.spelling))
+    ret += MangleName(SpellingBaseName(t))
   elif t.kind == TypeKind.FUNCTIONPROTO:
     ret += 'F'
     ret += Mangle(t.get_result())
@@ -502,7 +518,7 @@ def Mangle(t, canonical=True):
     if canonical or t.get_canonical().kind != TypeKind.UNEXPOSED:
       ret += Mangle(t.get_canonical())
     else:
-      ret += MangleName(SpellingBaseName(t.spelling))
+      ret += MangleName(SpellingBaseName(t))
   else:
     print t.kind, t.spelling
     import pdb; pdb.set_trace()
@@ -525,7 +541,7 @@ class Type(object):
   def GetName(self):
     if self.type.kind.value in (TypeKind.TYPEDEF.value, TypeKind.RECORD.value,
                                 TypeKind.ENUM.value):
-      return SpellingBaseName(self.type.spelling)
+      return SpellingBaseName(self.type)
     raise Error('Don\'t know how to get name of type %s' % self.type.spelling)
 
   def argument_types(self):
