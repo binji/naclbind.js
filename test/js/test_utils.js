@@ -13,7 +13,7 @@
 // limitations under the License.
 
 var assert = require('assert'),
-    utils = require('../src/js/utils.js');
+    utils = require('../../src/js/utils.js');
 
 describe('Utils', function() {
   describe('getClass', function() {

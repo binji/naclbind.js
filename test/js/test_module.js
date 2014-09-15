@@ -13,10 +13,10 @@
 // limitations under the License.
 
 var assert = require('assert'),
-    module = require('../src/js/module'),
-    type = require('../src/js/type'),
+    module = require('../../src/js/module'),
+    type = require('../../src/js/type'),
     NaClEmbed = require('./nacl_embed_for_testing'),
-    Embed = require('../src/js/embed'),
+    Embed = require('../../src/js/embed'),
     emptyMessage;
 
 emptyMessage = {

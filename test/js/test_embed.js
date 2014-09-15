@@ -13,7 +13,7 @@
 // limitations under the License.
 
 var assert = require('assert'),
-    Embed = require('../src/js/embed'),
+    Embed = require('../../src/js/embed'),
     NaClEmbed = require('./nacl_embed_for_testing');
 
 describe('Embed', function() {

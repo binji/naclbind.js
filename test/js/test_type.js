@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var type = require('../src/js/type'),
+var type = require('../../src/js/type'),
     assert = require('assert'),
     spell = type.getSpelling,
     qual = type.describeQualifier,
