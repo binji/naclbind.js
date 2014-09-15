@@ -137,9 +137,10 @@ var INVALID = 0,
     UNION = true,
 
     // Success
-    CAST_OK_EXACT = 2,
-    CAST_OK_PROMOTION = 1,
-    CAST_OK_CONVERSION = 0,
+    CAST_OK_EXACT = 3,
+    CAST_OK_PROMOTION = 2,
+    CAST_OK_CONVERSION = 1,
+    CAST_OK_DEFAULT_PROMOTION = 0,
     // Warning
     CAST_TRUNCATE = -1,
     CAST_SIGNED_UNSIGNED = -2,
@@ -822,11 +823,15 @@ function getFunctionCallRank(fnType, argTypes) {
   var result = [],
       castRank = null,
       i;
-  // TODO(binji): handle variadic
+
   for (i = 0; i < argTypes.length; ++i) {
-    castRank = getCastRank(argTypes[i], fnType.argTypes[i]);
-    if (castRank < 0) {
-      return null;
+    if (fnType.variadic && i >= fnType.argTypes.length) {
+      castRank = CAST_OK_DEFAULT_PROMOTION;
+    } else {
+      castRank = getCastRank(argTypes[i], fnType.argTypes[i]);
+      if (castRank < 0) {
+        return null;
+      }
     }
 
     result.push(castRank);

@@ -1041,5 +1041,31 @@ describe('Type', function() {
           fns = [fn0, fn1];
       assertBestViable(fns, [c, c], -1);
     });
+
+    it('should work with variadic functions', function() {
+      var i = type.int,
+          fn0 = type.Function(type.void, [i], type.VARIADIC);
+
+      assertBestViable([fn0], [i], 0);
+      assertBestViable([fn0], [i, i], 0);
+      assertBestViable([fn0], [i, i, i], 0);
+    });
+
+    it('should choose any other viable function over variadic', function() {
+      var i = type.int,
+          c = type.char,
+          f = type.float,
+          fn0 = type.Function(type.void, [i], type.VARIADIC),
+          fn1 = type.Function(type.void, [i, i]),
+          fn2 = type.Function(type.void, [c, f]),
+          fns = [fn0, fn1, fn2];
+
+      assertBestViable(fns, [i, i], 1);
+      assertBestViable(fns, [i, c], 1);
+      assertBestViable(fns, [c, f], 2);
+      assertBestViable(fns, [i, f], 0);
+      assertBestViable(fns, [i], 0);
+      assertBestViable(fns, [i, i, i], 0);
+    });
   });
 });
