@@ -18,9 +18,10 @@ var assert = require('assert'),
     path = require('path'),
     execFile = child_process.execFile,
     spawn = child_process.spawn,
+    toolchain = 'newlib',
 
-    outDir = path.resolve(__dirname, '../../out/test/pnacl/Debug'),
-    testNexe = path.join(outDir, 'test.x86_64.nexe');
+    outDir = path.resolve(__dirname, '../../out/test', toolchain, 'Debug'),
+    testNexe = path.join(outDir, 'test_x86_64.nexe');
 
 if (!process.env.NACL_SDK_ROOT) {
   assert.ok(false, 'NACL_SDK_ROOT not set, skipping tests.');
@@ -34,7 +35,7 @@ function startswith(s, prefix) {
 }
 
 function buildTest(callback) {
-  var cmd = ['CONFIG=Debug'],
+  var cmd = ['CONFIG=Debug', 'TOOLCHAIN=' + toolchain, 'test'],
       opts = {cwd: __dirname, stdio: 'inherit'},
       proc,
       start = new Date();

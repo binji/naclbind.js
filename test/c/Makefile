@@ -5,13 +5,15 @@
 # GNU Makefile based on shared rules provided by the Native Client SDK.
 # See README.Makefiles for more details.
 
-VALID_TOOLCHAINS := pnacl
+VALID_TOOLCHAINS := pnacl newlib
 
 OUTBASE = $(CURDIR)/../../out/test
 
 include $(NACL_SDK_ROOT)/tools/common.mk
 
+ifeq (pnacl,$(TOOLCHAIN))
 PNACL_TRANSLATE := $(shell $(NACL_CONFIG) -t $(TOOLCHAIN) --tool=translate)
+endif
 
 TARGET = test
 LIBS = ppapi_simple gtest nacl_io ppapi_cpp ppapi pthread
@@ -33,13 +35,14 @@ $(eval $(call LINK_RULE,$(TARGET),$(SOURCES),$(LIBS),$(DEPS)))
 endif
 
 # Translate
-$(OUTDIR)/$(TARGET).x86_64.nexe: $(OUTDIR)/$(TARGET).pexe
+ifeq (pnacl,$(TOOLCHAIN))
+$(OUTDIR)/$(TARGET)_x86_64.nexe: $(OUTDIR)/$(TARGET).pexe
 	$(call LOG,TRANSLATE,$@,$(PNACL_TRANSLATE) -o $@ $< -arch x86_64)
-$(OUTDIR)/$(TARGET).i686.nexe: $(OUTDIR)/$(TARGET).pexe
+$(OUTDIR)/$(TARGET)_i686.nexe: $(OUTDIR)/$(TARGET).pexe
 	$(call LOG,TRANSLATE,$@,$(PNACL_TRANSLATE) -o $@ $< -arch i686)
-$(OUTDIR)/$(TARGET).arm.nexe: $(OUTDIR)/$(TARGET).pexe
+$(OUTDIR)/$(TARGET)_arm.nexe: $(OUTDIR)/$(TARGET).pexe
 	$(call LOG,TRANSLATE,$@,$(PNACL_TRANSLATE) -o $@ $< -arch arm)
+endif
 
-$(eval $(call NMF_RULE,$(TARGET),))
-
-all: $(OUTDIR)/$(TARGET).x86_64.nexe
+test: $(OUTDIR)/$(TARGET)_x86_64.nexe
+.PHONY: test
