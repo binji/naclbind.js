@@ -3,3 +3,4 @@
 /.ninja_log
 /out
 /node_modules/*
+npm-debug.log
