@@ -17,46 +17,43 @@ var assert = require('assert'),
     fs = require('fs'),
     path = require('path'),
     execFile = child_process.execFile,
-    spawn = child_process.spawn,
     toolchain = 'newlib',
 
     outDir = path.resolve(__dirname, '../../out/test', toolchain, 'Debug'),
     testNexe = path.join(outDir, 'test_x86_64.nexe');
 
-if (!process.env.NACL_SDK_ROOT) {
-  assert.ok(false, 'NACL_SDK_ROOT not set, skipping tests.');
-}
-
-// Compiling the test takes a while.
-//this.enableTimeouts(false);
-
 function startswith(s, prefix) {
   return s.lastIndexOf(prefix, 0) === 0;
 }
 
+describe('Build C Tests', function() {
+  this.enableTimeouts(false);
+
+  it('should build successfully', function(done) {
+    if (!process.env.NACL_SDK_ROOT) {
+      assert.ok(false, 'NACL_SDK_ROOT not set.');
+    }
+
+    buildTest(done);
+  });
+});
+
 function buildTest(callback) {
   var cmd = ['CONFIG=Debug', 'TOOLCHAIN=' + toolchain, 'test'],
-      opts = {cwd: __dirname, stdio: 'inherit'},
+      opts = {cwd: __dirname},
       proc,
       start = new Date();
 
-  console.log('Making C tests...');
-  proc = spawn('make', cmd, opts);
-
-  proc.on('close', function(error) {
+  proc = execFile('make', cmd, opts, function(error, stdout, stderr) {
     var end = new Date();
 
     if (error) {
-      assert.ok(false, 'Unable to make test:\n' + error);
-      return;
+      assert.ok(false, 'Unable to make C tests.\n' + error);
     }
-
-    console.log('...done (' + (end - start) + 'ms).\n');
 
     fs.stat(testNexe, function(error, stat) {
       if (error) {
         assert.ok(false, 'Make succeeded, but cannot stat ' + testNexe);
-        return;
       }
 
       parseTests(callback);
@@ -130,7 +127,3 @@ function runTest(args, callback) {
     callback(null, stdout);
   });
 }
-
-before(function(done) {
-  buildTest(done);
-});
