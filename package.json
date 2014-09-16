@@ -12,7 +12,7 @@
   },
   "scripts": {
     "pretest": "jshint src",
-    "test": "mocha test/**/test_*.js",
+    "test": "mocha test/**/test*.js",
     "cover": "istanbul cover _mocha -x **/dist/*"
   },
   "repository": {
