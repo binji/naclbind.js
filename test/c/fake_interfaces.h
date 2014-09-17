@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gtest/gtest.h>
-#include <ppapi_simple/ps.h>
-#include <ppapi_simple/ps_main.h>
-#include "fake_interfaces.h"
-#include "interfaces.h"
+#ifndef FAKE_INTERFACES_H_
+#define FAKE_INTERFACES_H_
 
-int nacl_main(int argc, char* argv[]) {
-  PP_Instance instance = 1;
-  setenv("TERM", "xterm-256color", 0);
-  fake_var_init();
-  nb_interfaces_init(instance, fake_get_browser_interface);
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void fake_var_init(void);
+void fake_var_destroy(void);
+const void* fake_get_browser_interface(const char* interface_name);
+
+#ifdef __cplusplus
 }
+#endif
 
-PPAPI_SIMPLE_REGISTER_MAIN(nacl_main);
+#endif  // FAKE_INTERFACES_H_
