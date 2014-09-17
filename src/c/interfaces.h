@@ -23,6 +23,10 @@
 #include <ppapi/c/ppb_var_array_buffer.h>
 #include <ppapi/c/ppb_var_dictionary.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern PP_Instance g_pp_instance;
 extern struct PPB_Var_1_1* g_ppb_var;
 extern struct PPB_VarArray_1_0* g_ppb_var_array;
@@ -30,6 +34,10 @@ extern struct PPB_VarArrayBuffer_1_0* g_ppb_var_array_buffer;
 extern struct PPB_VarDictionary_1_0* g_ppb_var_dictionary;
 extern struct PPB_Messaging_1_0* g_ppb_messaging;
 
-void InitInterfaces(PP_Instance, PPB_GetInterface);
+void nb_interfaces_init(PP_Instance, PPB_GetInterface);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // INTERFACES_H_

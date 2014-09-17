@@ -15,23 +15,24 @@
 #include "interfaces.h"
 
 #include <stdlib.h>
+#include <stdio.h>
+
+#define INTERFACES \
+  X(var, Var, VAR, 1_1) \
+  X(var_array, VarArray, VAR_ARRAY, 1_0) \
+  X(var_array_buffer, VarArrayBuffer, VAR_ARRAY_BUFFER, 1_0) \
+  X(var_dictionary, VarDictionary, VAR_DICTIONARY, 1_0) \
+  X(messaging, Messaging, MESSAGING, 1_0)
 
 PP_Instance g_pp_instance = 0;
-struct PPB_Var_1_1* g_ppb_var = NULL;
-struct PPB_VarArray_1_0* g_ppb_var_array = NULL;
-struct PPB_VarArrayBuffer_1_0* g_ppb_var_array_buffer = NULL;
-struct PPB_VarDictionary_1_0* g_ppb_var_dictionary = NULL;
-struct PPB_Messaging_1_0* g_ppb_messaging = NULL;
+#define X(var, s, d, v) struct PPB_##s##_##v* g_ppb_##var = NULL;
+INTERFACES
+#undef X
 
-void InitInterfaces(PP_Instance instance, PPB_GetInterface get_interface) {
+void nb_interfaces_init(PP_Instance instance, PPB_GetInterface get_interface) {
   g_pp_instance = instance;
-  g_ppb_var = (struct PPB_Var_1_1*)get_interface(PPB_VAR_INTERFACE_1_1);
-  g_ppb_var_array = (struct PPB_VarArray_1_0*)get_interface(
-      PPB_VAR_ARRAY_INTERFACE_1_0);
-  g_ppb_var_array_buffer = (struct PPB_VarArrayBuffer_1_0*)get_interface(
-      PPB_VAR_ARRAY_BUFFER_INTERFACE_1_0);
-  g_ppb_var_dictionary = (struct PPB_VarDictionary_1_0*)get_interface(
-      PPB_VAR_DICTIONARY_INTERFACE_1_0);
-  g_ppb_messaging = (struct PPB_Messaging_1_0*)get_interface(
-      PPB_MESSAGING_INTERFACE_1_0);
+#define X(var, s, d, v) g_ppb_##var = \
+    (struct PPB_##s##_##v*)get_interface(PPB_##d##_INTERFACE_##v);
+  INTERFACES
+#undef X
 }
