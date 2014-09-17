@@ -1,4 +1,10 @@
 language: node_js
+install:
+  - sudo apt-get update
+  - sudo apt-get install libc6:i386 libstdc++6:i386
+  - ./build/install_sdk.sh
+env:
+  - NACL_SDK_ROOT=$PWD/out/nacl_sdk/pepper_canary
 node_js:
   - "0.11"
   - "0.10"
