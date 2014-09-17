@@ -20,166 +20,178 @@
 #include "error.h"
 #include "interfaces.h"
 
-const char* VarTypeToString(struct PP_Var* var) {
-  switch (var->type) {
-    case PP_VARTYPE_UNDEFINED: return "<undefined>";
-    case PP_VARTYPE_NULL: return "<null>";
-    case PP_VARTYPE_BOOL: return "<bool>";
-    case PP_VARTYPE_INT32: return "<int32>";
-    case PP_VARTYPE_DOUBLE: return "<double>";
-    case PP_VARTYPE_STRING: return "<string>";
-    case PP_VARTYPE_ARRAY: return "<array>";
-    case PP_VARTYPE_DICTIONARY: return "<dictionary>";
-    case PP_VARTYPE_ARRAY_BUFFER: return "<array buffer>";
-    case PP_VARTYPE_RESOURCE: return "<resource>";
-    default:
-      return "<unknown>";
-  }
+void nb_var_addref(struct PP_Var var) {
+  g_ppb_var->AddRef(var);
 }
 
-void AddRefVar(struct PP_Var* var) {
-  g_ppb_var->AddRef(*var);
+void nb_var_release(struct PP_Var var) {
+  g_ppb_var->Release(var);
 }
 
-void ReleaseVar(struct PP_Var* var) {
-  g_ppb_var->Release(*var);
+struct PP_Var nb_var_string_create(const char* s, uint32_t len) {
+  return g_ppb_var->VarFromUtf8(s, len);
 }
 
-void CreateArrayVar(struct PP_Var* var) {
-  *var = g_ppb_var_array->Create();
+struct PP_Var nb_var_array_create(void) {
+  return g_ppb_var_array->Create();
 }
 
-uint32_t GetArrayVarLength(struct PP_Var* var) {
-  assert(var->type == PP_VARTYPE_ARRAY);
-  return g_ppb_var_array->GetLength(*var);
+uint32_t nb_var_array_length(struct PP_Var var) {
+  assert(var.type == PP_VARTYPE_ARRAY);
+  return g_ppb_var_array->GetLength(var);
 }
 
-struct PP_Var GetArrayVar(struct PP_Var* var, int32_t index) {
-  assert(var->type == PP_VARTYPE_ARRAY);
-  return g_ppb_var_array->Get(*var, index);
+struct PP_Var nb_var_array_get(struct PP_Var var, uint32_t index) {
+  assert(var.type == PP_VARTYPE_ARRAY);
+  return g_ppb_var_array->Get(var, index);
 }
 
-void SetArrayVar(struct PP_Var* var, int32_t index, struct PP_Var value) {
-  assert(var->type == PP_VARTYPE_ARRAY);
-  g_ppb_var_array->Set(*var, index, value);
+bool nb_var_array_set(struct PP_Var var, uint32_t index, struct PP_Var value) {
+  assert(var.type == PP_VARTYPE_ARRAY);
+  return g_ppb_var_array->Set(var, index, value);
 }
 
-void CreateDictVar(struct PP_Var* var) {
-  *var = g_ppb_var_dictionary->Create();
+struct PP_Var nb_var_dict_create(void) {
+  return g_ppb_var_dictionary->Create();
 }
 
-struct PP_Var GetDictVar(struct PP_Var* var, const char* key) {
-  assert(var->type == PP_VARTYPE_DICTIONARY);
+struct PP_Var nb_var_dict_get(struct PP_Var var, const char* key) {
+  assert(var.type == PP_VARTYPE_DICTIONARY);
   struct PP_Var key_var = g_ppb_var->VarFromUtf8(key, strlen(key));
-  struct PP_Var result = g_ppb_var_dictionary->Get(*var, key_var);
-  ReleaseVar(&key_var);
+  struct PP_Var result = g_ppb_var_dictionary->Get(var, key_var);
+  nb_var_release(key_var);
   return result;
 }
 
-void SetDictVar(struct PP_Var* var, const char* key, struct PP_Var value) {
-  assert(var->type == PP_VARTYPE_DICTIONARY);
+struct PP_Var nb_var_dict_get_var(struct PP_Var var, struct PP_Var key) {
+  assert(var.type == PP_VARTYPE_DICTIONARY);
+  return g_ppb_var_dictionary->Get(var, key);
+}
+
+bool nb_var_dict_set(struct PP_Var var, const char* key, struct PP_Var value) {
+  assert(var.type == PP_VARTYPE_DICTIONARY);
   struct PP_Var key_var = g_ppb_var->VarFromUtf8(key, strlen(key));
-  g_ppb_var_dictionary->Set(*var, key_var, value);
-  ReleaseVar(&key_var);
+  bool result = g_ppb_var_dictionary->Set(var, key_var, value);
+  nb_var_release(key_var);
+  return result;
 }
 
-bool GetVarInt8(struct PP_Var* var, int8_t* out_value) {
-  if (var->type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var->type);
+bool nb_var_dict_set_var(struct PP_Var var, struct PP_Var key,
+                         struct PP_Var value) {
+  assert(var.type == PP_VARTYPE_DICTIONARY);
+  return g_ppb_var_dictionary->Set(var, key, value);
+}
+
+struct PP_Var nb_var_dict_get_keys(struct PP_Var var) {
+  assert(var.type == PP_VARTYPE_DICTIONARY);
+  return g_ppb_var_dictionary->GetKeys(var);
+}
+
+bool nb_var_dict_has_key(struct PP_Var var, const char* key) {
+  assert(var.type == PP_VARTYPE_DICTIONARY);
+  struct PP_Var key_var = g_ppb_var->VarFromUtf8(key, strlen(key));
+  bool result = g_ppb_var_dictionary->HasKey(var, key_var);
+  nb_var_release(key_var);
+  return result;
+}
+
+bool nb_var_int8(struct PP_Var var, int8_t* out_value) {
+  if (var.type != PP_VARTYPE_INT32) {
+    VERROR("expected var of type INT32. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_value = var->value.as_int;
+  *out_value = var.value.as_int;
   return TRUE;
 }
 
-bool GetVarUint8(struct PP_Var* var, uint8_t* out_value) {
-  if (var->type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var->type);
+bool nb_var_uint8(struct PP_Var var, uint8_t* out_value) {
+  if (var.type != PP_VARTYPE_INT32) {
+    VERROR("expected var of type INT32. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_value = var->value.as_int;
+  *out_value = var.value.as_int;
   return TRUE;
 }
 
-bool GetVarInt16(struct PP_Var* var, int16_t* out_value) {
-  if (var->type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var->type);
+bool nb_var_int16(struct PP_Var var, int16_t* out_value) {
+  if (var.type != PP_VARTYPE_INT32) {
+    VERROR("expected var of type INT32. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_value = var->value.as_int;
+  *out_value = var.value.as_int;
   return TRUE;
 }
 
-bool GetVarUint16(struct PP_Var* var, uint16_t* out_value) {
-  if (var->type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var->type);
+bool nb_var_uint16(struct PP_Var var, uint16_t* out_value) {
+  if (var.type != PP_VARTYPE_INT32) {
+    VERROR("expected var of type INT32. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_value = var->value.as_int;
+  *out_value = var.value.as_int;
   return TRUE;
 }
 
-bool GetVarInt32(struct PP_Var* var, int32_t* out_value) {
-  if (var->type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var->type);
+bool nb_var_int32(struct PP_Var var, int32_t* out_value) {
+  if (var.type != PP_VARTYPE_INT32) {
+    VERROR("expected var of type INT32. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_value = var->value.as_int;
+  *out_value = var.value.as_int;
   return TRUE;
 }
 
-bool GetVarUint32(struct PP_Var* var, uint32_t* out_value) {
-  if (var->type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var->type);
+bool nb_var_uint32(struct PP_Var var, uint32_t* out_value) {
+  if (var.type != PP_VARTYPE_INT32) {
+    VERROR("expected var of type INT32. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_value = var->value.as_int;
+  *out_value = var.value.as_int;
   return TRUE;
 }
 
-bool GetVarInt64(struct PP_Var* var, int64_t* out_value) {
+bool nb_var_int64(struct PP_Var var, int64_t* out_value) {
   // TODO: figure out how best to encode int64
   return FALSE;
 }
 
-bool GetVarUint64(struct PP_Var* var, uint64_t* out_value) {
+bool nb_var_uint64(struct PP_Var var, uint64_t* out_value) {
   // TODO: figure out how best to encode int64
   return FALSE;
 }
 
-bool GetVarFloat(struct PP_Var* var, float* out_value) {
-  if (var->type != PP_VARTYPE_DOUBLE) {
-    VERROR("expected var of type DOUBLE. Got %d.", var->type);
+bool nb_var_float(struct PP_Var var, float* out_value) {
+  if (var.type != PP_VARTYPE_DOUBLE) {
+    VERROR("expected var of type DOUBLE. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_value = var->value.as_double;
+  *out_value = var.value.as_double;
   return TRUE;
 }
 
-bool GetVarDouble(struct PP_Var* var, double* out_value) {
-  if (var->type != PP_VARTYPE_DOUBLE) {
-    VERROR("expected var of type DOUBLE. Got %d.", var->type);
+bool nb_var_double(struct PP_Var var, double* out_value) {
+  if (var.type != PP_VARTYPE_DOUBLE) {
+    VERROR("expected var of type DOUBLE. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_value = var->value.as_double;
+  *out_value = var.value.as_double;
   return TRUE;
 }
 
-bool GetVarString(struct PP_Var* var,
-                  const char** out_str, uint32_t* out_length) {
-  if (var->type != PP_VARTYPE_STRING) {
-    VERROR("expected var of type STRING. Got %d.", var->type);
+bool nb_var_string(struct PP_Var var, const char** out_str,
+                   uint32_t* out_length) {
+  if (var.type != PP_VARTYPE_STRING) {
+    VERROR("expected var of type STRING. Got %d.", var.type);
     return FALSE;
   }
 
-  *out_str = g_ppb_var->VarToUtf8(*var, out_length);
+  *out_str = g_ppb_var->VarToUtf8(var, out_length);
   return *out_str != NULL;
 }
