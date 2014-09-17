@@ -17,6 +17,8 @@
 
 #define FALSE 0
 #define TRUE 1
+#ifndef __cplusplus
 typedef int bool;
+#endif
 
 #endif  // BOOL_H_
