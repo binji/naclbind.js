@@ -67,8 +67,7 @@ function parseTests(callback) {
         suite = null;
 
     if (error) {
-      callback(error);
-      return;
+      assert.ok(false, 'Error running to get test list.\n' + error);
     }
 
     function addSuite() {
@@ -103,7 +102,7 @@ function parseTests(callback) {
         describe(suite.name, function() {
           suite.cases.forEach(function(testCase) {
             it(testCase, function(done) {
-              this.slow(150);
+              this.slow(200);
               runTest(['--gtest_filter='+suite.name+'.'+testCase], done);
             });
           });
