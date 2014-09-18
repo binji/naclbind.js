@@ -185,9 +185,7 @@ struct VarData* var_data_get(int64_t id) {
 
 struct VarData* var_data_get_type(struct PP_Var var, PP_VarType type) {
   struct VarData* var_data;
-  if (var.type != type) {
-    VERROR("var_data_get_type(%lld): expected type %d, got %d.",
-           var.value.as_id, type, var.type);
+  if (!nb_var_check_type_with_error(var, type)) {
     return NULL;
   }
 
@@ -531,8 +529,7 @@ PP_Bool dict_find(struct PP_Var var, struct PP_Var key,
     return PP_FALSE;
   }
 
-  if (key.type != PP_VARTYPE_STRING) {
-    VERROR("dict_find() called with non-string key: %d", var.type);
+  if (!nb_var_check_type_with_error(key, PP_VARTYPE_STRING)) {
     return PP_FALSE;
   }
 

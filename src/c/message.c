@@ -15,397 +15,370 @@
 #include "message.h"
 
 #include <assert.h>
-#include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ppapi/c/pp_var.h>
 
 #include "error.h"
 #include "var.h"
 
-static void DestroyMessageCommands(Message* message);
-static bool InitCommand(Command* command, struct PP_Var var);
-static void DestroyCommand(Command* command);
+static bool message_is_valid(struct Message* message);
+static bool expect_key(struct PP_Var var, const char* key,
+                       struct PP_Var* out_value);
+static bool optional_key(struct PP_Var var, const char* key,
+                         struct PP_Var* out_value);
+static bool id_is_valid(struct PP_Var var);
+static bool get_is_valid(struct PP_Var var);
+static bool set_is_valid(struct PP_Var var);
+static bool destroy_is_valid(struct PP_Var var);
+static bool commands_is_valid(struct PP_Var var);
+static bool command_is_valid(struct PP_Var var);
 
-Message* CreateMessage(struct PP_Var var) {
-  Message* message = calloc(1, sizeof(Message));
-  if (message == NULL) {
-    ERROR("Failed to calloc Message.");
-    goto fail;
+struct Message {
+  struct PP_Var var;
+};
+
+static bool string_to_long(const char* s, uint32_t len, long* out_value) {
+  enum { kBufferSize = 32 };
+  char buffer[kBufferSize + 1];
+  char* endptr;
+
+  len = (len < kBufferSize) ? len : kBufferSize;
+  memcpy(&buffer[0], s, len);
+  buffer[len] = 0;
+
+  errno = 0;
+  *out_value = strtol(buffer, &endptr, 10);
+  return (errno == 0 && endptr == buffer + len) ? TRUE : FALSE;
+}
+
+static bool var_string_to_long(struct PP_Var var, long* out_value) {
+  const char* str;
+  uint32_t len;
+
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_STRING)) {
+    return FALSE;
   }
 
-  struct PP_Var id_var = GetDictVar(&var, "id");
-  if (!GetVarInt32(&id_var, &message->id)) {
-    goto fail;
+  if (!nb_var_string(var, &str, &len)) {
+    return FALSE;
   }
 
-  struct PP_Var commands_var = GetDictVar(&var, "commands");
-  if (commands_var.type != PP_VARTYPE_ARRAY) {
-    ERROR("commands is not of array type.");
-    goto fail;
+  if (!string_to_long(str, len, out_value)) {
+    VERROR("Expected string to be int. Got \"%.*s\".", len, str);
+    return FALSE;
   }
 
-  message->num_commands = GetArrayVarLength(&commands_var);
-  message->commands = calloc(message->num_commands, sizeof(Command));
-  if (message->commands == NULL) {
-    ERROR("Failed to calloc Command array.");
-    goto fail;
-  }
+  return TRUE;
+}
 
-  for (uint32_t i = 0; i < message->num_commands; ++i) {
-    struct PP_Var command_var = GetArrayVar(&commands_var, i);
-    if (!InitCommand(&message->commands[i], command_var)) {
-      goto fail;
-    }
-  }
+struct Message* nb_message_create(struct PP_Var var) {
+  struct Message* message = calloc(1, sizeof(struct Message));
+  message->var = var;
+  nb_var_addref(var);
 
-  struct PP_Var ret_handles = GetDictVar(&var, "handles");
-  if (ret_handles.type != PP_VARTYPE_ARRAY) {
-    ERROR("handles is not of array type.");
-    goto fail;
-  }
-
-  message->num_ret_handles = GetArrayVarLength(&ret_handles);
-  message->ret_handles = calloc(message->num_ret_handles, sizeof(Handle));
-  if (message->ret_handles == NULL) {
-    ERROR("Failed to calloc return handle array.");
-    goto fail;
-  }
-
-  for (uint32_t i = 0; i < message->num_ret_handles; ++i) {
-    struct PP_Var handle_var = GetArrayVar(&ret_handles, i);
-    Handle handle;
-    if (!GetVarInt32(&handle_var, &handle)) {
-      VERROR("return handle %d is not integer type.", i);
-      goto fail;
-    }
-
-    message->ret_handles[i] = handle;
+  if (!message_is_valid(message)) {
+    nb_message_destroy(message);
+    return NULL;
   }
 
   return message;
-
-fail:
-  DestroyMessage(message);
-  return NULL;
 }
 
-void DestroyMessage(Message* message) {
-  assert(message != NULL);
-  DestroyMessageCommands(message);
-  free(message->ret_handles);
-  free(message->commands);
+void nb_message_destroy(struct Message* message) {
+  if (message == NULL) {
+    return;
+  }
+
+  nb_var_release(message->var);
   free(message);
 }
 
-void DestroyMessageCommands(Message* message) {
-  for (uint32_t i = 0; i < message->num_commands; ++i) {
-    DestroyCommand(&message->commands[i]);
-  }
+bool message_is_valid(struct Message* message) {
+  struct PP_Var var = message->var;
+  return nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY) &&
+         id_is_valid(var) &&
+         get_is_valid(var) &&
+         set_is_valid(var) &&
+         destroy_is_valid(var) &&
+         commands_is_valid(var);
 }
 
-int32_t GetMessageCommandCount(Message* message) {
-  return message->num_commands;
+bool expect_key(struct PP_Var var, const char* key, struct PP_Var* out_value) {
+  bool result = optional_key(var, key, out_value);
+  if (!result) {
+    VERROR("Expected message to have key: %s", key);
+  }
+
+  return result;
 }
 
-Command* GetMessageCommand(Message* message, int32_t index) {
-  assert(index < GetMessageCommandCount(message));
-
-  return &message->commands[index];
-}
-
-bool InitCommand(Command* command, struct PP_Var var) {
-  struct PP_Var cmd_var;
-  struct PP_Var type_var;
-  struct PP_Var ret_handle_var;
-  uint32_t cmd_length;
-  const char* cmd;
-
-  if (var.type != PP_VARTYPE_DICTIONARY) {
-    ERROR("command is not a dictionary.");
-    goto fail;
-  }
-
-  cmd_var = GetDictVar(&var, "cmd");
-  if (cmd_var.type != PP_VARTYPE_STRING) {
-    ERROR("cmd is not of type string.");
-    goto fail;
-  }
-
-  if (!GetVarString(&cmd_var, &cmd, &cmd_length)) {
-    ERROR("Failed to get string value of cmd.");
-    goto fail;
-  }
-  command->command = strndup(cmd, cmd_length);
-
-  type_var = GetDictVar(&var, "type");
-  int32_t type_int;
-  if (!GetVarInt32(&type_var, &type_int)) {
-    ERROR("type is not of type int.");
-    goto fail;
-  }
-  command->type = (Type)type_int;
-
-  struct PP_Var args = GetDictVar(&var, "args");
-  if (args.type != PP_VARTYPE_ARRAY) {
-    ERROR("args is not of type array.");
-    goto fail;
-  }
-
-  struct PP_Var arg_is_handle = GetDictVar(&var, "argIsHandle");
-  if (arg_is_handle.type != PP_VARTYPE_ARRAY) {
-    ERROR("arg_is_handle is not of type array.");
-    goto fail;
-  }
-
-  if (GetArrayVarLength(&args) != GetArrayVarLength(&arg_is_handle)) {
-    ERROR("arg.length != arg_is_handle.length");
-    goto fail;
-  }
-
-  command->num_args = GetArrayVarLength(&args);
-  command->args = calloc(command->num_args, sizeof(Arg));
-  if (command->args == NULL) {
-    ERROR("Failed to calloc Args.");
-    goto fail;
-  }
-
-  for (uint32_t arg_ix = 0; arg_ix < command->num_args; ++arg_ix) {
-    Arg* arg = &command->args[arg_ix];
-    arg->var = GetArrayVar(&args, arg_ix);
-
-    struct PP_Var is_handle_var = GetArrayVar(&arg_is_handle, arg_ix);
-    if (is_handle_var.type != PP_VARTYPE_BOOL) {
-      VERROR("arg_is_handle element %d has non-bool type: %d.",
-             arg_ix, is_handle_var.type);
-      goto fail;
-    }
-
-    arg->is_handle = is_handle_var.value.as_bool;
-  }
-
-  ret_handle_var = GetDictVar(&var, "ret");
-  if (!GetVarInt32(&ret_handle_var, &command->ret_handle)) {
-    ERROR("ret is not of type int.");
-    goto fail;
-  }
-
-  return TRUE;
-
-fail:
-  fprintf(stderr, "Command failed...\n");
-  if (command) {
-    free(command->args);
-    free((void*)command->command);
-  }
-  free(command);
-  return FALSE;
-}
-
-int32_t GetMessageRetHandleCount(Message* message) {
-  return message->num_ret_handles;
-}
-
-bool GetMessageRetHandle(Message* message, int32_t index, Handle* out_handle) {
-  assert(index < GetMessageRetHandleCount(message));
-
-  *out_handle = message->ret_handles[index];
-  return TRUE;
-}
-
-void DestroyCommand(Command* command) {
-  assert(command != NULL);
-  for (uint32_t i = 0; i < command->num_args; ++i) {
-    free(command->args[i].string);
-  }
-  free((void*)command->command);
-}
-
-int32_t GetCommandArgCount(Command* command) {
-  return command->num_args;
-}
-
-bool GetCommandArg(Command* command, int32_t index, Arg** out_arg) {
-  assert(index < command->num_args);
-
-  *out_arg = &command->args[index];
-  return TRUE;
-}
-
-bool GetArgVoidp(Command* command, int32_t index, void** out_value) {
-  Arg* arg;
-  if (!GetCommandArg(command, index, &arg)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
-  }
-  if (arg->var.type == PP_VARTYPE_NULL) {
-    *out_value = NULL;
-    return TRUE;
-  }
-  if (!arg->is_handle) {
-    CMD_VERROR("Expected arg %d to be handle", index);
-    return FALSE;
-  }
-  int32_t arg_handle_int;
-  if (!GetVarInt32(&arg->var, &arg_handle_int)) {
-    CMD_VERROR("Expected handle arg %d to be int32_t", index);
+bool optional_key(struct PP_Var var, const char* key,
+                  struct PP_Var* out_value) {
+  if (!nb_var_dict_has_key(var, key)) {
     return FALSE;
   }
 
-  Handle handle = arg_handle_int;
-  if (!GetHandleVoidp(handle, out_value)) {
-    CMD_VERROR("Expected arg %d handle's value to be void*", index);
-    return FALSE;
-  }
-
+  *out_value = nb_var_dict_get(var, key);
   return TRUE;
 }
 
-bool GetArgCharp(Command* command, int32_t index, char** out_value) {
-  Arg* arg;
-  if (!GetCommandArg(command, index, &arg)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
-  }
-  if (arg->var.type == PP_VARTYPE_NULL) {
-    *out_value = NULL;
-    return TRUE;
-  }
-  if (arg->is_handle) {
-    int32_t arg_handle_int;
-    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
-      CMD_VERROR("Expected handle arg %d to be int32_t", index);
-      return FALSE;
-    }
+bool id_is_valid(struct PP_Var var) {
+  bool result = FALSE;
+  struct PP_Var id = PP_MakeUndefined();
 
-    Handle handle = arg_handle_int;
-    if (!GetHandleCharp(handle, out_value)) {
-      CMD_VERROR("Expected arg %d handle's value to be char*", index);
-      return FALSE;
-    }
-  } else {
-    if (arg->var.type != PP_VARTYPE_STRING) {
-      CMD_VERROR("Expected arg %d to be char*", index);
-      return FALSE;
-    }
-
-    if (!arg->string) {
-      const char* str;
-      uint32_t len;
-      if (!GetVarString(&arg->var, &str, &len)) {
-        ERROR("Failed to get string value of arg.");
-        return FALSE;
-      }
-      arg->string = strndup(str, len);
-    }
-
-    *out_value = arg->string;
+  if (!expect_key(var, "id", &id)) {
+    goto cleanup;
   }
 
-  return TRUE;
+  if (!nb_var_check_type_with_error(id, PP_VARTYPE_INT32)) {
+    goto cleanup;
+  }
+
+  if (id.value.as_int <= 0) {
+    VERROR("Expected message id to be > 0. Got %d", id.value.as_int);
+    goto cleanup;
+  }
+
+  result = TRUE;
+cleanup:
+  nb_var_release(id);
+  return result;
 }
 
-bool GetArgInt32(Command* command, int32_t index, int32_t* out_value) {
-  Arg* arg;
-  if (!GetCommandArg(command, index, &arg)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
-  }
-  if (arg->is_handle) {
-    int32_t arg_handle_int;
-    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
-      CMD_VERROR("Expected handle arg %d to be int32_t", index);
-      return FALSE;
-    }
+bool get_is_valid(struct PP_Var var) {
+  bool result = FALSE;
+  struct PP_Var gethandles = PP_MakeUndefined();
+  uint32_t i, len;
 
-    Handle handle = arg_handle_int;
-    if (!GetHandleInt32(handle, out_value)) {
-      CMD_VERROR("Expected arg %d handle's value to be int32_t", index);
-      return FALSE;
-    }
-  } else {
-    if (!GetVarInt32(&arg->var, out_value)) {
-      CMD_VERROR("Expected arg %d to be int32_t", index);
-      return FALSE;
-    }
+  if (!optional_key(var, "get", &gethandles)) {
+    result = TRUE;
+    goto cleanup;
   }
 
-  return TRUE;
-}
-
-bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value) {
-  Arg* arg;
-  if (!GetCommandArg(command, index, &arg)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
-  }
-  if (arg->is_handle) {
-    int32_t arg_handle_int;
-    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
-      CMD_VERROR("Expected handle arg %d to be int32_t", index);
-      return FALSE;
-    }
-
-    Handle handle = arg_handle_int;
-    if (!GetHandleUint32(handle, out_value)) {
-      CMD_VERROR("Expected arg %d handle's value to be uint32_t", index);
-      return FALSE;
-    }
-  } else {
-    if (!GetVarUint32(&arg->var, out_value)) {
-      CMD_VERROR("Expected arg %d to be uint32_t", index);
-      return FALSE;
-    }
+  if (!nb_var_check_type_with_error(gethandles, PP_VARTYPE_ARRAY)) {
+    goto cleanup;
   }
 
-  return TRUE;
-}
+  len = nb_var_array_length(gethandles);
+  for (i = 0; i < len; ++i) {
+    struct PP_Var handle = nb_var_array_get(gethandles, i);
+    if (!nb_var_check_type_with_error(handle, PP_VARTYPE_INT32)) {
+      nb_var_release(handle);
+      goto cleanup;
+    }
 
-bool GetArgInt64(Command* command, int32_t index, int64_t* out_value) {
-  CMD_ERROR("GetArgInt64 not implemented.");
-  // TODO(binji): implement
-  return FALSE;
-}
-
-bool GetArgUint64(Command* command, int32_t index, uint64_t* out_value) {
-  CMD_ERROR("GetArgUint64 not implemented.");
-  // TODO(binji): implement
-  return FALSE;
-}
-
-bool GetArgFloat32(Command* command, int32_t index, float* out_value) {
-  CMD_ERROR("GetArgFloat32 not implemented.");
-  // TODO(binji): implement
-  return FALSE;
-}
-
-bool GetArgFloat64(Command* command, int32_t index, double* out_value) {
-  CMD_ERROR("GetArgFloat64 not implemented.");
-  // TODO(binji): implement
-  return FALSE;
-}
-
-bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value) {
-  Arg* arg;
-  if (!GetCommandArg(command, index, &arg)) {
-    CMD_VERROR("Can't get arg %d", index);
-    return FALSE;
+    nb_var_release(handle);
   }
-  if (arg->is_handle) {
-    int32_t arg_handle_int;
-    if (!GetVarInt32(&arg->var, &arg_handle_int)) {
-      CMD_VERROR("Expected handle arg %d to be int32_t", index);
+
+  result = TRUE;
+cleanup:
+  nb_var_release(gethandles);
+  return result;
+}
+
+bool set_is_valid(struct PP_Var var) {
+  bool result = FALSE;
+  struct PP_Var sethandles = PP_MakeUndefined();
+  struct PP_Var keys = PP_MakeUndefined();
+  uint32_t i, len;
+
+  if (!optional_key(var, "set", &sethandles)) {
+    result = TRUE;
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(sethandles, PP_VARTYPE_DICTIONARY)) {
+    goto cleanup;
+  }
+
+  keys = nb_var_dict_get_keys(sethandles);
+  len = nb_var_array_length(keys);
+  for (i = 0; i < len; ++i) {
+    struct PP_Var key = nb_var_array_get(keys, i);
+    long key_long;
+    struct PP_Var value;
+
+    if (!var_string_to_long(key, &key_long)) {
+      nb_var_release(key);
+      goto cleanup;
+    }
+
+    value = nb_var_dict_get_var(sethandles, key);
+    // TODO(binji): for now, only support int/double.
+    switch (value.type) {
+      case PP_VARTYPE_INT32:
+      case PP_VARTYPE_DOUBLE:
+        break;
+
+      default:
+        VERROR("Unexpected set handle value type: %s.",
+               nb_var_type_to_string(value.type));
+        nb_var_release(key);
+        nb_var_release(value);
+        goto cleanup;
+    }
+
+    nb_var_release(value);
+  }
+
+  result = TRUE;
+cleanup:
+  nb_var_release(keys);
+  nb_var_release(sethandles);
+  return result;
+}
+
+bool destroy_is_valid(struct PP_Var var) {
+  bool result = FALSE;
+  struct PP_Var destroyhandles;
+  uint32_t i, len;
+
+  if (!optional_key(var, "destroy", &destroyhandles)) {
+    result = TRUE;
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(destroyhandles, PP_VARTYPE_ARRAY)) {
+    goto cleanup;
+  }
+
+  len = nb_var_array_length(destroyhandles);
+  for (i = 0; i < len; ++i) {
+    struct PP_Var handle = nb_var_array_get(destroyhandles, i);
+    if (!nb_var_check_type_with_error(handle, PP_VARTYPE_INT32)) {
+      nb_var_release(handle);
+      nb_var_release(destroyhandles);
       return FALSE;
     }
 
-    Handle handle = arg_handle_int;
-    if (!GetHandleVar(handle, out_value)) {
-      CMD_VERROR("Expected arg %d handle's value to be uint32_t", index);
-      return FALSE;
-    }
-  } else {
-    *out_value = arg->var;
+    nb_var_release(handle);
   }
 
-  return TRUE;
+  result = TRUE;
+cleanup:
+  nb_var_release(destroyhandles);
+  return result;
 }
 
+bool commands_is_valid(struct PP_Var var) {
+  bool result = FALSE;
+  struct PP_Var commands = PP_MakeUndefined();
+  uint32_t i, len;
+
+  if (!optional_key(var, "commands", &commands)) {
+    result = TRUE;
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(commands, PP_VARTYPE_ARRAY)) {
+    goto cleanup;
+  }
+
+  len = nb_var_array_length(commands);
+  for (i = 0; i < len; ++i) {
+    struct PP_Var command = nb_var_array_get(commands, i);
+    if (!command_is_valid(command)) {
+      nb_var_release(command);
+      goto cleanup;
+    }
+
+    nb_var_release(command);
+  }
+
+  result = TRUE;
+cleanup:
+  nb_var_release(commands);
+  return result;
+}
+
+bool command_is_valid(struct PP_Var command) {
+  bool result = FALSE;
+  struct PP_Var id = PP_MakeUndefined();
+  struct PP_Var args = PP_MakeUndefined();
+  struct PP_Var ret = PP_MakeUndefined();
+  uint32_t i, len;
+
+  if (!nb_var_check_type_with_error(command, PP_VARTYPE_DICTIONARY)) {
+    goto cleanup;
+  }
+
+  if (!expect_key(command, "id", &id) ||
+      !expect_key(command, "args", &args)) {
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(id, PP_VARTYPE_INT32)) {
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(args, PP_VARTYPE_ARRAY)) {
+    goto cleanup;
+  }
+
+  ret = nb_var_dict_get(command, "ret");
+  if (ret.type != PP_VARTYPE_INT32 &&
+      ret.type != PP_VARTYPE_UNDEFINED) {
+    VERROR("Expected ret field to be int32 or undefined, not %s.",
+           nb_var_type_to_string(ret.type));
+    goto cleanup;
+  }
+
+  // Check that args is an array of ints.
+  len = nb_var_array_length(args);
+  for (i = 0; i < len; ++i) {
+    struct PP_Var arg = nb_var_array_get(args, i);
+    if (!nb_var_check_type_with_error(arg, PP_VARTYPE_INT32)) {
+      nb_var_release(arg);
+      goto cleanup;
+    }
+
+    nb_var_release(arg);
+  }
+
+  result = TRUE;
+cleanup:
+  nb_var_release(ret);
+  nb_var_release(args);
+  nb_var_release(id);
+  return result;
+}
+
+int nb_message_sethandles_count(struct Message* message) {
+}
+
+void nb_message_sethandles(struct Message* message, int index,
+                           Handle* out_handle, struct PP_Var* value) {
+}
+
+int nb_message_gethandles_count(struct Message* message) {
+}
+
+Handle nb_message_gethandle(struct Message* message, int index) {
+}
+
+int nb_message_destroyhandles_count(struct Message* message) {
+}
+
+Handle nb_message_destroyhandles(struct Message* message, int index) {
+}
+
+int nb_message_command_count(struct Message* message) {
+}
+
+int nb_message_command_function(struct Message* message, int command_idx) {
+}
+
+int nb_message_command_arg_count(struct Message* message, int command_idx) {
+}
+
+Handle nb_message_command_arg(struct Message* message, int command_idx,
+                              int arg_idx) {
+}
+
+bool nb_message_command_has_ret(struct Message* message, int command_idx) {
+}
+
+Handle nb_message_command_ret(struct Message* message, int command_idx) {
+}

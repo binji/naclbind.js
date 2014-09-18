@@ -14,6 +14,17 @@
 
 #include <stdio.h>
 
+#ifndef NDEBUG
+#define LOG(msg) ERROR(msg)
+#define VLOG(msg, ...) VERROR(msg, __VA_ARGS__)
+#else
+#define LOG(msg)
+#define VLOG(msg, ...)
+#endif
+
+#define TRACE LOG("enter")
+#define VTRACE(fmt, ...) VLOG("enter" fmt, __VA_ARGS__)
+
 #define ERROR(msg) \
   fprintf(stderr, "%s:%d:(%s): " msg "\n", __FILE__, __LINE__, __FUNCTION__)
 

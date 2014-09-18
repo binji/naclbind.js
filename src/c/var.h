@@ -27,6 +27,10 @@ extern "C" {
 void nb_var_addref(struct PP_Var);
 void nb_var_release(struct PP_Var);
 
+const char* nb_var_type_to_string(PP_VarType);
+bool nb_var_check_type(struct PP_Var, PP_VarType);
+bool nb_var_check_type_with_error(struct PP_Var, PP_VarType);
+
 struct PP_Var nb_var_string_create(const char*, uint32_t len);
 
 struct PP_Var nb_var_array_create(void);

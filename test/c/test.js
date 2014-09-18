@@ -123,6 +123,7 @@ function runTest(args, callback) {
       return;
     }
 
+    // console.log('STDOUT\n', stdout, 'STDERR\n', stderr);
     callback(null, stdout);
   });
 }

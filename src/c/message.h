@@ -15,60 +15,39 @@
 #ifndef MESSAGE_H_
 #define MESSAGE_H_
 
-#include <stdint.h>
-
 #include <ppapi/c/pp_var.h>
 
 #include "bool.h"
 #include "handle.h"
-#include "type.h"
 
-typedef struct {
-  struct PP_Var var;
-  bool is_handle;
-  char* string;
-} Arg;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef struct {
-  const char* command;
-  Type type;
-  Arg* args;
-  uint32_t num_args;
-  int32_t ret_handle;
-} Command;
+struct Message;
 
-typedef struct {
-  int32_t id;
-  Command* commands;
-  uint32_t num_commands;
-  Handle* ret_handles;
-  uint32_t num_ret_handles;
-} Message;
+struct Message* nb_message_create(struct PP_Var);
+void nb_message_destroy(struct Message*);
 
-Message* CreateMessage(struct PP_Var);
-void DestroyMessage(Message*);
-int32_t GetMessageCommandCount(Message*);
-Command* GetMessageCommand(Message*, int32_t index);
-int32_t GetMessageRetHandleCount(Message*);
-bool GetMessageRetHandle(Message*, int32_t index, Handle* out_handle);
+int nb_message_sethandles_count(struct Message*);
+void nb_message_sethandle(struct Message*, int index,
+                          Handle* out_handle, struct PP_Var* value);
 
-int32_t GetCommandArgCount(Command*);
-bool GetCommandArg(Command*, int32_t index, Arg** out_arg);
+int nb_message_gethandles_count(struct Message*);
+Handle nb_message_gethandle(struct Message*, int index);
 
-bool GetArgVoidp(Command* command, int32_t index, void** out_value);
-bool GetArgCharp(Command* command, int32_t index, char** out_value);
-bool GetArgInt32(Command* command, int32_t index, int32_t* out_value);
-bool GetArgUint32(Command* command, int32_t index, uint32_t* out_value);
-bool GetArgInt64(Command* command, int32_t index, int64_t* out_value);
-bool GetArgUint64(Command* command, int32_t index, uint64_t* out_value);
-bool GetArgFloat32(Command* command, int32_t index, float* out_value);
-bool GetArgFloat64(Command* command, int32_t index, double* out_value);
-bool GetArgVar(Command* command, int32_t index, struct PP_Var* out_value);
+int nb_message_destroyhandles_count(struct Message*);
+Handle nb_message_destroyhandle(struct Message*, int index);
 
-#define CMD_VERROR(fmt, ...) \
-  VERROR("%s: " fmt, command->command, __VA_ARGS__)
+int nb_message_command_count(struct Message*);
+int nb_message_command_function(struct Message*, int command_idx);
+int nb_message_command_arg_count(struct Message*, int command_idx);
+Handle nb_message_command_arg(struct Message*, int command_idx, int arg_idx);
+bool nb_message_command_has_ret(struct Message*, int command_idx);
+Handle nb_message_command_ret(struct Message*, int command_idx);
 
-#define CMD_ERROR(msg) \
-  VERROR("%s: " msg, command->command)
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // MESSAGE_H_

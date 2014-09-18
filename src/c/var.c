@@ -28,6 +28,38 @@ void nb_var_release(struct PP_Var var) {
   g_ppb_var->Release(var);
 }
 
+const char* nb_var_type_to_string(PP_VarType type) {
+  switch (type) {
+    case PP_VARTYPE_UNDEFINED: return "undefined";
+    case PP_VARTYPE_NULL: return "null";
+    case PP_VARTYPE_BOOL: return "bool";
+    case PP_VARTYPE_INT32: return "int32";
+    case PP_VARTYPE_DOUBLE: return "double";
+    case PP_VARTYPE_STRING: return "string";
+    case PP_VARTYPE_OBJECT: return "object";
+    case PP_VARTYPE_ARRAY: return "array";
+    case PP_VARTYPE_DICTIONARY: return "dictionary";
+    case PP_VARTYPE_ARRAY_BUFFER: return "array buffer";
+    case PP_VARTYPE_RESOURCE: return "resource";
+    default: return "unknown";
+  }
+}
+
+bool nb_var_check_type(struct PP_Var var, PP_VarType type) {
+  return var.type == type ? TRUE : FALSE;
+}
+
+bool nb_var_check_type_with_error(struct PP_Var var, PP_VarType type) {
+  if (var.type != type) {
+    VERROR("Expected var of type %s. Got %s.",
+           nb_var_type_to_string(type),
+           nb_var_type_to_string(var.type));
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 struct PP_Var nb_var_string_create(const char* s, uint32_t len) {
   return g_ppb_var->VarFromUtf8(s, len);
 }
@@ -96,8 +128,7 @@ bool nb_var_dict_has_key(struct PP_Var var, const char* key) {
 }
 
 bool nb_var_int8(struct PP_Var var, int8_t* out_value) {
-  if (var.type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_INT32)) {
     return FALSE;
   }
 
@@ -106,8 +137,7 @@ bool nb_var_int8(struct PP_Var var, int8_t* out_value) {
 }
 
 bool nb_var_uint8(struct PP_Var var, uint8_t* out_value) {
-  if (var.type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_INT32)) {
     return FALSE;
   }
 
@@ -116,8 +146,7 @@ bool nb_var_uint8(struct PP_Var var, uint8_t* out_value) {
 }
 
 bool nb_var_int16(struct PP_Var var, int16_t* out_value) {
-  if (var.type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_INT32)) {
     return FALSE;
   }
 
@@ -126,8 +155,7 @@ bool nb_var_int16(struct PP_Var var, int16_t* out_value) {
 }
 
 bool nb_var_uint16(struct PP_Var var, uint16_t* out_value) {
-  if (var.type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_INT32)) {
     return FALSE;
   }
 
@@ -136,8 +164,7 @@ bool nb_var_uint16(struct PP_Var var, uint16_t* out_value) {
 }
 
 bool nb_var_int32(struct PP_Var var, int32_t* out_value) {
-  if (var.type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_INT32)) {
     return FALSE;
   }
 
@@ -146,8 +173,7 @@ bool nb_var_int32(struct PP_Var var, int32_t* out_value) {
 }
 
 bool nb_var_uint32(struct PP_Var var, uint32_t* out_value) {
-  if (var.type != PP_VARTYPE_INT32) {
-    VERROR("expected var of type INT32. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_INT32)) {
     return FALSE;
   }
 
@@ -166,8 +192,7 @@ bool nb_var_uint64(struct PP_Var var, uint64_t* out_value) {
 }
 
 bool nb_var_float(struct PP_Var var, float* out_value) {
-  if (var.type != PP_VARTYPE_DOUBLE) {
-    VERROR("expected var of type DOUBLE. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_DOUBLE)) {
     return FALSE;
   }
 
@@ -176,8 +201,7 @@ bool nb_var_float(struct PP_Var var, float* out_value) {
 }
 
 bool nb_var_double(struct PP_Var var, double* out_value) {
-  if (var.type != PP_VARTYPE_DOUBLE) {
-    VERROR("expected var of type DOUBLE. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_DOUBLE)) {
     return FALSE;
   }
 
@@ -187,8 +211,7 @@ bool nb_var_double(struct PP_Var var, double* out_value) {
 
 bool nb_var_string(struct PP_Var var, const char** out_str,
                    uint32_t* out_length) {
-  if (var.type != PP_VARTYPE_STRING) {
-    VERROR("expected var of type STRING. Got %d.", var.type);
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_STRING)) {
     return FALSE;
   }
 
