@@ -29,6 +29,8 @@ struct Message;
 struct Message* nb_message_create(struct PP_Var);
 void nb_message_destroy(struct Message*);
 
+int nb_message_id(struct Message* message);
+
 int nb_message_sethandles_count(struct Message*);
 void nb_message_sethandle(struct Message*, int index,
                           Handle* out_handle, struct PP_Var* value);
@@ -39,7 +41,7 @@ Handle nb_message_gethandle(struct Message*, int index);
 int nb_message_destroyhandles_count(struct Message*);
 Handle nb_message_destroyhandle(struct Message*, int index);
 
-int nb_message_command_count(struct Message*);
+int nb_message_commands_count(struct Message*);
 int nb_message_command_function(struct Message*, int command_idx);
 int nb_message_command_arg_count(struct Message*, int command_idx);
 Handle nb_message_command_arg(struct Message*, int command_idx, int arg_idx);

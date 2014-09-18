@@ -21,22 +21,47 @@
 #include <ppapi/c/pp_var.h>
 
 #include "error.h"
+#include "handle.h"
 #include "var.h"
 
-static bool message_is_valid(struct Message* message);
+struct Message;
+struct Command;
+
+static void* calloc_list(uint32_t len, size_t element_size);
 static bool expect_key(struct PP_Var var, const char* key,
                        struct PP_Var* out_value);
 static bool optional_key(struct PP_Var var, const char* key,
                          struct PP_Var* out_value);
-static bool id_is_valid(struct PP_Var var);
-static bool get_is_valid(struct PP_Var var);
-static bool set_is_valid(struct PP_Var var);
-static bool destroy_is_valid(struct PP_Var var);
-static bool commands_is_valid(struct PP_Var var);
-static bool command_is_valid(struct PP_Var var);
+static bool parse_message(struct Message* message, struct PP_Var var);
+static bool parse_id(struct Message* message, struct PP_Var var);
+static bool parse_gethandles(struct Message* message, struct PP_Var var);
+static bool parse_sethandles(struct Message* message, struct PP_Var var);
+static bool parse_destroyhandles(struct Message* message, struct PP_Var var);
+static bool parse_commands(struct Message* message, struct PP_Var var);
+static bool parse_command(struct Command* command, struct PP_Var var);
+
+struct Command {
+  int id;
+  Handle* args;
+  uint32_t args_count;
+  Handle ret;
+};
+
+struct HandleVarPair {
+  Handle id;
+  struct PP_Var var;
+};
 
 struct Message {
-  struct PP_Var var;
+  int id;
+  Handle* gethandles;
+  uint32_t gethandles_count;
+  struct HandleVarPair* sethandles;
+  uint32_t sethandles_count;
+  Handle* destroyhandles;
+  uint32_t destroyhandles_count;
+  struct Command* commands;
+  uint32_t commands_count;
 };
 
 static bool string_to_long(const char* s, uint32_t len, long* out_value) {
@@ -75,10 +100,7 @@ static bool var_string_to_long(struct PP_Var var, long* out_value) {
 
 struct Message* nb_message_create(struct PP_Var var) {
   struct Message* message = calloc(1, sizeof(struct Message));
-  message->var = var;
-  nb_var_addref(var);
-
-  if (!message_is_valid(message)) {
+  if (!parse_message(message, var)) {
     nb_message_destroy(message);
     return NULL;
   }
@@ -87,22 +109,25 @@ struct Message* nb_message_create(struct PP_Var var) {
 }
 
 void nb_message_destroy(struct Message* message) {
-  if (message == NULL) {
-    return;
-  }
+  uint32_t i;
+  assert(message != NULL);
 
-  nb_var_release(message->var);
+  for (i = 0; i < message->commands_count; ++i) {
+    free(message->commands[i].args);
+  }
+  free(message->commands);
+  free(message->destroyhandles);
+
+  for (i = 0; i < message->sethandles_count; ++i) {
+    nb_var_release(message->sethandles[i].var);
+  }
+  free(message->sethandles);
+  free(message->gethandles);
   free(message);
 }
 
-bool message_is_valid(struct Message* message) {
-  struct PP_Var var = message->var;
-  return nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY) &&
-         id_is_valid(var) &&
-         get_is_valid(var) &&
-         set_is_valid(var) &&
-         destroy_is_valid(var) &&
-         commands_is_valid(var);
+void* calloc_list(uint32_t len, size_t element_size) {
+  return len ? calloc(len, element_size) : NULL;
 }
 
 bool expect_key(struct PP_Var var, const char* key, struct PP_Var* out_value) {
@@ -124,7 +149,16 @@ bool optional_key(struct PP_Var var, const char* key,
   return TRUE;
 }
 
-bool id_is_valid(struct PP_Var var) {
+bool parse_message(struct Message* message, struct PP_Var var) {
+  return nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY) &&
+         parse_id(message, var) &&
+         parse_gethandles(message, var) &&
+         parse_sethandles(message, var) &&
+         parse_destroyhandles(message, var) &&
+         parse_commands(message, var);
+}
+
+bool parse_id(struct Message* message, struct PP_Var var) {
   bool result = FALSE;
   struct PP_Var id = PP_MakeUndefined();
 
@@ -141,60 +175,71 @@ bool id_is_valid(struct PP_Var var) {
     goto cleanup;
   }
 
+  message->id = id.value.as_int;
   result = TRUE;
 cleanup:
   nb_var_release(id);
   return result;
 }
 
-bool get_is_valid(struct PP_Var var) {
+bool parse_gethandles(struct Message* message, struct PP_Var var) {
   bool result = FALSE;
-  struct PP_Var gethandles = PP_MakeUndefined();
+  struct PP_Var gethandles_var = PP_MakeUndefined();
+  Handle* gethandles = NULL;
   uint32_t i, len;
 
-  if (!optional_key(var, "get", &gethandles)) {
+  if (!optional_key(var, "get", &gethandles_var)) {
     result = TRUE;
     goto cleanup;
   }
 
-  if (!nb_var_check_type_with_error(gethandles, PP_VARTYPE_ARRAY)) {
+  if (!nb_var_check_type_with_error(gethandles_var, PP_VARTYPE_ARRAY)) {
     goto cleanup;
   }
 
-  len = nb_var_array_length(gethandles);
+  len = nb_var_array_length(gethandles_var);
+  gethandles = calloc_list(len, sizeof(Handle));
   for (i = 0; i < len; ++i) {
-    struct PP_Var handle = nb_var_array_get(gethandles, i);
+    struct PP_Var handle = nb_var_array_get(gethandles_var, i);
     if (!nb_var_check_type_with_error(handle, PP_VARTYPE_INT32)) {
       nb_var_release(handle);
       goto cleanup;
     }
 
+    gethandles[i] = handle.value.as_int;
     nb_var_release(handle);
   }
 
+  message->gethandles = gethandles;
+  message->gethandles_count = len;
+
   result = TRUE;
+  gethandles = NULL;  // Pass ownership to the message.
 cleanup:
-  nb_var_release(gethandles);
+  free(gethandles);
+  nb_var_release(gethandles_var);
   return result;
 }
 
-bool set_is_valid(struct PP_Var var) {
+bool parse_sethandles(struct Message* message, struct PP_Var var) {
   bool result = FALSE;
-  struct PP_Var sethandles = PP_MakeUndefined();
+  struct PP_Var sethandles_var = PP_MakeUndefined();
   struct PP_Var keys = PP_MakeUndefined();
+  struct HandleVarPair* sethandles = NULL;
   uint32_t i, len;
 
-  if (!optional_key(var, "set", &sethandles)) {
+  if (!optional_key(var, "set", &sethandles_var)) {
     result = TRUE;
     goto cleanup;
   }
 
-  if (!nb_var_check_type_with_error(sethandles, PP_VARTYPE_DICTIONARY)) {
+  if (!nb_var_check_type_with_error(sethandles_var, PP_VARTYPE_DICTIONARY)) {
     goto cleanup;
   }
 
-  keys = nb_var_dict_get_keys(sethandles);
+  keys = nb_var_dict_get_keys(sethandles_var);
   len = nb_var_array_length(keys);
+  sethandles = calloc_list(len, sizeof(struct HandleVarPair));
   for (i = 0; i < len; ++i) {
     struct PP_Var key = nb_var_array_get(keys, i);
     long key_long;
@@ -205,7 +250,9 @@ bool set_is_valid(struct PP_Var var) {
       goto cleanup;
     }
 
-    value = nb_var_dict_get_var(sethandles, key);
+    value = nb_var_dict_get_var(sethandles_var, key);
+    nb_var_release(key);
+
     // TODO(binji): for now, only support int/double.
     switch (value.type) {
       case PP_VARTYPE_INT32:
@@ -215,170 +262,240 @@ bool set_is_valid(struct PP_Var var) {
       default:
         VERROR("Unexpected set handle value type: %s.",
                nb_var_type_to_string(value.type));
-        nb_var_release(key);
         nb_var_release(value);
         goto cleanup;
     }
 
-    nb_var_release(value);
+    sethandles[i].id = key_long;
+    // NOTE: this passes the reference from nb_var_dict_get_var above to
+    // sethandles[i].var.
+    sethandles[i].var = value;
   }
 
+  message->sethandles = sethandles;
+  message->sethandles_count = len;
   result = TRUE;
+  sethandles = NULL;  // Pass ownership to the message.
 cleanup:
+  free(sethandles);
   nb_var_release(keys);
-  nb_var_release(sethandles);
+  nb_var_release(sethandles_var);
   return result;
 }
 
-bool destroy_is_valid(struct PP_Var var) {
+bool parse_destroyhandles(struct Message* message, struct PP_Var var) {
   bool result = FALSE;
-  struct PP_Var destroyhandles;
+  struct PP_Var destroyhandles_var = PP_MakeUndefined();
+  Handle* destroyhandles = NULL;
   uint32_t i, len;
 
-  if (!optional_key(var, "destroy", &destroyhandles)) {
+  if (!optional_key(var, "destroy", &destroyhandles_var)) {
     result = TRUE;
     goto cleanup;
   }
 
-  if (!nb_var_check_type_with_error(destroyhandles, PP_VARTYPE_ARRAY)) {
+  if (!nb_var_check_type_with_error(destroyhandles_var, PP_VARTYPE_ARRAY)) {
     goto cleanup;
   }
 
-  len = nb_var_array_length(destroyhandles);
+  len = nb_var_array_length(destroyhandles_var);
+  destroyhandles = calloc_list(len, sizeof(Handle));
   for (i = 0; i < len; ++i) {
-    struct PP_Var handle = nb_var_array_get(destroyhandles, i);
+    struct PP_Var handle = nb_var_array_get(destroyhandles_var, i);
     if (!nb_var_check_type_with_error(handle, PP_VARTYPE_INT32)) {
       nb_var_release(handle);
-      nb_var_release(destroyhandles);
-      return FALSE;
-    }
-
-    nb_var_release(handle);
-  }
-
-  result = TRUE;
-cleanup:
-  nb_var_release(destroyhandles);
-  return result;
-}
-
-bool commands_is_valid(struct PP_Var var) {
-  bool result = FALSE;
-  struct PP_Var commands = PP_MakeUndefined();
-  uint32_t i, len;
-
-  if (!optional_key(var, "commands", &commands)) {
-    result = TRUE;
-    goto cleanup;
-  }
-
-  if (!nb_var_check_type_with_error(commands, PP_VARTYPE_ARRAY)) {
-    goto cleanup;
-  }
-
-  len = nb_var_array_length(commands);
-  for (i = 0; i < len; ++i) {
-    struct PP_Var command = nb_var_array_get(commands, i);
-    if (!command_is_valid(command)) {
-      nb_var_release(command);
       goto cleanup;
     }
 
-    nb_var_release(command);
+    destroyhandles[i] = handle.value.as_int;
+    nb_var_release(handle);
   }
 
+  message->destroyhandles = destroyhandles;
+  message->destroyhandles_count = len;
   result = TRUE;
+  destroyhandles = NULL;  // Pass ownership to the message.
 cleanup:
-  nb_var_release(commands);
+  free(destroyhandles);
+  nb_var_release(destroyhandles_var);
   return result;
 }
 
-bool command_is_valid(struct PP_Var command) {
+bool parse_commands(struct Message* message, struct PP_Var var) {
   bool result = FALSE;
-  struct PP_Var id = PP_MakeUndefined();
-  struct PP_Var args = PP_MakeUndefined();
-  struct PP_Var ret = PP_MakeUndefined();
+  struct PP_Var commands_var = PP_MakeUndefined();
+  struct Command* commands = NULL;
   uint32_t i, len;
 
-  if (!nb_var_check_type_with_error(command, PP_VARTYPE_DICTIONARY)) {
+  if (!optional_key(var, "commands", &commands_var)) {
+    result = TRUE;
     goto cleanup;
   }
 
-  if (!expect_key(command, "id", &id) ||
-      !expect_key(command, "args", &args)) {
+  if (!nb_var_check_type_with_error(commands_var, PP_VARTYPE_ARRAY)) {
     goto cleanup;
   }
 
-  if (!nb_var_check_type_with_error(id, PP_VARTYPE_INT32)) {
-    goto cleanup;
-  }
-
-  if (!nb_var_check_type_with_error(args, PP_VARTYPE_ARRAY)) {
-    goto cleanup;
-  }
-
-  ret = nb_var_dict_get(command, "ret");
-  if (ret.type != PP_VARTYPE_INT32 &&
-      ret.type != PP_VARTYPE_UNDEFINED) {
-    VERROR("Expected ret field to be int32 or undefined, not %s.",
-           nb_var_type_to_string(ret.type));
-    goto cleanup;
-  }
-
-  // Check that args is an array of ints.
-  len = nb_var_array_length(args);
+  len = nb_var_array_length(commands_var);
+  commands = calloc_list(len, sizeof(struct Command));
   for (i = 0; i < len; ++i) {
-    struct PP_Var arg = nb_var_array_get(args, i);
+    struct PP_Var command_var = nb_var_array_get(commands_var, i);
+    if (!parse_command(&commands[i], command_var)) {
+      nb_var_release(command_var);
+      goto cleanup;
+    }
+
+    nb_var_release(command_var);
+  }
+
+  message->commands = commands;
+  message->commands_count = len;
+  result = TRUE;
+  commands = NULL;  // Pass ownership to the message.
+cleanup:
+  free(commands);
+  nb_var_release(commands_var);
+  return result;
+}
+
+bool parse_command(struct Command* command, struct PP_Var var) {
+  bool result = FALSE;
+  struct PP_Var id_var = PP_MakeUndefined();
+  struct PP_Var args_var = PP_MakeUndefined();
+  struct PP_Var ret_var = PP_MakeUndefined();
+  Handle* args = NULL;
+  uint32_t i, len;
+
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY)) {
+    goto cleanup;
+  }
+
+  if (!expect_key(var, "id", &id_var) || !expect_key(var, "args", &args_var)) {
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(id_var, PP_VARTYPE_INT32)) {
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(args_var, PP_VARTYPE_ARRAY)) {
+    goto cleanup;
+  }
+
+  ret_var = nb_var_dict_get(var, "ret");
+  if (ret_var.type != PP_VARTYPE_INT32 &&
+      ret_var.type != PP_VARTYPE_UNDEFINED) {
+    VERROR("Expected ret field to be int32 or undefined, not %s.",
+           nb_var_type_to_string(ret_var.type));
+    goto cleanup;
+  }
+
+  // Check that args_var is an array of ints.
+  len = nb_var_array_length(args_var);
+  args = calloc_list(len, sizeof(Handle));
+  for (i = 0; i < len; ++i) {
+    struct PP_Var arg = nb_var_array_get(args_var, i);
     if (!nb_var_check_type_with_error(arg, PP_VARTYPE_INT32)) {
       nb_var_release(arg);
       goto cleanup;
     }
 
+    args[i] = arg.value.as_int;
     nb_var_release(arg);
   }
 
+  command->id = id_var.value.as_int;
+  command->args = args;
+  command->args_count = len;
+  if (ret_var.type != PP_VARTYPE_UNDEFINED) {
+    command->ret = ret_var.value.as_int;
+  }
   result = TRUE;
+  args = NULL;  // Pass ownership to the message.
 cleanup:
-  nb_var_release(ret);
-  nb_var_release(args);
-  nb_var_release(id);
+  free(args);
+  nb_var_release(ret_var);
+  nb_var_release(args_var);
+  nb_var_release(id_var);
   return result;
 }
 
-int nb_message_sethandles_count(struct Message* message) {
+int nb_message_id(struct Message* message) {
+  assert(message != NULL);
+  return message->id;
 }
 
-void nb_message_sethandles(struct Message* message, int index,
-                           Handle* out_handle, struct PP_Var* value) {
+int nb_message_sethandles_count(struct Message* message) {
+  assert(message != NULL);
+  return message->sethandles_count;
+}
+
+void nb_message_sethandle(struct Message* message, int index,
+                          Handle* out_handle, struct PP_Var* out_value) {
+  assert(message != NULL);
+  assert(index >= 0 && index < message->sethandles_count);
+  assert(out_handle != NULL);
+  assert(out_value != NULL);
+  *out_handle = message->sethandles[index].id;
+  *out_value = message->sethandles[index].var;
+  nb_var_addref(*out_value);
 }
 
 int nb_message_gethandles_count(struct Message* message) {
+  assert(message != NULL);
+  return message->gethandles_count;
 }
 
 Handle nb_message_gethandle(struct Message* message, int index) {
+  assert(message != NULL);
+  assert(index >= 0 && index < message->gethandles_count);
+  return message->gethandles[index];
 }
 
 int nb_message_destroyhandles_count(struct Message* message) {
+  assert(message != NULL);
+  return message->destroyhandles_count;
 }
 
-Handle nb_message_destroyhandles(struct Message* message, int index) {
+Handle nb_message_destroyhandle(struct Message* message, int index) {
+  assert(message != NULL);
+  assert(index >= 0 && index < message->destroyhandles_count);
+  return message->destroyhandles[index];
 }
 
-int nb_message_command_count(struct Message* message) {
+int nb_message_commands_count(struct Message* message) {
+  assert(message != NULL);
+  return message->commands_count;
 }
 
 int nb_message_command_function(struct Message* message, int command_idx) {
+  assert(message != NULL);
+  assert(command_idx >= 0 && command_idx < message->commands_count);
+  return message->commands[command_idx].id;
 }
 
 int nb_message_command_arg_count(struct Message* message, int command_idx) {
+  assert(message != NULL);
+  assert(command_idx >= 0 && command_idx < message->commands_count);
+  return message->commands[command_idx].args_count;
 }
 
 Handle nb_message_command_arg(struct Message* message, int command_idx,
                               int arg_idx) {
+  assert(message != NULL);
+  assert(command_idx >= 0 && command_idx < message->commands_count);
+  assert(arg_idx >= 0 && arg_idx < message->commands[command_idx].args_count);
+  return message->commands[command_idx].args[arg_idx];
 }
 
 bool nb_message_command_has_ret(struct Message* message, int command_idx) {
+  assert(message != NULL);
+  assert(command_idx >= 0 && command_idx < message->commands_count);
+  return message->commands[command_idx].ret != 0 ? TRUE : FALSE;
 }
 
 Handle nb_message_command_ret(struct Message* message, int command_idx) {
+  assert(message != NULL);
+  assert(command_idx >= 0 && command_idx < message->commands_count);
+  return message->commands[command_idx].ret;
 }
