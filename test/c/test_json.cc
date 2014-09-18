@@ -13,74 +13,59 @@
 // limitations under the License.
 
 #include "gtest/gtest.h"
-
 #include <json/reader.h>
 #include <ppapi/c/pp_var.h>
-
+#include "fake_interfaces.h"
 #include "json.h"
 #include "message.h"
 #include "var.h"
 
-TEST(Json, Null) {
-  struct PP_Var var = json_to_var("null");
-  char* s = var_to_json_flat(var);
-  EXPECT_STREQ(s, "null\n");
-  free(s);
-  nb_var_release(var);
+class JsonTest : public ::testing::Test {
+ public:
+  void RoundTrip(const char* json, const char* expected) {
+    struct PP_Var var = json_to_var(json);
+    char* s = var_to_json_flat(var);
+    nb_var_release(var);
+
+    EXPECT_STREQ(expected, s);
+    free(s);
+  }
+
+  virtual void TearDown() {
+    EXPECT_EQ(TRUE, fake_var_check_no_references());
+  }
+ private:
+};
+
+TEST_F(JsonTest, Null) {
+  RoundTrip("null", "null\n");
 }
 
-TEST(Json, Int) {
-  struct PP_Var var = json_to_var("42");
-  char* s = var_to_json_flat(var);
-  EXPECT_STREQ(s, "42\n");
-  free(s);
-  nb_var_release(var);
+TEST_F(JsonTest, Int) {
+  RoundTrip("42", "42\n");
 }
 
-TEST(Json, Double) {
-  struct PP_Var var = json_to_var("3.5");
-  char* s = var_to_json_flat(var);
-  EXPECT_STREQ(s, "3.50\n");
-  free(s);
-  nb_var_release(var);
+TEST_F(JsonTest, Double) {
+  RoundTrip("3.5", "3.50\n");
 }
 
-TEST(Json, String) {
-  struct PP_Var var = json_to_var("\"hello, world\"");
-  char* s = var_to_json_flat(var);
-  EXPECT_STREQ(s, "\"hello, world\"\n");
-  free(s);
-  nb_var_release(var);
+TEST_F(JsonTest, String) {
+  RoundTrip("\"hello, world\"", "\"hello, world\"\n");
 }
 
-TEST(Json, Bool) {
-  struct PP_Var var = json_to_var("true");
-  char* s = var_to_json_flat(var);
-  EXPECT_STREQ(s, "true\n");
-  free(s);
-  nb_var_release(var);
+TEST_F(JsonTest, Bool) {
+  RoundTrip("true", "true\n");
 }
 
-TEST(Json, Array) {
-  struct PP_Var var = json_to_var("[true, 1, 2.0, \"hi\"]");
-  char* s = var_to_json_flat(var);
-  EXPECT_STREQ(s, "[true,1,2.0,\"hi\"]\n");
-  free(s);
-  nb_var_release(var);
+TEST_F(JsonTest, Array) {
+  RoundTrip("[true, 1, 2.0, \"hi\"]", "[true,1,2.0,\"hi\"]\n");
 }
 
-TEST(Json, Dictionary) {
-  struct PP_Var var = json_to_var("{\"hi\": 12, \"bye\": 23}");
-  char* s = var_to_json_flat(var);
-  EXPECT_STREQ(s, "{\"bye\":23,\"hi\":12}\n");
-  free(s);
-  nb_var_release(var);
+TEST_F(JsonTest, Dictionary) {
+  RoundTrip("{\"hi\": 12, \"bye\": 23}", "{\"bye\":23,\"hi\":12}\n");
 }
 
-TEST(Json, Complex) {
-  struct PP_Var var = json_to_var("[[1, 2], {\"foo\": [3, 4]}, [[null]]]");
-  char* s = var_to_json_flat(var);
-  EXPECT_STREQ(s, "[[1,2],{\"foo\":[3,4]},[[null]]]\n");
-  free(s);
-  nb_var_release(var);
+TEST_F(JsonTest, Complex) {
+  RoundTrip("[[1, 2], {\"foo\": [3, 4]}, [[null]]]",
+            "[[1,2],{\"foo\":[3,4]},[[null]]]\n");
 }
