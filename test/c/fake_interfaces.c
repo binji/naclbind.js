@@ -24,7 +24,9 @@
 #include <ppapi/c/ppb_var_array_buffer.h>
 #include <ppapi/c/ppb_var_dictionary.h>
 #include <ppapi/c/ppb_messaging.h>
+#include "bool.h"
 #include "error.h"
+#include "json.h"
 
 enum { kArrayInitCount = 4 };
 enum { kDictInitCount = 4 };
@@ -142,6 +144,32 @@ void fake_var_init(void) {
 
 void fake_var_destroy(void) {
   var_data_destroy_all();
+}
+
+bool fake_var_check_no_references(void) {
+  bool result = TRUE;
+  int i;
+  for (i = 0; i < kDataCap; ++i) {
+    struct PP_Var var;
+    char* json = NULL;
+
+    if (s_data[i].ref_count == 0) {
+      continue;
+    }
+
+    var.type = s_data[i].type;
+    var.value.as_id = i;
+    json = var_to_json(var);
+
+    VERROR("VarData with id=%d, type=\"%s\" has non-zero refcount %d:\n%s",
+           i,
+           nb_var_type_to_string(s_data[i].type),
+           s_data[i].ref_count,
+           json);
+    result = FALSE;
+  }
+
+  return result;
 }
 
 const void* fake_get_browser_interface(const char* interface_name) {
@@ -413,7 +441,7 @@ PP_Bool array_set(struct PP_Var var, uint32_t index, struct PP_Var value) {
     var_data->array.len = new_len;
   }
 
-  var_add_ref(var);
+  var_add_ref(value);
   var_release(var_data->array.data[index]);
   var_data->array.data[index] = value;
   return PP_TRUE;

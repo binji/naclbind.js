@@ -53,9 +53,12 @@ static PP_Var value_to_var(const Value& value) {
         }
 
         if (!nb_var_array_set(array, i, child)) {
+          nb_var_release(child);
           nb_var_release(array);
           return PP_MakeUndefined();
         }
+
+        nb_var_release(child);
       }
       return array;
     }
@@ -68,10 +71,14 @@ static PP_Var value_to_var(const Value& value) {
            ++iter) {
         std::string key = *iter;
         Value child_value = value[key];
-        if (!nb_var_dict_set(dict, key.c_str(), value_to_var(child_value))) {
+        struct PP_Var child_value_var = value_to_var(child_value);
+        if (!nb_var_dict_set(dict, key.c_str(), child_value_var)) {
+          nb_var_release(child_value_var);
           nb_var_release(dict);
           return PP_MakeUndefined();
         }
+
+        nb_var_release(child_value_var);
       }
       return dict;
     }
@@ -111,6 +118,7 @@ static Value var_to_value(struct PP_Var var) {
       for (uint32_t i = 0; i < len; ++i) {
         struct PP_Var child = nb_var_array_get(var, i);
         value.append(var_to_value(child));
+        nb_var_release(child);
       }
 
       return value;
@@ -126,13 +134,18 @@ static Value var_to_value(struct PP_Var var) {
         uint32_t key_len;
 
         if (!nb_var_string(key, &key_data, &key_len)) {
+          nb_var_release(key);
           nb_var_release(keys);
           return Value();
         }
 
+        nb_var_release(key);
+
         std::string key_string(key_data, key_len);
         struct PP_Var child = nb_var_dict_get_var(var, key);
         value[key_string] = var_to_value(child);
+
+        nb_var_release(child);
       }
 
       nb_var_release(keys);
