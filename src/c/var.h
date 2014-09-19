@@ -17,7 +17,6 @@
 
 #include <stdint.h>
 #include <ppapi/c/pp_var.h>
-
 #include "bool.h"
 
 #ifdef __cplusplus

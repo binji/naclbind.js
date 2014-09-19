@@ -22,12 +22,15 @@ LIBS = jsoncpp ppapi_simple gtest nacl_io ppapi_cpp ppapi pthread
 
 CFLAGS =
 SOURCES = \
+  $(SRC_DIR)/handle.c \
   $(SRC_DIR)/interfaces.c \
   $(SRC_DIR)/message.c \
   $(SRC_DIR)/var.c \
+  $(SRC_DIR)/type.c \
   fake_interfaces.c \
   json.cc \
   test.cc \
+  test_handle.cc \
   test_message.cc \
   test_json.cc
 

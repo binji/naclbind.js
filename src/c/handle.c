@@ -13,32 +13,60 @@
 // limitations under the License.
 
 #include "handle.h"
-
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <ppapi/c/pp_var.h>
-
 #include "error.h"
 #include "interfaces.h"
 #include "var.h"
 
 #define HANDLE_MAP_INITIAL_CAPACITY 16
 
-typedef struct {
-  Handle handle;
-  HandleObject object;
-} HandleMapPair;
+union HandleValue {
+  int8_t int8;
+  uint8_t uint8;
+  int16_t int16;
+  uint16_t uint16;
+  int32_t int32;
+  uint32_t uint32;
+  int64_t int64;
+  uint64_t uint64;
+  float float32;
+  double float64;
+  void* voidp;
+  struct PP_Var var;
+} HandleValue;
 
-static HandleMapPair* s_handle_map = NULL;
+struct HandleObject {
+  Type type;
+  union HandleValue value;
+  // PP_Var strings are not guaranteed to be NULL-terminated, so if we want to
+  // use it as a C string, we have to allocate space for a NULL and remember to
+  // free it later.
+  //
+  // This field will be non-NULL when type == TYPE_VAR and
+  // nb_handle_get_charp() has been called. The memory will be free'd in
+  // DestroyHandle.
+  char* string_value;
+};
+
+
+struct HandleMapPair {
+  Handle handle;
+  struct HandleObject object;
+};
+
+// TODO(binji): use hashmap instead of sorted array.
+static struct HandleMapPair* s_handle_map = NULL;
 static size_t s_handle_map_size = 0;
 static size_t s_handle_map_capacity = 0;
 
-static bool ResizeHandleMap(size_t new_capacity) {
+static bool resize_handle_map(size_t new_capacity) {
   assert(s_handle_map_size <= new_capacity);
-  s_handle_map = realloc(s_handle_map, sizeof(HandleMapPair) * new_capacity);
+  s_handle_map = realloc(s_handle_map,
+                         sizeof(struct HandleMapPair) * new_capacity);
   s_handle_map_capacity = new_capacity;
   if (!s_handle_map) {
     ERROR("Out of memory");
@@ -47,20 +75,20 @@ static bool ResizeHandleMap(size_t new_capacity) {
   return TRUE;
 }
 
-bool RegisterHandle(Handle handle, Type type, HandleValue value) {
+static bool register_handle(Handle handle, Type type, union HandleValue value) {
   if (!s_handle_map) {
-    if (!ResizeHandleMap(HANDLE_MAP_INITIAL_CAPACITY)) {
+    if (!resize_handle_map(HANDLE_MAP_INITIAL_CAPACITY)) {
       return FALSE;
     }
   }
 
   if (s_handle_map_size == s_handle_map_capacity) {
-    if (!ResizeHandleMap(s_handle_map_capacity * 2)) {
+    if (!resize_handle_map(s_handle_map_capacity * 2)) {
       return FALSE;
     }
   }
 
-  HandleMapPair* pair = NULL;
+  struct HandleMapPair* pair = NULL;
 
   if (s_handle_map_size == 0) {
     assert(s_handle_map_capacity > 0);
@@ -90,7 +118,7 @@ bool RegisterHandle(Handle handle, Type type, HandleValue value) {
       size_t insert_ix = lo_ix;
       if (insert_ix < s_handle_map_size) {
         memmove(&s_handle_map[insert_ix + 1], &s_handle_map[insert_ix],
-                sizeof(HandleMapPair) * (s_handle_map_size - insert_ix));
+                sizeof(struct HandleMapPair) * (s_handle_map_size - insert_ix));
       }
 
       pair = &s_handle_map[insert_ix];
@@ -105,92 +133,93 @@ bool RegisterHandle(Handle handle, Type type, HandleValue value) {
   return TRUE;
 }
 
-bool RegisterHandleInt8(Handle handle, int8_t value) {
-  HandleValue hval;
+int32_t nb_handle_count(void) {
+  return s_handle_map_size;
+}
+
+bool nb_handle_register_int8(Handle handle, int8_t value) {
+  union HandleValue hval;
   hval.int8 = value;
-  return RegisterHandle(handle, TYPE_INT8, hval);
+  return register_handle(handle, TYPE_INT8, hval);
 }
 
-bool RegisterHandleUint8(Handle handle, uint8_t value) {
-  HandleValue hval;
+bool nb_handle_register_uint8(Handle handle, uint8_t value) {
+  union HandleValue hval;
   hval.uint8 = value;
-  return RegisterHandle(handle, TYPE_INT8, hval);
+  return register_handle(handle, TYPE_INT8, hval);
 }
 
-bool RegisterHandleInt16(Handle handle, int16_t value) {
-  HandleValue hval;
+bool nb_handle_register_int16(Handle handle, int16_t value) {
+  union HandleValue hval;
   hval.int16 = value;
-  return RegisterHandle(handle, TYPE_INT16, hval);
+  return register_handle(handle, TYPE_INT16, hval);
 }
 
-bool RegisterHandleUint16(Handle handle, uint16_t value) {
-  HandleValue hval;
+bool nb_handle_register_uint16(Handle handle, uint16_t value) {
+  union HandleValue hval;
   hval.uint16 = value;
-  return RegisterHandle(handle, TYPE_UINT16, hval);
+  return register_handle(handle, TYPE_UINT16, hval);
 }
 
-bool RegisterHandleInt32(Handle handle, int32_t value) {
-  HandleValue hval;
+bool nb_handle_register_int32(Handle handle, int32_t value) {
+  union HandleValue hval;
   hval.int32 = value;
-  return RegisterHandle(handle, TYPE_INT32, hval);
+  return register_handle(handle, TYPE_INT32, hval);
 }
 
-bool RegisterHandleUint32(Handle handle, uint32_t value) {
-  HandleValue hval;
+bool nb_handle_register_uint32(Handle handle, uint32_t value) {
+  union HandleValue hval;
   hval.uint32 = value;
-  return RegisterHandle(handle, TYPE_UINT32, hval);
+  return register_handle(handle, TYPE_UINT32, hval);
 }
 
-bool RegisterHandleInt64(Handle handle, int64_t value) {
-  HandleValue hval;
+bool nb_handle_register_int64(Handle handle, int64_t value) {
+  union HandleValue hval;
   hval.int64 = value;
-  return RegisterHandle(handle, TYPE_INT64, hval);
+  return register_handle(handle, TYPE_INT64, hval);
 }
 
-bool RegisterHandleUint64(Handle handle, uint64_t value) {
-  HandleValue hval;
+bool nb_handle_register_uint64(Handle handle, uint64_t value) {
+  union HandleValue hval;
   hval.uint64 = value;
-  return RegisterHandle(handle, TYPE_UINT64, hval);
+  return register_handle(handle, TYPE_UINT64, hval);
 }
 
-bool RegisterHandleFloat(Handle handle, float value) {
-  HandleValue hval;
+bool nb_handle_register_float(Handle handle, float value) {
+  union HandleValue hval;
   hval.float32 = value;
-  return RegisterHandle(handle, TYPE_FLOAT32, hval);
+  return register_handle(handle, TYPE_FLOAT, hval);
 }
 
-bool RegisterHandleDouble(Handle handle, double value) {
-  HandleValue hval;
+bool nb_handle_register_double(Handle handle, double value) {
+  union HandleValue hval;
   hval.float64 = value;
-  return RegisterHandle(handle, TYPE_FLOAT64, hval);
+  return register_handle(handle, TYPE_DOUBLE, hval);
 }
 
-bool RegisterHandleVoidp(Handle handle, void* value) {
-  HandleValue hval;
+bool nb_handle_register_voidp(Handle handle, void* value) {
+  union HandleValue hval;
   hval.voidp = value;
-  return RegisterHandle(handle, TYPE_VOID_P, hval);
+  return register_handle(handle, TYPE_VOID_P, hval);
 }
 
-bool RegisterHandleVar(Handle handle, struct PP_Var value) {
-  HandleValue hval;
+bool nb_handle_register_var(Handle handle, struct PP_Var value) {
+  union HandleValue hval;
   hval.var = value;
-  AddRefVar(&hval.var);
+  nb_var_addref(hval.var);
 
   switch (value.type) {
     case PP_VARTYPE_ARRAY_BUFFER:
-      return RegisterHandle(handle, TYPE_ARRAY_BUFFER, hval);
     case PP_VARTYPE_ARRAY:
-      return RegisterHandle(handle, TYPE_ARRAY, hval);
     case PP_VARTYPE_DICTIONARY:
-      return RegisterHandle(handle, TYPE_DICTIONARY, hval);
     case PP_VARTYPE_STRING:
-      return RegisterHandle(handle, TYPE_STRING, hval);
+      return register_handle(handle, TYPE_VAR, hval);
     default:
       return FALSE;
   }
 }
 
-bool GetHandle(Handle handle, HandleObject* out_handle_object) {
+static bool get_handle(Handle handle, struct HandleObject* out_handle_object) {
   // Binary search.
   size_t lo_ix = 0;  // Inclusive
   size_t hi_ix = s_handle_map_size;  // Exclusive
@@ -227,38 +256,32 @@ bool GetHandle(Handle handle, HandleObject* out_handle_object) {
 #define TYPE_UINT32_MAX (0xffffffffL)
 #define TYPE_UINT64_MIN (0)
 #define TYPE_UINT64_MAX (0xffffffffffffffffLL)
-#define TYPE_FLOAT32_MIN_24 (-0xffffffL)
-#define TYPE_FLOAT32_MAX_24 (0xffffffL)
-#define TYPE_FLOAT64_MIN_53 (-0x1fffffffffffffLL)
-#define TYPE_FLOAT64_MAX_53 (0x1fffffffffffffLL)
+#define TYPE_FLOAT_MIN_24 (-0xffffffL)
+#define TYPE_FLOAT_MAX_24 (0xffffffL)
+#define TYPE_DOUBLE_MIN_53 (-0x1fffffffffffffLL)
+#define TYPE_DOUBLE_MAX_53 (0x1fffffffffffffLL)
 
-#define TYPE_CHAR_FMT "%d"
 #define TYPE_INT8_FMT "%d"
 #define TYPE_INT16_FMT "%d"
 #define TYPE_INT32_FMT "%d"
-#define TYPE_LONG_FMT "%d"
 #define TYPE_INT64_FMT "%lld"
 #define TYPE_UINT8_FMT "%u"
 #define TYPE_UINT16_FMT "%u"
 #define TYPE_UINT32_FMT "%u"
-#define TYPE_ULONG_FMT "%u"
 #define TYPE_UINT64_FMT "%llu"
-#define TYPE_FLOAT32_FMT "%g"
-#define TYPE_FLOAT64_FMT "%g"
+#define TYPE_FLOAT_FMT "%g"
+#define TYPE_DOUBLE_FMT "%g"
 
 #define TYPE_INT8_FIELD int8
-#define TYPE_CHAR_FIELD int8
 #define TYPE_INT16_FIELD int16
 #define TYPE_INT32_FIELD int32
-#define TYPE_LONG_FIELD int32
 #define TYPE_INT64_FIELD int64
 #define TYPE_UINT8_FIELD uint8
 #define TYPE_UINT16_FIELD uint16
 #define TYPE_UINT32_FIELD uint32
-#define TYPE_ULONG_FIELD uint32
 #define TYPE_UINT64_FIELD uint64
-#define TYPE_FLOAT32_FIELD float32
-#define TYPE_FLOAT64_FIELD float64
+#define TYPE_FLOAT_FIELD float32
+#define TYPE_DOUBLE_FIELD float64
 
 #define HOBJ_FIELD(type) (hobj.value.type##_FIELD)
 
@@ -270,7 +293,7 @@ bool GetHandle(Handle handle, HandleObject* out_handle_object) {
 #define DEFAULT_TYPE_CASE(to_type) \
   default: \
     VERROR("handle %d is of type %s. Expected %s.", handle, \
-           TypeToString(hobj.type), TypeToString(to_type)); \
+           nb_type_to_string(hobj.type), nb_type_to_string(to_type)); \
     return FALSE  // no semicolon
 
 #define TYPE_CASE_TRUNC_GENERIC(to_type, from_type, check) \
@@ -336,273 +359,244 @@ bool GetHandle(Handle handle, HandleObject* out_handle_object) {
   }
 
 #define TRUNC_CHECK_INT_TO_FLOAT(to_type, from_type) \
-  if (HOBJ_FIELD(from_type) < TYPE_FLOAT32_MIN_24 || \
-      HOBJ_FIELD(from_type) > TYPE_FLOAT32_MAX_24) { \
+  if (HOBJ_FIELD(from_type) < TYPE_FLOAT_MIN_24 || \
+      HOBJ_FIELD(from_type) > TYPE_FLOAT_MAX_24) { \
     TRUNC_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
 #define TRUNC_CHECK_INT_TO_DOUBLE(to_type, from_type) \
-  if (HOBJ_FIELD(from_type) < TYPE_FLOAT64_MIN_53 || \
-      HOBJ_FIELD(from_type) > TYPE_FLOAT64_MAX_53) { \
+  if (HOBJ_FIELD(from_type) < TYPE_DOUBLE_MIN_53 || \
+      HOBJ_FIELD(from_type) > TYPE_DOUBLE_MAX_53) { \
     TRUNC_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
 #define TRUNC_ERROR(to_type, from_type) \
   VERROR("handle %d(%s) with value " from_type##_FMT \
-         " cannot be represented as %s.", handle, TypeToString(hobj.type), \
-         HOBJ_FIELD(from_type), TypeToString(to_type))
+         " cannot be represented as %s.", handle, \
+         nb_type_to_string(hobj.type), HOBJ_FIELD(from_type), \
+         nb_type_to_string(to_type))
 
-bool GetHandleInt8(Handle handle, int8_t* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_int8(Handle handle, int8_t* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE(TYPE_INT8, TYPE_CHAR);
     TYPE_CASE(TYPE_INT8, TYPE_INT8);
     TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT16);
     TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_INT8, TYPE_LONG);
     TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT64);
     TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT8);
     TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT16);
     TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT32);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_ULONG);
     TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT8, TYPE_FLOAT32);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT8, TYPE_FLOAT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT8, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT8, TYPE_DOUBLE);
     DEFAULT_TYPE_CASE(TYPE_INT8);
   }
 }
 
-bool GetHandleUint8(Handle handle, uint8_t* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_uint8(Handle handle, uint8_t* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT8, TYPE_CHAR);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT8, TYPE_INT8);
     TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT16);
     TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_LONG);
     TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT64);
     TYPE_CASE(TYPE_UINT8, TYPE_UINT8);
     TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT16);
     TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT32);
-    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_ULONG);
     TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT8, TYPE_FLOAT32);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT8, TYPE_FLOAT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT8, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT8, TYPE_DOUBLE);
     DEFAULT_TYPE_CASE(TYPE_UINT8);
   }
 }
 
-bool GetHandleInt16(Handle handle, int16_t* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_int16(Handle handle, int16_t* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE(TYPE_INT16, TYPE_CHAR);
     TYPE_CASE(TYPE_INT16, TYPE_INT8);
     TYPE_CASE(TYPE_INT16, TYPE_INT16);
     TYPE_CASE_TRUNC(TYPE_INT16, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_LONG);
     TYPE_CASE_TRUNC(TYPE_INT16, TYPE_INT64);
     TYPE_CASE(TYPE_INT16, TYPE_UINT8);
     TYPE_CASE_TRUNC_MAX(TYPE_INT16, TYPE_UINT16);
     TYPE_CASE_TRUNC(TYPE_INT16, TYPE_UINT32);
-    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_ULONG);
     TYPE_CASE_TRUNC(TYPE_INT16, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT16, TYPE_FLOAT32);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT16, TYPE_FLOAT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT16, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT16, TYPE_DOUBLE);
     DEFAULT_TYPE_CASE(TYPE_INT16);
   }
 }
 
-bool GetHandleUint16(Handle handle, uint16_t* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_uint16(Handle handle, uint16_t* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT16, TYPE_CHAR);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT16, TYPE_INT8);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT16, TYPE_INT16);
     TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_LONG);
     TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_INT64);
     TYPE_CASE(TYPE_UINT16, TYPE_UINT8);
     TYPE_CASE(TYPE_UINT16, TYPE_UINT16);
     TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_UINT32);
-    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_ULONG);
     TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT16, TYPE_FLOAT32);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT16, TYPE_FLOAT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT16, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT16, TYPE_DOUBLE);
     DEFAULT_TYPE_CASE(TYPE_UINT16);
   }
 }
 
-bool GetHandleInt32(Handle handle, int32_t* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_int32(Handle handle, int32_t* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE(TYPE_INT32, TYPE_CHAR);
     TYPE_CASE(TYPE_INT32, TYPE_INT8);
     TYPE_CASE(TYPE_INT32, TYPE_INT16);
     TYPE_CASE(TYPE_INT32, TYPE_INT32);
-    TYPE_CASE(TYPE_INT32, TYPE_LONG);
     TYPE_CASE_TRUNC(TYPE_INT32, TYPE_INT64);
     TYPE_CASE(TYPE_INT32, TYPE_UINT8);
     TYPE_CASE(TYPE_INT32, TYPE_UINT16);
     TYPE_CASE_TRUNC_MAX(TYPE_INT32, TYPE_UINT32);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT32, TYPE_ULONG);
     TYPE_CASE_TRUNC(TYPE_INT32, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT32, TYPE_FLOAT32);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT32, TYPE_FLOAT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT32, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT32, TYPE_DOUBLE);
     DEFAULT_TYPE_CASE(TYPE_INT32);
   }
 }
 
-bool GetHandleUint32(Handle handle, uint32_t* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_uint32(Handle handle, uint32_t* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_CHAR);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT8);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT16);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT32);
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_LONG);
     TYPE_CASE_TRUNC(TYPE_UINT32, TYPE_INT64);
     TYPE_CASE(TYPE_UINT32, TYPE_UINT8);
     TYPE_CASE(TYPE_UINT32, TYPE_UINT16);
     TYPE_CASE(TYPE_UINT32, TYPE_UINT32);
-    TYPE_CASE(TYPE_UINT32, TYPE_ULONG);
     TYPE_CASE_TRUNC(TYPE_UINT32, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT32, TYPE_FLOAT32);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT32, TYPE_FLOAT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT32, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT32, TYPE_DOUBLE);
     DEFAULT_TYPE_CASE(TYPE_UINT32);
   }
 }
 
-bool GetHandleInt64(Handle handle, int64_t* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_int64(Handle handle, int64_t* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE(TYPE_INT64, TYPE_CHAR);
     TYPE_CASE(TYPE_INT64, TYPE_INT8);
     TYPE_CASE(TYPE_INT64, TYPE_INT16);
     TYPE_CASE(TYPE_INT64, TYPE_INT32);
-    TYPE_CASE(TYPE_INT64, TYPE_LONG);
     TYPE_CASE(TYPE_INT64, TYPE_INT64);
     TYPE_CASE(TYPE_INT64, TYPE_UINT8);
     TYPE_CASE(TYPE_INT64, TYPE_UINT16);
     TYPE_CASE(TYPE_INT64, TYPE_UINT32);
-    TYPE_CASE(TYPE_INT64, TYPE_ULONG);
     TYPE_CASE_TRUNC_MAX(TYPE_INT64, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT64, TYPE_FLOAT32);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT64, TYPE_FLOAT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT64, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT64, TYPE_DOUBLE);
     DEFAULT_TYPE_CASE(TYPE_INT64);
   }
 }
 
-bool GetHandleUint64(Handle handle, uint64_t* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_uint64(Handle handle, uint64_t* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_CHAR);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT8);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT16);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT32);
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_LONG);
     TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT64);
     TYPE_CASE(TYPE_UINT64, TYPE_UINT8);
     TYPE_CASE(TYPE_UINT64, TYPE_UINT16);
     TYPE_CASE(TYPE_UINT64, TYPE_UINT32);
-    TYPE_CASE(TYPE_UINT64, TYPE_ULONG);
     TYPE_CASE(TYPE_UINT64, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT64, TYPE_FLOAT32);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT64, TYPE_FLOAT64);
+    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT64, TYPE_FLOAT);
+    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT64, TYPE_DOUBLE);
     DEFAULT_TYPE_CASE(TYPE_UINT64);
   }
 }
 
-bool GetHandleFloat(Handle handle, float* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_float(Handle handle, float* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE(TYPE_FLOAT32, TYPE_CHAR);
-    TYPE_CASE(TYPE_FLOAT32, TYPE_INT8);
-    TYPE_CASE(TYPE_FLOAT32, TYPE_INT16);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT32, TYPE_INT32);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT32, TYPE_LONG);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT32, TYPE_INT64);
-    TYPE_CASE(TYPE_FLOAT32, TYPE_UINT8);
-    TYPE_CASE(TYPE_FLOAT32, TYPE_UINT16);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT32, TYPE_UINT32);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT32, TYPE_ULONG);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT32, TYPE_UINT64);
-    TYPE_CASE(TYPE_FLOAT32, TYPE_FLOAT32);
-    TYPE_CASE(TYPE_FLOAT32, TYPE_FLOAT64);
-    DEFAULT_TYPE_CASE(TYPE_FLOAT32);
+    TYPE_CASE(TYPE_FLOAT, TYPE_INT8);
+    TYPE_CASE(TYPE_FLOAT, TYPE_INT16);
+    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_INT32);
+    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_INT64);
+    TYPE_CASE(TYPE_FLOAT, TYPE_UINT8);
+    TYPE_CASE(TYPE_FLOAT, TYPE_UINT16);
+    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_UINT32);
+    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_UINT64);
+    TYPE_CASE(TYPE_FLOAT, TYPE_FLOAT);
+    TYPE_CASE(TYPE_FLOAT, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_FLOAT);
   }
 }
 
-bool GetHandleDouble(Handle handle, double* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_double(Handle handle, double* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    TYPE_CASE(TYPE_FLOAT64, TYPE_CHAR);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_INT8);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_INT16);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_INT32);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_LONG);
-    TYPE_CASE_TRUNC_INT_TO_DOUBLE(TYPE_FLOAT64, TYPE_INT64);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_UINT8);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_UINT16);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_UINT32);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_ULONG);
-    TYPE_CASE_TRUNC_INT_TO_DOUBLE(TYPE_FLOAT64, TYPE_UINT64);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_FLOAT32);
-    TYPE_CASE(TYPE_FLOAT64, TYPE_FLOAT64);
-    DEFAULT_TYPE_CASE(TYPE_FLOAT64);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_INT8);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_INT16);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_INT32);
+    TYPE_CASE_TRUNC_INT_TO_DOUBLE(TYPE_DOUBLE, TYPE_INT64);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT8);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT16);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT32);
+    TYPE_CASE_TRUNC_INT_TO_DOUBLE(TYPE_DOUBLE, TYPE_UINT64);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_FLOAT);
+    TYPE_CASE(TYPE_DOUBLE, TYPE_DOUBLE);
+    DEFAULT_TYPE_CASE(TYPE_DOUBLE);
   }
 }
 
-bool GetHandleVoidp(Handle handle, void** out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_voidp(Handle handle, void** out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   if (hobj.type != TYPE_VOID_P) {
     VERROR("handle %d is of type %s. Expected %s.", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_VOID_P));
+           nb_type_to_string(hobj.type), nb_type_to_string(TYPE_VOID_P));
     return FALSE;
   }
 
@@ -610,40 +604,42 @@ bool GetHandleVoidp(Handle handle, void** out_value) {
   return TRUE;
 }
 
-bool GetHandleCharp(Handle handle, char** out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_charp(Handle handle, char** out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
-  if (hobj.type == TYPE_STRING) {
+  if (hobj.type == TYPE_VAR) {
     uint32_t len;
-    const char* str = g_ppb_var->VarToUtf8(hobj.value.var, &len);
+    const char* str;
+    if (!nb_var_string(hobj.value.var, &str, &len)) {
+      VERROR("unable to get string for handle %d", handle);
+      return FALSE;
+    }
+
     hobj.string_value = strndup(str, len);
     *out_value = hobj.string_value;
   } else if (hobj.type == TYPE_VOID_P) {
     *out_value = (char*)hobj.value.voidp;
   } else {
     VERROR("handle %d is of type %s. Expected %s.", handle,
-          TypeToString(hobj.type), TypeToString(TYPE_VOID_P));
+           nb_type_to_string(hobj.type), nb_type_to_string(TYPE_VOID_P));
     return FALSE;
   }
 
   return TRUE;
 }
 
-bool GetHandleVar(Handle handle, struct PP_Var* out_value) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_get_var(Handle handle, struct PP_Var* out_value) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_ARRAY_BUFFER &&
-      hobj.type != TYPE_ARRAY &&
-      hobj.type != TYPE_DICTIONARY &&
-      hobj.type != TYPE_STRING) {
+  if (hobj.type != TYPE_VAR) {
     VERROR("handle %d is of type %s. Expected %s.", handle,
-          TypeToString(hobj.type), TypeToString(hobj.type));
+           nb_type_to_string(hobj.type), nb_type_to_string(TYPE_VAR));
     return FALSE;
   }
 
@@ -651,8 +647,8 @@ bool GetHandleVar(Handle handle, struct PP_Var* out_value) {
   return TRUE;
 }
 
-void DestroyHandle(Handle handle) {
-  HandleMapPair* pair = NULL;
+void nb_handle_destroy(Handle handle) {
+  struct HandleMapPair* pair = NULL;
 
 
   // Binary search.
@@ -678,44 +674,37 @@ void DestroyHandle(Handle handle) {
     return;
   }
 
-  switch (pair->object.type) {
-    case TYPE_ARRAY_BUFFER:
-    case TYPE_ARRAY:
-    case TYPE_DICTIONARY:
-    case TYPE_STRING:
-      ReleaseVar(&pair->object.value.var);
-      break;
-    default:
-      break;
+  if (pair->object.type == TYPE_VAR) {
+    nb_var_release(pair->object.value.var);
   }
 
   free(pair->object.string_value);
 
   size_t remove_ix = mid_ix;
   if (remove_ix + 1 < s_handle_map_size) {
-    memmove(&s_handle_map[remove_ix], &s_handle_map[remove_ix + 1],
-            sizeof(HandleMapPair) * (s_handle_map_size - (remove_ix + 1)));
+    memmove(
+        &s_handle_map[remove_ix], &s_handle_map[remove_ix + 1],
+        sizeof(struct HandleMapPair) * (s_handle_map_size - (remove_ix + 1)));
   }
   s_handle_map_size--;
 }
 
-void DestroyHandles(Handle* handles, int32_t handle_count) {
+void nb_handle_destroy_many(Handle* handles, uint32_t handles_count) {
   // TODO(binji): optimize
-  int32_t i;
-  for (i = 0; i < handle_count; ++i) {
+  uint32_t i;
+  for (i = 0; i < handles_count; ++i) {
     Handle handle = handles[i];
-    DestroyHandle(handle);
+    nb_handle_destroy(handle);
   }
 }
 
-bool HandleToVar(Handle handle, struct PP_Var* var) {
-  HandleObject hobj;
-  if (!GetHandle(handle, &hobj)) {
+bool nb_handle_convert_to_var(Handle handle, struct PP_Var* var) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
   switch (hobj.type) {
-    case TYPE_CHAR:
     case TYPE_INT8:
       var->type = PP_VARTYPE_INT32;
       var->value.as_int = hobj.value.int8;
@@ -733,29 +722,24 @@ bool HandleToVar(Handle handle, struct PP_Var* var) {
       var->value.as_int = hobj.value.uint16;
       break;
     case TYPE_INT32:
-    case TYPE_LONG:
       var->type = PP_VARTYPE_INT32;
       var->value.as_int = hobj.value.int32;
       break;
     case TYPE_UINT32:
-    case TYPE_ULONG:
       var->type = PP_VARTYPE_INT32;
       var->value.as_int = hobj.value.uint32;
       break;
-    case TYPE_FLOAT32:
+    case TYPE_FLOAT:
       var->type = PP_VARTYPE_DOUBLE;
       var->value.as_int = hobj.value.float32;
       break;
-    case TYPE_FLOAT64:
+    case TYPE_DOUBLE:
       var->type = PP_VARTYPE_DOUBLE;
       var->value.as_int = hobj.value.float64;
       break;
-    case TYPE_ARRAY_BUFFER:
-    case TYPE_ARRAY:
-    case TYPE_DICTIONARY:
-    case TYPE_STRING:
+    case TYPE_VAR:
       *var = hobj.value.var;
-      AddRefVar(var);
+      nb_var_addref(*var);
       break;
     case TYPE_VOID_P:
       if (hobj.value.voidp) {
@@ -767,7 +751,7 @@ bool HandleToVar(Handle handle, struct PP_Var* var) {
       break;
     default:
       VERROR("Don't know how to convert handle %d with type %s to var", handle,
-             TypeToString(hobj.type));
+             nb_type_to_string(hobj.type));
       return FALSE;
   }
 
