@@ -146,7 +146,7 @@ bool nb_handle_register_int8(Handle handle, int8_t value) {
 bool nb_handle_register_uint8(Handle handle, uint8_t value) {
   union HandleValue hval;
   hval.uint8 = value;
-  return register_handle(handle, TYPE_INT8, hval);
+  return register_handle(handle, TYPE_UINT8, hval);
 }
 
 bool nb_handle_register_int16(Handle handle, int16_t value) {
@@ -244,9 +244,9 @@ static bool get_handle(Handle handle, struct HandleObject* out_handle_object) {
 #define TYPE_INT8_MAX (0x7f)
 #define TYPE_INT16_MIN (-0x8000)
 #define TYPE_INT16_MAX (0x7fff)
-#define TYPE_INT32_MIN (-0x80000000L)
+#define TYPE_INT32_MIN (int32_t)(-0x80000000L)
 #define TYPE_INT32_MAX (0x7fffffffL)
-#define TYPE_INT64_MIN (-0x8000000000000000LL)
+#define TYPE_INT64_MIN (int64_t)(-0x8000000000000000LL)
 #define TYPE_INT64_MAX (0x7fffffffffffffffLL)
 #define TYPE_UINT8_MIN (0)
 #define TYPE_UINT8_MAX (0xff)
@@ -285,94 +285,224 @@ static bool get_handle(Handle handle, struct HandleObject* out_handle_object) {
 
 #define HOBJ_FIELD(type) (hobj.value.type##_FIELD)
 
+#define TYPE_SWITCH(to_type) \
+  switch (hobj.type) { \
+    TYPE_CASE(to_type, TYPE_INT8); \
+    TYPE_CASE(to_type, TYPE_UINT8); \
+    TYPE_CASE(to_type, TYPE_INT16); \
+    TYPE_CASE(to_type, TYPE_UINT16); \
+    TYPE_CASE(to_type, TYPE_INT32); \
+    TYPE_CASE(to_type, TYPE_UINT32); \
+    TYPE_CASE(to_type, TYPE_INT64); \
+    TYPE_CASE(to_type, TYPE_UINT64); \
+    TYPE_CASE(to_type, TYPE_FLOAT); \
+    TYPE_CASE(to_type, TYPE_DOUBLE); \
+    DEFAULT_TYPE_CASE(to_type); \
+  }
+
 #define TYPE_CASE(to_type, from_type) \
   case from_type: \
+    CHECK_##to_type##_##from_type(); \
     *out_value = HOBJ_FIELD(from_type); \
     return TRUE  // no semicolon
+
+#define CHECK_TYPE_INT8_TYPE_INT8()
+#define CHECK_TYPE_INT8_TYPE_INT16() CHECK(TYPE_INT8, TYPE_INT16);
+#define CHECK_TYPE_INT8_TYPE_INT32() CHECK(TYPE_INT8, TYPE_INT32);
+#define CHECK_TYPE_INT8_TYPE_INT64() CHECK(TYPE_INT8, TYPE_INT64);
+#define CHECK_TYPE_INT8_TYPE_UINT8()  CHECK_MAX(TYPE_INT8, TYPE_UINT8);
+#define CHECK_TYPE_INT8_TYPE_UINT16() CHECK_MAX(TYPE_INT8, TYPE_UINT16);
+#define CHECK_TYPE_INT8_TYPE_UINT32() CHECK_MAX(TYPE_INT8, TYPE_UINT32);
+#define CHECK_TYPE_INT8_TYPE_UINT64() CHECK_MAX(TYPE_INT8, TYPE_UINT64);
+#define CHECK_TYPE_INT8_TYPE_FLOAT() CHECK_FLOAT_TO_INT(TYPE_INT8, TYPE_FLOAT);
+#define CHECK_TYPE_INT8_TYPE_DOUBLE() CHECK_DOUBLE_TO_INT(TYPE_INT8, TYPE_DOUBLE);
+
+#define CHECK_TYPE_UINT8_TYPE_INT8()  CHECK_GT_ZERO(TYPE_UINT8, TYPE_INT8);
+#define CHECK_TYPE_UINT8_TYPE_INT16() CHECK_MAX_GT_ZERO(TYPE_UINT8, TYPE_INT16);
+#define CHECK_TYPE_UINT8_TYPE_INT32() CHECK_MAX_GT_ZERO(TYPE_UINT8, TYPE_INT32);
+#define CHECK_TYPE_UINT8_TYPE_INT64() CHECK_MAX_GT_ZERO(TYPE_UINT8, TYPE_INT64);
+#define CHECK_TYPE_UINT8_TYPE_UINT8()
+#define CHECK_TYPE_UINT8_TYPE_UINT16() CHECK_MAX(TYPE_UINT8, TYPE_UINT16);
+#define CHECK_TYPE_UINT8_TYPE_UINT32() CHECK_MAX(TYPE_UINT8, TYPE_UINT32);
+#define CHECK_TYPE_UINT8_TYPE_UINT64() CHECK_MAX(TYPE_UINT8, TYPE_UINT64);
+#define CHECK_TYPE_UINT8_TYPE_FLOAT() CHECK_FLOAT_TO_INT(TYPE_UINT8, TYPE_FLOAT);
+#define CHECK_TYPE_UINT8_TYPE_DOUBLE() CHECK_DOUBLE_TO_INT(TYPE_UINT8, TYPE_DOUBLE);
+
+#define CHECK_TYPE_INT16_TYPE_INT8()
+#define CHECK_TYPE_INT16_TYPE_INT16()
+#define CHECK_TYPE_INT16_TYPE_INT32() CHECK(TYPE_INT16, TYPE_INT32);
+#define CHECK_TYPE_INT16_TYPE_INT64() CHECK(TYPE_INT16, TYPE_INT64);
+#define CHECK_TYPE_INT16_TYPE_UINT8()
+#define CHECK_TYPE_INT16_TYPE_UINT16() CHECK_MAX(TYPE_INT16, TYPE_UINT16);
+#define CHECK_TYPE_INT16_TYPE_UINT32() CHECK_MAX(TYPE_INT16, TYPE_UINT32);
+#define CHECK_TYPE_INT16_TYPE_UINT64() CHECK_MAX(TYPE_INT16, TYPE_UINT64);
+#define CHECK_TYPE_INT16_TYPE_FLOAT() CHECK_FLOAT_TO_INT(TYPE_INT16, TYPE_FLOAT);
+#define CHECK_TYPE_INT16_TYPE_DOUBLE() CHECK_DOUBLE_TO_INT(TYPE_INT16, TYPE_DOUBLE);
+
+#define CHECK_TYPE_UINT16_TYPE_INT8()  CHECK_GT_ZERO(TYPE_UINT16, TYPE_INT8);
+#define CHECK_TYPE_UINT16_TYPE_INT16() CHECK_GT_ZERO(TYPE_UINT16, TYPE_INT16);
+#define CHECK_TYPE_UINT16_TYPE_INT32() CHECK_MAX_GT_ZERO(TYPE_UINT16, TYPE_INT32);
+#define CHECK_TYPE_UINT16_TYPE_INT64() CHECK_MAX_GT_ZERO(TYPE_UINT16, TYPE_INT64);
+#define CHECK_TYPE_UINT16_TYPE_UINT8()
+#define CHECK_TYPE_UINT16_TYPE_UINT16()
+#define CHECK_TYPE_UINT16_TYPE_UINT32() CHECK(TYPE_UINT16, TYPE_UINT32);
+#define CHECK_TYPE_UINT16_TYPE_UINT64() CHECK(TYPE_UINT16, TYPE_UINT64);
+#define CHECK_TYPE_UINT16_TYPE_FLOAT() CHECK_FLOAT_TO_INT(TYPE_UINT16, TYPE_FLOAT);
+#define CHECK_TYPE_UINT16_TYPE_DOUBLE() CHECK_DOUBLE_TO_INT(TYPE_UINT16, TYPE_DOUBLE);
+
+#define CHECK_TYPE_INT32_TYPE_INT8()
+#define CHECK_TYPE_INT32_TYPE_INT16()
+#define CHECK_TYPE_INT32_TYPE_INT32()
+#define CHECK_TYPE_INT32_TYPE_INT64() CHECK(TYPE_INT32, TYPE_INT64);
+#define CHECK_TYPE_INT32_TYPE_UINT8()
+#define CHECK_TYPE_INT32_TYPE_UINT16()
+#define CHECK_TYPE_INT32_TYPE_UINT32() CHECK_MAX(TYPE_INT32, TYPE_UINT32);
+#define CHECK_TYPE_INT32_TYPE_UINT64() CHECK_MAX(TYPE_INT32, TYPE_UINT64);
+#define CHECK_TYPE_INT32_TYPE_FLOAT() CHECK_FLOAT_TO_INT(TYPE_INT32, TYPE_FLOAT);
+#define CHECK_TYPE_INT32_TYPE_DOUBLE() CHECK_DOUBLE_TO_INT(TYPE_INT32, TYPE_DOUBLE);
+
+#define CHECK_TYPE_UINT32_TYPE_INT8()  CHECK_GT_ZERO(TYPE_UINT32, TYPE_INT8);
+#define CHECK_TYPE_UINT32_TYPE_INT16() CHECK_GT_ZERO(TYPE_UINT32, TYPE_INT16);
+#define CHECK_TYPE_UINT32_TYPE_INT32() CHECK_GT_ZERO(TYPE_UINT32, TYPE_INT32);
+#define CHECK_TYPE_UINT32_TYPE_INT64() CHECK_MAX_GT_ZERO(TYPE_UINT32, TYPE_INT64);
+#define CHECK_TYPE_UINT32_TYPE_UINT8()
+#define CHECK_TYPE_UINT32_TYPE_UINT16()
+#define CHECK_TYPE_UINT32_TYPE_UINT32()
+#define CHECK_TYPE_UINT32_TYPE_UINT64() CHECK(TYPE_UINT32, TYPE_UINT64);
+#define CHECK_TYPE_UINT32_TYPE_FLOAT() CHECK_FLOAT_TO_INT(TYPE_UINT32, TYPE_FLOAT);
+#define CHECK_TYPE_UINT32_TYPE_DOUBLE() CHECK_DOUBLE_TO_INT(TYPE_UINT32, TYPE_DOUBLE);
+
+#define CHECK_TYPE_INT64_TYPE_INT8()
+#define CHECK_TYPE_INT64_TYPE_INT16()
+#define CHECK_TYPE_INT64_TYPE_INT32()
+#define CHECK_TYPE_INT64_TYPE_INT64()
+#define CHECK_TYPE_INT64_TYPE_UINT8()
+#define CHECK_TYPE_INT64_TYPE_UINT16()
+#define CHECK_TYPE_INT64_TYPE_UINT32()
+#define CHECK_TYPE_INT64_TYPE_UINT64() CHECK_MAX(TYPE_INT64, TYPE_UINT64);
+#define CHECK_TYPE_INT64_TYPE_FLOAT() CHECK_FLOAT_TO_INT(TYPE_INT64, TYPE_FLOAT);
+#define CHECK_TYPE_INT64_TYPE_DOUBLE() CHECK_DOUBLE_TO_INT(TYPE_INT64, TYPE_DOUBLE);
+
+#define CHECK_TYPE_UINT64_TYPE_INT8()  CHECK_GT_ZERO(TYPE_UINT64, TYPE_INT8);
+#define CHECK_TYPE_UINT64_TYPE_INT16() CHECK_GT_ZERO(TYPE_UINT64, TYPE_INT16);
+#define CHECK_TYPE_UINT64_TYPE_INT32() CHECK_GT_ZERO(TYPE_UINT64, TYPE_INT32);
+#define CHECK_TYPE_UINT64_TYPE_INT64() CHECK_GT_ZERO(TYPE_UINT64, TYPE_INT64);
+#define CHECK_TYPE_UINT64_TYPE_UINT8()
+#define CHECK_TYPE_UINT64_TYPE_UINT16()
+#define CHECK_TYPE_UINT64_TYPE_UINT32()
+#define CHECK_TYPE_UINT64_TYPE_UINT64()
+#define CHECK_TYPE_UINT64_TYPE_FLOAT() CHECK_FLOAT_TO_INT(TYPE_UINT64, TYPE_FLOAT);
+#define CHECK_TYPE_UINT64_TYPE_DOUBLE() CHECK_DOUBLE_TO_INT(TYPE_UINT64, TYPE_DOUBLE);
+
+#define CHECK_TYPE_FLOAT_TYPE_INT8()
+#define CHECK_TYPE_FLOAT_TYPE_INT16()
+#define CHECK_TYPE_FLOAT_TYPE_INT32() CHECK_INT_TO_FLOAT(TYPE_FLOAT, TYPE_INT32);
+#define CHECK_TYPE_FLOAT_TYPE_INT64() CHECK_INT_TO_FLOAT(TYPE_FLOAT, TYPE_INT64);
+#define CHECK_TYPE_FLOAT_TYPE_UINT8()
+#define CHECK_TYPE_FLOAT_TYPE_UINT16()
+#define CHECK_TYPE_FLOAT_TYPE_UINT32() CHECK_MAX_INT_TO_FLOAT(TYPE_FLOAT, TYPE_UINT32);
+#define CHECK_TYPE_FLOAT_TYPE_UINT64() CHECK_MAX_INT_TO_FLOAT(TYPE_FLOAT, TYPE_UINT64);
+#define CHECK_TYPE_FLOAT_TYPE_FLOAT()
+#define CHECK_TYPE_FLOAT_TYPE_DOUBLE()
+
+#define CHECK_TYPE_DOUBLE_TYPE_INT8()
+#define CHECK_TYPE_DOUBLE_TYPE_INT16()
+#define CHECK_TYPE_DOUBLE_TYPE_INT32()
+#define CHECK_TYPE_DOUBLE_TYPE_INT64() CHECK_INT_TO_DOUBLE(TYPE_FLOAT, TYPE_INT64);
+#define CHECK_TYPE_DOUBLE_TYPE_UINT8()
+#define CHECK_TYPE_DOUBLE_TYPE_UINT16()
+#define CHECK_TYPE_DOUBLE_TYPE_UINT32()
+#define CHECK_TYPE_DOUBLE_TYPE_UINT64() CHECK_MAX_INT_TO_DOUBLE(TYPE_FLOAT, TYPE_UINT64);
+#define CHECK_TYPE_DOUBLE_TYPE_FLOAT()
+#define CHECK_TYPE_DOUBLE_TYPE_DOUBLE()
 
 #define DEFAULT_TYPE_CASE(to_type) \
   default: \
     VERROR("handle %d is of type %s. Expected %s.", handle, \
-           nb_type_to_string(hobj.type), nb_type_to_string(to_type)); \
+           nb_type_to_string(hobj.type), \
+           nb_type_to_string(to_type)); \
     return FALSE  // no semicolon
 
-#define TYPE_CASE_TRUNC_GENERIC(to_type, from_type, check) \
-  case from_type: \
-    check(to_type, from_type); \
-    *out_value = HOBJ_FIELD(from_type); \
-    return TRUE  // no semicolon
-
-#define TYPE_CASE_TRUNC(to_type, from_type) \
-  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK)
-
-#define TYPE_CASE_TRUNC_MIN(to_type, from_type) \
-  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_MIN)
-
-#define TYPE_CASE_TRUNC_MAX(to_type, from_type) \
-  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_MAX)
-
-#define TYPE_CASE_TRUNC_FLOAT_TO_INT(to_type, from_type) \
-  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_FLOAT_TO_INT)
-
-#define TYPE_CASE_TRUNC_DOUBLE_TO_INT(to_type, from_type) \
-  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_DOUBLE_TO_INT)
-
-#define TYPE_CASE_TRUNC_INT_TO_FLOAT(to_type, from_type) \
-  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_INT_TO_FLOAT)
-
-#define TYPE_CASE_TRUNC_INT_TO_DOUBLE(to_type, from_type) \
-  TYPE_CASE_TRUNC_GENERIC(to_type, from_type, TRUNC_CHECK_INT_TO_DOUBLE)
-
-#define TRUNC_CHECK(to_type, from_type) \
+#define CHECK(to_type, from_type) \
   if (HOBJ_FIELD(from_type) < to_type##_MIN || \
       HOBJ_FIELD(from_type) > to_type##_MAX) { \
-    TRUNC_ERROR(to_type, from_type); \
+    CHECK_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
-#define TRUNC_CHECK_MAX(to_type, from_type) \
+#define CHECK_MAX(to_type, from_type) \
   if (HOBJ_FIELD(from_type) > to_type##_MAX) { \
-    TRUNC_ERROR(to_type, from_type); \
+    CHECK_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
-#define TRUNC_CHECK_MIN(to_type, from_type) \
-  if (HOBJ_FIELD(from_type) < to_type##_MIN) { \
-    TRUNC_ERROR(to_type, from_type); \
+#define CHECK_GT_ZERO(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < 0) { \
+    CHECK_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
-#define TRUNC_CHECK_FLOAT_TO_INT(to_type, from_type) \
+#define CHECK_MAX_GT_ZERO(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < 0 || \
+      HOBJ_FIELD(from_type) > to_type##_MAX) { \
+    CHECK_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define CHECK_SIGN(to_type, from_type) \
+  CHECK(to_type, from_type)
+
+#define CHECK_FLOAT_TO_INT(to_type, from_type) \
   if (HOBJ_FIELD(from_type) < to_type##_MIN || \
       HOBJ_FIELD(from_type) > to_type##_MAX || \
       HOBJ_FIELD(from_type) != rintf(HOBJ_FIELD(from_type))) { \
-    TRUNC_ERROR(to_type, from_type); \
+    CHECK_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
-#define TRUNC_CHECK_DOUBLE_TO_INT(to_type, from_type) \
+#define CHECK_FLOAT_TO_INT64(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) < to_type##_MIN_FLOAT || \
+      HOBJ_FIELD(from_type) > to_type##_MAX_FLOAT || \
+      HOBJ_FIELD(from_type) != rintf(HOBJ_FIELD(from_type))) { \
+    CHECK_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define CHECK_DOUBLE_TO_INT(to_type, from_type) \
   if (HOBJ_FIELD(from_type) < to_type##_MIN || \
       HOBJ_FIELD(from_type) > to_type##_MAX || \
       HOBJ_FIELD(from_type) != rint(HOBJ_FIELD(from_type))) { \
-    TRUNC_ERROR(to_type, from_type); \
+    CHECK_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
-#define TRUNC_CHECK_INT_TO_FLOAT(to_type, from_type) \
+#define CHECK_INT_TO_FLOAT(to_type, from_type) \
   if (HOBJ_FIELD(from_type) < TYPE_FLOAT_MIN_24 || \
       HOBJ_FIELD(from_type) > TYPE_FLOAT_MAX_24) { \
-    TRUNC_ERROR(to_type, from_type); \
+    CHECK_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
-#define TRUNC_CHECK_INT_TO_DOUBLE(to_type, from_type) \
+#define CHECK_MAX_INT_TO_FLOAT(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) > TYPE_FLOAT_MAX_24) { \
+    CHECK_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define CHECK_INT_TO_DOUBLE(to_type, from_type) \
   if (HOBJ_FIELD(from_type) < TYPE_DOUBLE_MIN_53 || \
       HOBJ_FIELD(from_type) > TYPE_DOUBLE_MAX_53) { \
-    TRUNC_ERROR(to_type, from_type); \
+    CHECK_ERROR(to_type, from_type); \
     return FALSE; \
   }
 
-#define TRUNC_ERROR(to_type, from_type) \
+#define CHECK_MAX_INT_TO_DOUBLE(to_type, from_type) \
+  if (HOBJ_FIELD(from_type) > TYPE_DOUBLE_MAX_53) { \
+    CHECK_ERROR(to_type, from_type); \
+    return FALSE; \
+  }
+
+#define CHECK_ERROR(to_type, from_type) \
   VERROR("handle %d(%s) with value " from_type##_FMT \
          " cannot be represented as %s.", handle, \
          nb_type_to_string(hobj.type), HOBJ_FIELD(from_type), \
@@ -384,19 +514,7 @@ bool nb_handle_get_int8(Handle handle, int8_t* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE(TYPE_INT8, TYPE_INT8);
-    TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT16);
-    TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_INT8, TYPE_INT64);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT8);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT16);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT32);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT8, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT8, TYPE_FLOAT);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT8, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_INT8);
-  }
+  TYPE_SWITCH(TYPE_INT8);
 }
 
 bool nb_handle_get_uint8(Handle handle, uint8_t* out_value) {
@@ -405,19 +523,7 @@ bool nb_handle_get_uint8(Handle handle, uint8_t* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT8, TYPE_INT8);
-    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT16);
-    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_INT64);
-    TYPE_CASE(TYPE_UINT8, TYPE_UINT8);
-    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT16);
-    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT32);
-    TYPE_CASE_TRUNC(TYPE_UINT8, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT8, TYPE_FLOAT);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT8, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_UINT8);
-  }
+  TYPE_SWITCH(TYPE_UINT8);
 }
 
 bool nb_handle_get_int16(Handle handle, int16_t* out_value) {
@@ -426,19 +532,7 @@ bool nb_handle_get_int16(Handle handle, int16_t* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE(TYPE_INT16, TYPE_INT8);
-    TYPE_CASE(TYPE_INT16, TYPE_INT16);
-    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_INT64);
-    TYPE_CASE(TYPE_INT16, TYPE_UINT8);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT16, TYPE_UINT16);
-    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_UINT32);
-    TYPE_CASE_TRUNC(TYPE_INT16, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT16, TYPE_FLOAT);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT16, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_INT16);
-  }
+  TYPE_SWITCH(TYPE_INT16);
 }
 
 bool nb_handle_get_uint16(Handle handle, uint16_t* out_value) {
@@ -447,19 +541,7 @@ bool nb_handle_get_uint16(Handle handle, uint16_t* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT16, TYPE_INT8);
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT16, TYPE_INT16);
-    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_INT64);
-    TYPE_CASE(TYPE_UINT16, TYPE_UINT8);
-    TYPE_CASE(TYPE_UINT16, TYPE_UINT16);
-    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_UINT32);
-    TYPE_CASE_TRUNC(TYPE_UINT16, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT16, TYPE_FLOAT);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT16, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_UINT16);
-  }
+  TYPE_SWITCH(TYPE_UINT16);
 }
 
 bool nb_handle_get_int32(Handle handle, int32_t* out_value) {
@@ -468,19 +550,7 @@ bool nb_handle_get_int32(Handle handle, int32_t* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE(TYPE_INT32, TYPE_INT8);
-    TYPE_CASE(TYPE_INT32, TYPE_INT16);
-    TYPE_CASE(TYPE_INT32, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_INT32, TYPE_INT64);
-    TYPE_CASE(TYPE_INT32, TYPE_UINT8);
-    TYPE_CASE(TYPE_INT32, TYPE_UINT16);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT32, TYPE_UINT32);
-    TYPE_CASE_TRUNC(TYPE_INT32, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT32, TYPE_FLOAT);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT32, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_INT32);
-  }
+  TYPE_SWITCH(TYPE_INT32);
 }
 
 bool nb_handle_get_uint32(Handle handle, uint32_t* out_value) {
@@ -489,19 +559,7 @@ bool nb_handle_get_uint32(Handle handle, uint32_t* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT8);
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT16);
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT32, TYPE_INT32);
-    TYPE_CASE_TRUNC(TYPE_UINT32, TYPE_INT64);
-    TYPE_CASE(TYPE_UINT32, TYPE_UINT8);
-    TYPE_CASE(TYPE_UINT32, TYPE_UINT16);
-    TYPE_CASE(TYPE_UINT32, TYPE_UINT32);
-    TYPE_CASE_TRUNC(TYPE_UINT32, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT32, TYPE_FLOAT);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT32, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_UINT32);
-  }
+  TYPE_SWITCH(TYPE_UINT32);
 }
 
 bool nb_handle_get_int64(Handle handle, int64_t* out_value) {
@@ -510,19 +568,7 @@ bool nb_handle_get_int64(Handle handle, int64_t* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE(TYPE_INT64, TYPE_INT8);
-    TYPE_CASE(TYPE_INT64, TYPE_INT16);
-    TYPE_CASE(TYPE_INT64, TYPE_INT32);
-    TYPE_CASE(TYPE_INT64, TYPE_INT64);
-    TYPE_CASE(TYPE_INT64, TYPE_UINT8);
-    TYPE_CASE(TYPE_INT64, TYPE_UINT16);
-    TYPE_CASE(TYPE_INT64, TYPE_UINT32);
-    TYPE_CASE_TRUNC_MAX(TYPE_INT64, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_INT64, TYPE_FLOAT);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_INT64, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_INT64);
-  }
+  TYPE_SWITCH(TYPE_INT64);
 }
 
 bool nb_handle_get_uint64(Handle handle, uint64_t* out_value) {
@@ -531,19 +577,7 @@ bool nb_handle_get_uint64(Handle handle, uint64_t* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT8);
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT16);
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT32);
-    TYPE_CASE_TRUNC_MIN(TYPE_UINT64, TYPE_INT64);
-    TYPE_CASE(TYPE_UINT64, TYPE_UINT8);
-    TYPE_CASE(TYPE_UINT64, TYPE_UINT16);
-    TYPE_CASE(TYPE_UINT64, TYPE_UINT32);
-    TYPE_CASE(TYPE_UINT64, TYPE_UINT64);
-    TYPE_CASE_TRUNC_FLOAT_TO_INT(TYPE_UINT64, TYPE_FLOAT);
-    TYPE_CASE_TRUNC_DOUBLE_TO_INT(TYPE_UINT64, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_UINT64);
-  }
+  TYPE_SWITCH(TYPE_UINT64);
 }
 
 bool nb_handle_get_float(Handle handle, float* out_value) {
@@ -552,19 +586,7 @@ bool nb_handle_get_float(Handle handle, float* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE(TYPE_FLOAT, TYPE_INT8);
-    TYPE_CASE(TYPE_FLOAT, TYPE_INT16);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_INT32);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_INT64);
-    TYPE_CASE(TYPE_FLOAT, TYPE_UINT8);
-    TYPE_CASE(TYPE_FLOAT, TYPE_UINT16);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_UINT32);
-    TYPE_CASE_TRUNC_INT_TO_FLOAT(TYPE_FLOAT, TYPE_UINT64);
-    TYPE_CASE(TYPE_FLOAT, TYPE_FLOAT);
-    TYPE_CASE(TYPE_FLOAT, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_FLOAT);
-  }
+  TYPE_SWITCH(TYPE_FLOAT);
 }
 
 bool nb_handle_get_double(Handle handle, double* out_value) {
@@ -573,19 +595,7 @@ bool nb_handle_get_double(Handle handle, double* out_value) {
     return FALSE;
   }
 
-  switch (hobj.type) {
-    TYPE_CASE(TYPE_DOUBLE, TYPE_INT8);
-    TYPE_CASE(TYPE_DOUBLE, TYPE_INT16);
-    TYPE_CASE(TYPE_DOUBLE, TYPE_INT32);
-    TYPE_CASE_TRUNC_INT_TO_DOUBLE(TYPE_DOUBLE, TYPE_INT64);
-    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT8);
-    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT16);
-    TYPE_CASE(TYPE_DOUBLE, TYPE_UINT32);
-    TYPE_CASE_TRUNC_INT_TO_DOUBLE(TYPE_DOUBLE, TYPE_UINT64);
-    TYPE_CASE(TYPE_DOUBLE, TYPE_FLOAT);
-    TYPE_CASE(TYPE_DOUBLE, TYPE_DOUBLE);
-    DEFAULT_TYPE_CASE(TYPE_DOUBLE);
-  }
+  TYPE_SWITCH(TYPE_DOUBLE);
 }
 
 bool nb_handle_get_voidp(Handle handle, void** out_value) {

@@ -15,6 +15,7 @@
 var assert = require('assert'),
     child_process = require('child_process'),
     fs = require('fs'),
+    os = require('os'),
     path = require('path'),
     execFile = child_process.execFile,
     toolchain = 'newlib',
@@ -39,7 +40,8 @@ describe('Build C Tests', function() {
 });
 
 function buildTest(callback) {
-  var cmd = ['CONFIG=Debug', 'TOOLCHAIN=' + toolchain, 'test'],
+  var numCpus = os.cpus().length,
+      cmd = ['CONFIG=Debug', 'TOOLCHAIN=' + toolchain, '-j', numCpus, 'test'],
       opts = {cwd: __dirname},
       proc,
       start = new Date();
