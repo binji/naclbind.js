@@ -19,6 +19,38 @@
 #include "handle.h"
 #include "var.h"
 
+bool operator ==(struct PP_Var v1, struct PP_Var v2) {
+  if (v1.type != v2.type) {
+    return false;
+  }
+
+  switch (v1.type) {
+    case PP_VARTYPE_UNDEFINED:
+    case PP_VARTYPE_NULL:
+      return true;
+
+    case PP_VARTYPE_BOOL:
+      return v1.value.as_bool == v2.value.as_bool;
+
+    case PP_VARTYPE_INT32:
+      return v1.value.as_int == v2.value.as_int;
+
+    case PP_VARTYPE_DOUBLE:
+      return v1.value.as_double == v2.value.as_double;
+
+    case PP_VARTYPE_STRING:
+    case PP_VARTYPE_OBJECT:
+    case PP_VARTYPE_ARRAY:
+    case PP_VARTYPE_DICTIONARY:
+    case PP_VARTYPE_ARRAY_BUFFER:
+    case PP_VARTYPE_RESOURCE:
+      return v1.value.as_id == v2.value.as_id;
+
+    default:
+      return false;
+  }
+}
+
 class HandleTest : public ::testing::Test {
  public:
   HandleTest() {}
@@ -226,4 +258,59 @@ TEST_F(HandleTest, Double) {
   ROW(double,  0.0,  O, O,  O,  O,  O,  O,  O,  O,  O,  O, _, _);
   ROW(double, 1e11,  _, _,  _,  _,  _,  _,  O,  O,  T,  O, _, _);
   ROW(double, 1e20,  _, _,  _,  _,  _,  _,  _,  _,  T,  O, _, _);
+}
+
+TEST_F(HandleTest, Voidp) {
+  int dummy;
+  void* vp = &dummy;
+
+  //             i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 vp  v
+  ROW(voidp, vp,  _, _, _,   _,  _,  _,  _,  _,  _,  _, O, _);
+}
+
+TEST_F(HandleTest, Var) {
+  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeUndefined()));
+  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeNull()));
+  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeBool(PP_TRUE)));
+  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeInt32(42)));
+  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeDouble(3.25)));
+
+  {
+    struct PP_Var v = nb_var_string_create("hi", 2);
+    //           i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 vp  v
+    ROW(var, v,   _, _, _,   _,  _,  _,  _,  _,  _,  _, _, O);
+    nb_var_release(v);
+  }
+
+  {
+    struct PP_Var v = nb_var_array_create();
+    //           i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 vp  v
+    ROW(var, v,   _, _, _,   _,  _,  _,  _,  _,  _,  _, _, O);
+    nb_var_release(v);
+  }
+
+  {
+    struct PP_Var v = nb_var_dict_create();
+    //           i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 vp  v
+    ROW(var, v,   _, _, _,   _,  _,  _,  _,  _,  _,  _, _, O);
+    nb_var_release(v);
+  }
+
+  {
+    struct PP_Var v = nb_var_buffer_create(10);
+    //           i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 vp  v
+    ROW(var, v,   _, _, _,   _,  _,  _,  _,  _,  _,  _, _, O);
+    nb_var_release(v);
+  }
+}
+
+TEST_F(HandleTest, Charp) {
+  struct PP_Var v = nb_var_string_create("hi", 2);
+  ASSERT_EQ(TRUE, nb_handle_register_var(1, v));
+  nb_var_release(v);
+
+  char* s;
+  EXPECT_EQ(TRUE, nb_handle_get_charp(1, &s));
+  EXPECT_STREQ("hi", s);
+  nb_handle_destroy(1);
 }

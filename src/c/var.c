@@ -127,6 +127,28 @@ bool nb_var_dict_has_key(struct PP_Var var, const char* key) {
   return result;
 }
 
+struct PP_Var nb_var_buffer_create(uint32_t length) {
+  return g_ppb_var_array_buffer->Create(length);
+}
+
+uint32_t nb_var_buffer_byte_length(struct PP_Var var) {
+  assert(var.type == PP_VARTYPE_ARRAY_BUFFER);
+  uint32_t length;
+  bool result = g_ppb_var_array_buffer->ByteLength(var, &length);
+  assert(result);
+  return length;
+}
+
+void nb_var_buffer_map(struct PP_Var var) {
+  assert(var.type == PP_VARTYPE_ARRAY_BUFFER);
+  g_ppb_var_array_buffer->Map(var);
+}
+
+void nb_var_buffer_unmap(struct PP_Var var) {
+  assert(var.type == PP_VARTYPE_ARRAY_BUFFER);
+  g_ppb_var_array_buffer->Unmap(var);
+}
+
 bool nb_var_int8(struct PP_Var var, int8_t* out_value) {
   if (!nb_var_check_type_with_error(var, PP_VARTYPE_INT32)) {
     return FALSE;
