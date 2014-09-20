@@ -42,13 +42,9 @@ describe('Build C Tests', function() {
 function buildTest(callback) {
   var numCpus = os.cpus().length,
       cmd = ['CONFIG=Debug', 'TOOLCHAIN=' + toolchain, '-j', numCpus, 'test'],
-      opts = {cwd: __dirname},
-      proc,
-      start = new Date();
+      opts = {cwd: __dirname};
 
-  proc = execFile('make', cmd, opts, function(error, stdout, stderr) {
-    var end = new Date();
-
+  execFile('make', cmd, opts, function(error, stdout, stderr) {
     if (error) {
       assert.ok(false, 'Unable to make C tests.\n' + error);
     }
