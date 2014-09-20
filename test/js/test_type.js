@@ -92,7 +92,8 @@ describe('Type', function() {
           assert.throws(function() { type.Numeric(type.INT, badCv); });
           assert.throws(function() { type.Pointer(type.int, badCv); });
           assert.throws(function() {
-            type.Record('s', [type.Field('f', type.int, 0)], type.STRUCT, badCv);
+            type.Record('s', 4, [type.Field('f', type.int, 0)], type.STRUCT,
+                        badCv);
           });
           assert.throws(function() { type.Enum('e', badCv); });
           assert.throws(function() { type.Typedef('t', type.int, badCv); });
@@ -203,7 +204,7 @@ describe('Type', function() {
         // Name should be string or null (for anonymous).
         [undefined, 100].forEach(function(badTag) {
           assert.throws(function() {
-            type.Record(badTag, [type.Field('f', type.int, 0)]);
+            type.Record(badTag, 4, [type.Field('f', type.int, 0)]);
           });
         });
       });
@@ -211,42 +212,42 @@ describe('Type', function() {
       it('should throw creating a record with bad fields', function() {
         // No array
         assert.throws(function() {
-          type.Record('foo', type.Field('f', type.int, 0));
+          type.Record('foo', 4, type.Field('f', type.int, 0));
         });
 
         // Raw object instead of type.Field
         assert.throws(function() {
-          type.Record('foo', [{name: 'f', type: type.int, offset: 0}]);
+          type.Record('foo', 4, [{name: 'f', type: type.int, offset: 0}]);
         });
 
         assert.throws(function() {
-          type.Record('foo', [undefined]);
+          type.Record('foo', 0, [undefined]);
         });
 
         // Field name must be string or null (for anonymous)
         assert.throws(function() {
-          type.Record('foo', [type.Field(1234, type.int, 0)]);
+          type.Record('foo', 4, [type.Field(1234, type.int, 0)]);
         });
 
         // Field must have valid type
         assert.throws(function() {
-          type.Record('foo', [type.Field('f', null, 0)]);
+          type.Record('foo', 0, [type.Field('f', null, 0)]);
         });
 
         // Field offset must be number
         assert.throws(function() {
-          type.Record('foo', [type.Field('f', type.int, 'none')]);
+          type.Record('foo', 4, [type.Field('f', type.int, 'none')]);
         });
       });
 
       it('should throw creating a record with bad struct/union', function() {
         // Should be type.STRUCT/type.UNION (bool)
         assert.throws(function() {
-          type.Record('foo', [type.Field('f', type.int, 0)], 'struct');
+          type.Record('foo', 4, [type.Field('f', type.int, 0)], 'struct');
         });
 
         assert.throws(function() {
-          type.Record('foo', [type.Field('f', type.int, 0)], null);
+          type.Record('foo', 4, [type.Field('f', type.int, 0)], null);
         });
       });
     });
@@ -283,8 +284,8 @@ describe('Type', function() {
     });
 
     it('should correctly spell record types', function() {
-      var s = type.Record('s', [type.Field('field', type.int, 0)]),
-          u = type.Record('u', [type.Field('field', type.int, 0)], type.UNION);
+      var s = type.Record('s', 4, [type.Field('field', type.int, 0)]),
+          u = type.Record('u', 4, [type.Field('field', type.int, 0)], type.UNION);
       assert.strictEqual(spell(s), 'struct s');
       assert.strictEqual(spell(u), 'union u');
     });
@@ -299,7 +300,7 @@ describe('Type', function() {
     });
 
     it('should correctly spell pointer types', function() {
-      var s = type.Record('myStruct', [type.Field('field', type.int, 0)]),
+      var s = type.Record('myStruct', 4, [type.Field('field', type.int, 0)]),
           e = type.Enum('myEnum'),
           t = type.Typedef('myTypedef', type.int),
           f = type.Function(type.void, [type.int]);
@@ -363,7 +364,7 @@ describe('Type', function() {
           Pc = type.Pointer(type.char),
           A2_c = type.Array(type.char, 2),
           A_c = type.IncompleteArray(type.char),
-          s = type.Record('s', [type.Field('f', type.int, 0)]),
+          s = type.Record('s', 4, [type.Field('f', type.int, 0)]),
           e = type.Enum('e'),
           FiiE = type.Function(type.int, [type.int]);
       assert.strictEqual(canon(v), v);
@@ -383,7 +384,7 @@ describe('Type', function() {
         type.Pointer(type.char),
         type.Array(type.char, 2),
         type.IncompleteArray(type.char),
-        type.Record('s', [type.Field('f', type.int, 0)]),
+        type.Record('s', 4, [type.Field('f', type.int, 0)]),
         type.Enum('e'),
         type.Function(type.int, [type.int])
       ];
@@ -464,8 +465,8 @@ describe('Type', function() {
 
       it('should fail cast of void -> anything else', function() {
         var e = type.Enum('e'),
-            s = type.Record('s', [type.Field('f', type.int, 0)]),
-            u = type.Record('s', [type.Field('f', type.int, 0)], type.UNION),
+            s = type.Record('s', 4, [type.Field('f', type.int, 0)]),
+            u = type.Record('s', 4, [type.Field('f', type.int, 0)], type.UNION),
             f = type.Function(type.void, [type.int]),
             fp = type.Pointer(f),
             p = type.Pointer(type.void),
@@ -596,8 +597,8 @@ describe('Type', function() {
       });
 
       it('should fail to cast numeric -> record, void, function', function() {
-        var s = type.Record('s', [type.Field('f', type.int, 0)]),
-            u = type.Record('s', [type.Field('f', type.int, 0)], type.UNION),
+        var s = type.Record('s', 4, [type.Field('f', type.int, 0)]),
+            u = type.Record('s', 4, [type.Field('f', type.int, 0)], type.UNION),
             v = type.void,
             f = type.Function(type.void, [type.int]);
         [s, u, v, f].forEach(function(x) {
@@ -621,8 +622,8 @@ describe('Type', function() {
       var v = type.void,
           c = type.char,
           e = type.Enum('e'),
-          s = type.Record('s', [type.Field('f', type.int, 0)]),
-          u = type.Record('s', [type.Field('f', type.int, 0)], type.UNION),
+          s = type.Record('s', 4, [type.Field('f', type.int, 0)]),
+          u = type.Record('s', 4, [type.Field('f', type.int, 0)], type.UNION),
           f = type.Function(type.void, [type.int]);
 
       it('should allow cast of pointer -> same pointer', function() {
@@ -805,9 +806,9 @@ describe('Type', function() {
     });
 
     describe('Record', function() {
-      var s = type.Record('s', [type.Field('f', type.int, 0)]),
-          s2 = type.Record('s2', [type.Field('f', type.int, 0)]),
-          u = type.Record('s', [type.Field('f', type.int, 0)], type.UNION);
+      var s = type.Record('s', 4, [type.Field('f', type.int, 0)]),
+          s2 = type.Record('s2', 4, [type.Field('f', type.int, 0)]),
+          u = type.Record('s', 4, [type.Field('f', type.int, 0)], type.UNION);
 
       it('should allow cast to same record', function() {
         assertCast(s, s, type.CAST_OK_EXACT);
@@ -873,7 +874,7 @@ describe('Type', function() {
       it('should fail on cast of enum -> anything else', function() {
         assertCast(e, type.void, type.CAST_ERROR);
         assertCast(e, type.Pointer(type.int), type.CAST_ERROR);
-        assertCast(e, type.Record('s', [type.Field('f', type.int, 0)]), type.CAST_ERROR);
+        assertCast(e, type.Record('s', 4, [type.Field('f', type.int, 0)]), type.CAST_ERROR);
         assertCast(e, type.Function(type.int, [type.int]), type.CAST_ERROR);
         assertCast(e, type.Array(type.int, 2), type.CAST_ERROR);
         assertCast(e, type.IncompleteArray(type.int), type.CAST_ERROR);
@@ -890,7 +891,7 @@ describe('Type', function() {
         assertCast(f, type.int, type.CAST_ERROR);
         assertCast(f, type.Enum('e'), type.CAST_ERROR);
         assertCast(f, type.Pointer(type.int), type.CAST_ERROR);
-        assertCast(f, type.Record('s', [type.Field('f', type.int, 0)]), type.CAST_ERROR);
+        assertCast(f, type.Record('s', 4, [type.Field('f', type.int, 0)]), type.CAST_ERROR);
         assertCast(f, type.Array(type.int, 2), type.CAST_ERROR);
         assertCast(f, type.IncompleteArray(type.int), type.CAST_ERROR);
       });

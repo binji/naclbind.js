@@ -367,12 +367,13 @@ Pointer.prototype.equals = function(that) {
          this.pointee.equals(that.pointee);
 };
 
-function Record(tag, fields, isUnion, cv) {
+function Record(tag, size, fields, isUnion, cv) {
   if (!(this instanceof Record)) {
-    return new Record(tag, fields, isUnion, cv);
+    return new Record(tag, size, fields, isUnion, cv);
   }
 
   utils.checkNullOrString(tag, 'tag');
+  utils.checkNonnegativeNumber(size, 'size');
   utils.checkArray(fields, Field, 'fields');
 
   if (isUnion !== undefined && utils.getClass(isUnion) !== 'Boolean') {
@@ -381,6 +382,7 @@ function Record(tag, fields, isUnion, cv) {
 
   Type.call(this, RECORD, cv);
   this.tag = tag;
+  this.size = size;
   this.fields = fields;
   this.isUnion = isUnion || false;
   this.spelling = getSpelling(this);
@@ -388,14 +390,15 @@ function Record(tag, fields, isUnion, cv) {
 Record.prototype = Object.create(Type.prototype);
 Record.prototype.constructor = Record;
 Record.prototype.qualify = function(cv) {
-  return Record(this.tag, this.fields, this.isUnion, this.cv | cv);
+  return Record(this.tag, this.size, this.fields, this.isUnion, this.cv | cv);
 };
 Record.prototype.unqualified = function() {
-  return Record(this.tag, this.fields, this.isUnion);
+  return Record(this.tag, this.size, this.fields, this.isUnion);
 };
 Record.prototype.equals = function(that) {
   return Type.prototype.equals.call(this, that) &&
          this.tag === that.tag &&
+         this.size === that.size &&
          utils.everyArrayPair(this.fields, that.fields,
              function(f1, f2) { return f1.equals(f2); }) &&
          this.isUnion === that.isUnion;
