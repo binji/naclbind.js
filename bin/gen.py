@@ -711,6 +711,7 @@ def main(args):
   parser.add_option('-b', '--blacklist-file', action='append', default=[])
   parser.add_option('-B', '--blacklist-symbol', action='append', default=[])
   parser.add_option('-t', '--template')
+  parser.add_option('-o', '--output')
   options, args = parser.parse_args(args)
   if options.verbose:
     logging.getLogger().setLevel(logging.INFO)
@@ -748,7 +749,17 @@ def main(args):
   template_dict = AttrDict()
   template_dict.TypeKind = TypeKind
   template_dict.collector = collector
-  print easy_template.RunTemplateString(template, template_dict)
+
+  out_text = easy_template.RunTemplateString(template, template_dict)
+
+  if options.output:
+    outdir = os.path.dirname(options.output)
+    if not os.path.exists(outdir):
+      os.makedirs(outdir)
+    with open(options.output, 'w') as outf:
+      outf.write(out_text)
+  else:
+    sys.stdout.write(out_text)
 
   return 0
 
