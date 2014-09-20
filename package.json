@@ -13,7 +13,7 @@
   "scripts": {
     "pretest": "jshint src",
     "test": "mocha test/**/test*.js",
-    "cover": "istanbul cover _mocha -x **/dist/*"
+    "cover": "istanbul cover _mocha test/js/test_*.js"
   },
   "repository": {
     "type": "git",
