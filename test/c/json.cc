@@ -93,6 +93,9 @@ static Value var_to_value(struct PP_Var var) {
     case PP_VARTYPE_NULL:
       return Value();
 
+    case PP_VARTYPE_BOOL:
+      return Value(var.value.as_bool ? true : false);
+
     case PP_VARTYPE_INT32:
       return Value(var.value.as_int);
 
@@ -107,9 +110,6 @@ static Value var_to_value(struct PP_Var var) {
       }
       return Value(std::string(s, len));
     }
-
-    case PP_VARTYPE_BOOL:
-      return Value(var.value.as_bool ? true : false);
 
     case PP_VARTYPE_ARRAY: {
       Value value(arrayValue);
@@ -151,6 +151,10 @@ static Value var_to_value(struct PP_Var var) {
       nb_var_release(keys);
       return value;
     }
+
+    default:
+      VERROR("Unexpected type %s", nb_var_type_to_string(var.type));
+      return Value();
   }
 }
 

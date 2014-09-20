@@ -27,6 +27,7 @@
 #include "bool.h"
 #include "error.h"
 #include "json.h"
+#include "var.h"
 
 enum { kArrayInitCount = 4 };
 enum { kDictInitCount = 4 };
