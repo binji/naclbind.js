@@ -13,7 +13,7 @@
 // limitations under the License.
 
 var assert = require('assert'),
-    module = require('../../src/js/module'),
+    mod = require('../../src/js/mod'),
     type = require('../../src/js/type'),
     NaClEmbed = require('./nacl_embed_for_testing'),
     Embed = require('../../src/js/embed'),
@@ -28,7 +28,7 @@ emptyMessage = {
 
 describe('Module', function() {
   it('should start with an empty message', function() {
-    var m = module.Module();
+    var m = mod.Module();
     assert.deepEqual(m.$getMessage(), emptyMessage);
   });
 
@@ -36,15 +36,15 @@ describe('Module', function() {
     var fnType = type.Function(type.void, []);
 
     assert.throws(function() {
-      module.Function(module.ERROR_IF_ID, fnType);
+      mod.Function(mod.ERROR_IF_ID, fnType);
     }, /\$errorIf/);
   });
 
   it('should work for a simple function type', function() {
     var addType = type.Function(type.int, [type.int, type.int]),
-        m = module.Module();
+        m = mod.Module();
 
-    m.$defineFunction('add', [module.Function(1, addType)]);
+    m.$defineFunction('add', [mod.Function(1, addType)]);
 
     m.add(3, 4);
 
@@ -64,11 +64,11 @@ describe('Module', function() {
   it('should work for an overloaded function', function() {
     var addIntType = type.Function(type.int, [type.int, type.int]),
         addFloatType = type.Function(type.float, [type.float, type.float]),
-        m = module.Module();
+        m = mod.Module();
 
     m.$defineFunction('add', [
-        module.Function(1, addIntType),
-        module.Function(2, addFloatType)
+        mod.Function(1, addIntType),
+        mod.Function(2, addFloatType)
     ]);
 
     m.add(3, 4);
@@ -91,7 +91,7 @@ describe('Module', function() {
   });
 
   it('should allow creation of handles', function() {
-    var m = module.Module(),
+    var m = mod.Module(),
         h1,
         h2;
 
@@ -114,10 +114,10 @@ describe('Module', function() {
 
   it('should allow use of explicitly-created handles', function() {
     var addType = type.Function(type.int, [type.int, type.int]),
-        m = module.Module(),
+        m = mod.Module(),
         h;
 
-    m.$defineFunction('add', [module.Function(1, addType)]);
+    m.$defineFunction('add', [mod.Function(1, addType)]);
     h = m.$handle(4);
     m.add(h, h);
 
@@ -136,10 +136,10 @@ describe('Module', function() {
         intp = type.Pointer(type.int),
         mallocType = type.Function(voidp, [type.uint]),
         getIntType = type.Function(type.int, [intp]),
-        m = module.Module();
+        m = mod.Module();
 
-    m.$defineFunction('malloc', [module.Function(1, mallocType)]);
-    m.$defineFunction('get', [module.Function(2, getIntType)]);
+    m.$defineFunction('malloc', [mod.Function(1, mallocType)]);
+    m.$defineFunction('get', [mod.Function(2, getIntType)]);
 
     m.get(m.malloc(4).cast(intp));
 
@@ -155,7 +155,7 @@ describe('Module', function() {
   });
 
   it('should allow creation of another context', function() {
-    var m = module.Module(),
+    var m = mod.Module(),
         c = m.$createContext(),
         h;
 
@@ -172,11 +172,11 @@ describe('Module', function() {
     it('should call callback and extract value from handle', function(done) {
       var ne = NaClEmbed(),
           e = Embed(ne),
-          m = module.Module(e),
+          m = mod.Module(e),
           addType = type.Function(type.int, [type.int, type.int]),
           h;
 
-      m.$defineFunction('add', [module.Function(1, addType)]);
+      m.$defineFunction('add', [mod.Function(1, addType)]);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -203,12 +203,12 @@ describe('Module', function() {
     it('should unwrap multiple handles', function(done) {
       var ne = NaClEmbed(),
           e = Embed(ne),
-          m = module.Module(e),
+          m = mod.Module(e),
           addType = type.Function(type.int, [type.int, type.int]),
           h1,
           h2;
 
-      m.$defineFunction('add', [module.Function(1, addType)]);
+      m.$defineFunction('add', [mod.Function(1, addType)]);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -228,7 +228,7 @@ describe('Module', function() {
     it('should pass current context to commit callback', function(done) {
       var ne = NaClEmbed(),
           e = Embed(ne),
-          m = module.Module(e),
+          m = mod.Module(e),
           c = m.$createContext(),
           oldC;
 
@@ -253,7 +253,7 @@ describe('Module', function() {
 
   describe('$destroyHandles', function() {
     it('should only destroy handles that are in the context', function() {
-      var m = module.Module(),
+      var m = mod.Module(),
           c = m.$createContext();
 
       // Created in default context.
@@ -270,7 +270,7 @@ describe('Module', function() {
     });
 
     it('should destroy handles from passed-in context', function() {
-      var m = module.Module(),
+      var m = mod.Module(),
           oldC = m.$context,
           c = m.$createContext();
 
@@ -285,7 +285,7 @@ describe('Module', function() {
     });
 
     it('should remove handles from the context immediately', function() {
-      var m = module.Module(),
+      var m = mod.Module(),
           c = m.$context;
 
       m.$handle(1);
@@ -296,7 +296,7 @@ describe('Module', function() {
     });
 
     it('should not destroy handles created after', function() {
-      var m = module.Module();
+      var m = mod.Module();
 
       m.$handle(1);
       m.$destroyHandles();
@@ -306,7 +306,7 @@ describe('Module', function() {
     });
 
     it('should accumulate handles to destroy', function() {
-      var m = module.Module();
+      var m = mod.Module();
 
       m.$handle(1);
       m.$destroyHandles();
@@ -320,7 +320,7 @@ describe('Module', function() {
     it('should be equivalent to calling destroy then commit', function(done) {
       var ne = NaClEmbed(),
           e = Embed(ne),
-          m = module.Module(e);
+          m = mod.Module(e);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -337,7 +337,7 @@ describe('Module', function() {
     it('should allow getting a handle that is being destroyed', function(done) {
       var ne = NaClEmbed(),
           e = Embed(ne),
-          m = module.Module(e),
+          m = mod.Module(e),
           h;
 
       ne.load();
@@ -356,7 +356,7 @@ describe('Module', function() {
 
   describe('$errorIf', function() {
     it('should add a command with id of ERROR_IF_ID', function() {
-      var m = module.Module();
+      var m = mod.Module();
 
       m.$errorIf(1);
       assert.deepEqual(m.$getMessage(), {
@@ -364,13 +364,13 @@ describe('Module', function() {
         setHandles: {1: 1},
         destroyHandles: [],
         commands: [
-          {id: module.ERROR_IF_ID, args: [1]}
+          {id: mod.ERROR_IF_ID, args: [1]}
         ]
       });
     });
 
     it('should throw if called with non-convertible to int value', function() {
-      var m = module.Module(),
+      var m = mod.Module(),
           rec = type.Record('rec', [type.Field('f', type.int, 0)], type.STRUCT),
           h;
 
@@ -387,7 +387,7 @@ describe('Module', function() {
   describe('Handle', function() {
     describe('cast', function() {
       it('should create a new handle with the same id', function() {
-        var m = module.Module(),
+        var m = mod.Module(),
             h1,
             h2;
 
@@ -399,7 +399,7 @@ describe('Module', function() {
       });
 
       it('should throw if the cast is invalid', function() {
-        var m = module.Module(),
+        var m = mod.Module(),
             h;
 
         h = m.$handle(1);
@@ -411,7 +411,7 @@ describe('Module', function() {
 
     describe('setFinalizer', function() {
       it('should be called when the handle is destroyed', function(done) {
-        var m = module.Module(),
+        var m = mod.Module(),
             h;
 
         h = m.$handle(1);
@@ -424,7 +424,7 @@ describe('Module', function() {
       });
 
       it('should be called in reverse order of creation', function(done) {
-        var m = module.Module(),
+        var m = mod.Module(),
             finalizer,
             count = 0,
             h1,
@@ -467,7 +467,7 @@ describe('Module', function() {
       });
 
       it('should only be called once', function() {
-        var m = module.Module(),
+        var m = mod.Module(),
             count = 0,
             h1,
             h2;
@@ -481,7 +481,7 @@ describe('Module', function() {
       });
 
       it('should throw if setFinalizer is called more than once', function() {
-        var m = module.Module(),
+        var m = mod.Module(),
             dummy = function() {},
             h1,
             h2,
@@ -509,11 +509,11 @@ describe('Module', function() {
         var voidp = type.Pointer(type.void),
             mallocType = type.Function(voidp, [type.uint]),
             freeType = type.Function(type.void, [voidp]),
-            m = module.Module(),
+            m = mod.Module(),
             h;
 
-        m.$defineFunction('malloc', [module.Function(1, mallocType)]);
-        m.$defineFunction('free', [module.Function(2, freeType)]);
+        m.$defineFunction('malloc', [mod.Function(1, mallocType)]);
+        m.$defineFunction('free', [mod.Function(2, freeType)]);
 
         h = m.malloc(4);
         h.setFinalizer(function(x) { m.free(x); });
