@@ -90,6 +90,8 @@ function Module(embed) {
   this.$handles_ = new HandleList();
   this.$functions_ = {};
   this.$context = this.$createContext();
+  this.$types = {};
+  this.$tags = {};
   this.$initMessage_();
 }
 Module.prototype.$defineFunction = function(name, functions) {
@@ -127,7 +129,18 @@ Module.prototype.$defineFunction = function(name, functions) {
 
     return retHandle;
   };
+
+  this[name].types = fnTypes;
 };
+Object.defineProperty(Module.prototype, '$functionsCount', {
+  get: function() { return Object.keys(this.$functions_).length; }
+});
+Object.defineProperty(Module.prototype, '$typesCount', {
+  get: function() { return Object.keys(this.$types).length; }
+});
+Object.defineProperty(Module.prototype, '$tagsCount', {
+  get: function() { return Object.keys(this.$tags).length; }
+});
 Module.prototype.$createContext = function() {
   return new Context(this.$handles_);
 };

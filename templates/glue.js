@@ -14,7 +14,7 @@
 
 // DO NOT EDIT, this file is auto-generated from //templates/glue.js
 
-var module = require('module'),
+var mod = require('mod'),
     type = require('type'),
 
     tags = {},
@@ -54,10 +54,10 @@ var funcType_{{type.js_mangle}} = type.Function(
 );
 [[]]
 
-var m = module.Module();
+var m = mod.Module();
 
 [[for i, fn in enumerate(collector.functions):]]
-m.$defineFunction('{{fn.spelling}}', [module.Function({{i+1}}, funcType_{{fn.type.get_canonical().js_mangle}})]);
+m.$defineFunction('{{fn.spelling}}', [mod.Function({{i+1}}, funcType_{{fn.type.get_canonical().js_mangle}})]);
 [[]]
 
 m.$types = types;
