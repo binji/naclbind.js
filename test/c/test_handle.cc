@@ -314,3 +314,70 @@ TEST_F(HandleTest, Charp) {
   EXPECT_STREQ("hi", s);
   nb_handle_destroy(1);
 }
+
+#define CONVERT_OK(reg, val, pp_type, as) \
+  { \
+    struct PP_Var var; \
+    EXPECT_EQ(TRUE, nb_handle_register_##reg(1, val)); \
+    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var)); \
+    EXPECT_EQ(pp_type, var.type); \
+    EXPECT_EQ(val, var.value.as); \
+    nb_var_release(var); \
+    nb_handle_destroy(1); \
+  }
+
+#define CONVERT_FAIL(reg, val) \
+  { \
+    struct PP_Var var; \
+    EXPECT_EQ(TRUE, nb_handle_register_##reg(1, val)); \
+    EXPECT_EQ(FALSE, nb_handle_convert_to_var(1, &var)); \
+    nb_handle_destroy(1); \
+  }
+
+
+TEST_F(HandleTest, ConvertToVar) {
+  CONVERT_OK(int8, 0x70, PP_VARTYPE_INT32, as_int);
+  CONVERT_OK(uint8, 0xf0, PP_VARTYPE_INT32, as_int);
+  CONVERT_OK(int16, 0x7000, PP_VARTYPE_INT32, as_int);
+  CONVERT_OK(uint16, 0xf000, PP_VARTYPE_INT32, as_int);
+  CONVERT_OK(int32, 0x70000000, PP_VARTYPE_INT32, as_int);
+  CONVERT_OK(uint32, 0xf0000000, PP_VARTYPE_INT32, as_int);
+  CONVERT_OK(float, 3.25, PP_VARTYPE_DOUBLE, as_double);
+  CONVERT_OK(double, 1e11, PP_VARTYPE_DOUBLE, as_double);
+  // var
+  {
+    struct PP_Var var;
+    struct PP_Var dummy = nb_var_array_create();
+    EXPECT_EQ(TRUE, nb_handle_register_var(1, dummy));
+    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(dummy.type, var.type);
+    EXPECT_EQ(dummy.value.as_id, var.value.as_id);
+    nb_var_release(var);
+    nb_var_release(dummy);
+    nb_handle_destroy(1);
+  }
+  // voidp (with value)
+  {
+    struct PP_Var var;
+    int dummy;
+    void* voidp = &dummy;
+    EXPECT_EQ(TRUE, nb_handle_register_voidp(1, voidp));
+    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(PP_VARTYPE_INT32, var.type);
+    EXPECT_EQ(1, var.value.as_int);  // Returns the handle, of the void*
+    nb_var_release(var);
+    nb_handle_destroy(1);
+  }
+  // voidp (NULL)
+  {
+    struct PP_Var var;
+    EXPECT_EQ(TRUE, nb_handle_register_voidp(1, NULL));
+    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(PP_VARTYPE_NULL, var.type);
+    nb_var_release(var);
+    nb_handle_destroy(1);
+  }
+  // TODO(binji): implement
+  CONVERT_FAIL(int64, 0);
+  CONVERT_FAIL(uint64, 0);
+}

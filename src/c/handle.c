@@ -741,11 +741,11 @@ bool nb_handle_convert_to_var(Handle handle, struct PP_Var* var) {
       break;
     case TYPE_FLOAT:
       var->type = PP_VARTYPE_DOUBLE;
-      var->value.as_int = hobj.value.float32;
+      var->value.as_double = hobj.value.float32;
       break;
     case TYPE_DOUBLE:
       var->type = PP_VARTYPE_DOUBLE;
-      var->value.as_int = hobj.value.float64;
+      var->value.as_double = hobj.value.float64;
       break;
     case TYPE_VAR:
       *var = hobj.value.var;
