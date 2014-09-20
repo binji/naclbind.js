@@ -14,25 +14,25 @@
 
 // DO NOT EDIT, this file is auto-generated from //templates/glue.js
 
-var naclbind = require('naclbind');
+var module = require('module'),
+    type = require('type'),
 
-Type = naclbind.Type;
-Tags = {};
-Types = {};
+    tags = {},
+    types = {};
 
 [[for type in collector.types_topo:]]
 [[  if type.kind == TypeKind.UNEXPOSED:]]
 [[    type = type.get_canonical()]]
 [[  if type.kind == TypeKind.TYPEDEF:]]
-{{type.js_inline}} = Type.Typedef('{{type.GetName()}}', {{type.get_canonical().js_inline}});
+{{type.js_inline}} = type.Typedef('{{type.GetName()}}', {{type.get_canonical().js_inline}});
 [[  elif type.kind == TypeKind.RECORD:]]
-{{type.js_inline}} = Type.Record('{{type.GetName()}}', [
+{{type.js_inline}} = type.Record('{{type.GetName()}}', [
 [[    for name, ftype, offset in type.fields():]]
   {name: '{{name}}', type: {{ftype.js_inline}}, offset: {{offset}}},
 [[    ]]
 ], {{type.get_size()}});
 [[  elif type.kind == TypeKind.ENUM:]]
-{{type.js_inline}} = Type.Enum('{{type.GetName()}}');
+{{type.js_inline}} = type.Enum('{{type.GetName()}}');
 [[  else:]]
 // {{type.kind}} {{type.spelling}}
 [[  ]]
@@ -40,27 +40,27 @@ Types = {};
 
 [[for type, fns in collector.SortedFunctionTypes():]]
 // {{type.get_canonical().spelling}} -- {{', '.join(fn.spelling for fn in fns)}}
-var FuncType_{{type.js_mangle}} = Type.Function(
+var funcType_{{type.js_mangle}} = type.Function(
   {{type.get_result().get_canonical().js_inline}},
   [
 [[  for arg_type in type.argument_types():]]
     {{arg_type.get_canonical().js_inline}},
 [[  ]]
 [[  if type.is_function_variadic():]]
-  ], Type.VARIADIC
+  ], type.VARIADIC
 [[  else:]]
   ]
 [[  ]]
 );
 [[]]
 
-m = naclbind.Module();
+var m = module.Module();
 
 [[for i, fn in enumerate(collector.functions):]]
-m.defineFunction({{i+1}}, '{{fn.spelling}}', FuncType_{{fn.type.get_canonical().js_mangle}});
+m.$defineFunction('{{fn.spelling}}', [module.Function({{i+1}}, funcType_{{fn.type.get_canonical().js_mangle}})]);
 [[]]
 
-m.Types = Types;
-m.Tags = Tags;
+m.$types = types;
+m.$tags = tags;
 
 module.exports = m;

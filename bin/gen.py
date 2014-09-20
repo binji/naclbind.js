@@ -345,11 +345,11 @@ def IsQualified(t):
 def GetJsQualifiedArg(t):
   a = []
   if t.is_const_qualified():
-    a.append('Type.CONST')
+    a.append('type.CONST')
   if t.is_volatile_qualified():
-    a.append('Type.VOLATILE')
+    a.append('type.VOLATILE')
   if t.is_restrict_qualified():
-    a.append('Type.RESTRICT')
+    a.append('type.RESTRICT')
   return '|'.join(a)
 
 def GetJsQualifiedArgWithComma(t):
@@ -390,10 +390,10 @@ def SpellingBaseName(t):
 def GetJsInline(t):
   if t.kind.value in PRIMITIVE_TYPES:
     if IsQualified(t):
-      return 'Type.Numeric(Type.%s, %s)' % (
+      return 'type.Numeric(type.%s, %s)' % (
           PRIMITIVE_TYPE_KINDS_KIND[t.kind.value], GetJsQualifiedArg(t))
     else:
-      return 'Type.%s' % PRIMITIVE_TYPE_KINDS_NAME[t.kind.value]
+      return 'type.%s' % PRIMITIVE_TYPE_KINDS_NAME[t.kind.value]
 
   value = TYPE_KINDS_JS_INLINE.get(t.kind.value, None)
   if not value:
@@ -404,37 +404,37 @@ def GetJsInline(t):
   return value(t)
 
 def GetJsInline_Pointer(t):
-  return 'Type.Pointer(%s%s)' % (GetJsInline(t.get_pointee()),
+  return 'type.Pointer(%s%s)' % (GetJsInline(t.get_pointee()),
                                  GetJsQualifiedArgWithComma(t))
 
 def GetJsInline_Record(t):
-  return 'Tags.%s' % SpellingBaseName(t)
+  return 'tags.%s' % SpellingBaseName(t)
 
 def GetJsInline_FunctionProto(t):
-  return 'Type.Function(%s, [%s])' % (
+  return 'type.Function(%s, [%s])' % (
       GetJsInline(t.get_result()),
       ', '.join(GetJsInline(a) for a in t.argument_types()))
 
 def GetJsInline_Typedef(t):
-  return 'Types.%s' % SpellingBaseName(t)
+  return 'types.%s' % SpellingBaseName(t)
 
 def GetJsInline_Enum(t):
-  return 'Types.%s' % SpellingBaseName(t)
+  return 'tags.%s' % SpellingBaseName(t)
 
 def GetJsInline_Unexposed(t):
   can = t.get_canonical()
   if can.kind != TypeKind.UNEXPOSED:
     return GetJsInline(can)
 
-  return 'Types.%s' % SpellingBaseName(t)
+  return 'types.%s' % SpellingBaseName(t)
 
 def GetJsInline_ConstantArray(t):
-  return 'Type.Array(%s, %d%s)' % (
+  return 'type.Array(%s, %d%s)' % (
       GetJsInline(t.get_array_element_type()), t.get_array_size(),
       GetJsQualifiedArgWithComma(t))
 
 def GetJsInline_IncompleteArray(t):
-  return 'Type.Array(%s%s)' % (GetJsInline(t.get_array_element_type()),
+  return 'type.Array(%s%s)' % (GetJsInline(t.get_array_element_type()),
                                GetJsQualifiedArgWithComma(t))
 
 TYPE_KINDS_JS_INLINE = {
