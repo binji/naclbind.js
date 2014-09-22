@@ -65,7 +65,8 @@ def RunNaClConfig(*args):
 NACL_CONFIG = os.path.join(NACL_SDK_ROOT, 'tools', 'nacl_config.py')
 PNACL_CLANG = RunNaClConfig('-t', 'pnacl', '--tool', 'clang')
 PNACL_ROOT = os.path.dirname(os.path.dirname(PNACL_CLANG))
-PNACL_LIB = os.path.join(PNACL_ROOT, GetHostDir(), 'lib')
+# PNACL_LIB = os.path.join(PNACL_ROOT, GetHostDir(), 'lib')
+PNACL_LIB = os.path.join(PNACL_ROOT, 'lib')
 
 sys.path.append(PYTHON_BINDINGS_DIR)
 
@@ -549,8 +550,45 @@ class Type(object):
       yield Type(t)
 
   def fields(self):
+    # TODO(binji): This is an ugly hack to support the various types of
+    # nested structs:
+    # anonymous vs named struct * unnamed vs. named field
+    #
+    # anonymous struct, unnamed field: embed struct's fields
+    # anonymous struct, named field: use named field
+    # named struct, unnamed field: do nothing
+    # named struct, named field: use named field
+    #
+    # The trouble is that we can't easily tell from the LLVM data which
+    # is which: basically we get the following info:
+    #
+    # anonymous struct, unnamed field: STRUCT_DECL (spelling == '')
+    # anonymous struct, named field: STUCT_DECL (spelling == ''), FIELD_DECL
+    # named struct, unnamed field: STRUCT_DECL
+    # named struct, named field: STRUCT_DECL, FIELD_DECL
+    #
+    # So if there is a FIELD_DECL, we should always use it. But we should only
+    # use a STRUCT_DECL if the spelling is ''. But that will embed fields in
+    # the second case listed above (anonymous struct, named field), which is
+    # incorrect.
+    #
+    # The correct solution is to only include a STRUCT_DECL if a matching
+    # FIELD_DECL is not found. That requires checking that anonymous types
+    # match, which is currently broken. This hack relies on LLVM's get_offset:
+    # if it returns < 0, then that name is not a field of the struct. This can
+    # break if that name exists in the field for any other reason.
     for f in self.type.get_declaration().get_children():
-      yield f.spelling, Type(f.type), self.type.get_offset(f.spelling) / 8
+      if f.kind == CursorKind.FIELD_DECL:
+        yield f.spelling, Type(f.type), self.type.get_offset(f.spelling) / 8
+
+    for f in self.type.get_declaration().get_children():
+      if f.kind == CursorKind.STRUCT_DECL and f.spelling == '':
+        ftype = Type(f.type)
+        # For unnamed nested structs, embed the fields directly
+        for nf_spelling, nf_type, _ in ftype.fields():
+          nf_offset = self.type.get_offset(nf_spelling) / 8
+          if nf_offset >= 0:
+            yield nf_spelling, nf_type, nf_offset
 
   def __getattr__(self, name):
     val = getattr(self.type, name)
@@ -582,7 +620,7 @@ class Type(object):
     if t1.kind == TypeKind.ENUM:
       return t1.spelling == t2.spelling
     elif t1.kind == TypeKind.RECORD:
-      return t1.spelling == t2.spelling
+      return t1.get_canonical().spelling == t2.get_canonical().spelling
     elif t1.kind == TypeKind.POINTER:
       return self.get_pointee() == other.get_pointee()
     elif t1.kind == TypeKind.CONSTANTARRAY:
@@ -601,7 +639,20 @@ class Type(object):
     return not self.__eq__(other)
 
   def __hash__(self):
-    return hash(self.type.spelling)
+    if self.IsPrimitive():
+      return hash(self.type.kind)
+    if self.type.kind == TypeKind.ENUM:
+      return hash(self.type.spelling)
+    elif self.type.kind == TypeKind.RECORD:
+      return hash(self.type.get_canonical().spelling)
+    elif self.type.kind == TypeKind.POINTER:
+      return hash(self.get_pointee())
+    elif self.type.kind == TypeKind.CONSTANTARRAY:
+      return hash(self.get_array_element_type()) ^ hash(self.get_array_size())
+    elif self.type.kind in (TypeKind.TYPEDEF, TypeKind.UNEXPOSED):
+      return hash(self.get_canonical())
+    else:
+      return hash(self.type.spelling)
 
 
 class Function(object):
@@ -655,13 +706,20 @@ class Collector(object):
     deps = []
     if t.kind == TypeKind.TYPEDEF:
       deps.append(t.get_canonical())
+    elif t.kind == TypeKind.UNEXPOSED:
+      self._VisitType(t.get_canonical())
+      return
     elif t.kind == TypeKind.POINTER:
       deps.append(t.get_pointee())
     elif t.kind == TypeKind.FUNCTIONPROTO:
       deps.append(t.get_result())
       deps.extend(list(t.argument_types()))
     elif t.kind == TypeKind.RECORD:
-      deps.extend(c.type for c in t.get_declaration().get_children())
+      for c in t.get_declaration().get_children():
+        if c.kind == CursorKind.FIELD_DECL:
+          deps.append(c.type)
+        elif c.kind == CursorKind.STRUCT_DECL and c.spelling == '':
+          deps.append(c.type)
 
     self.types.add(t)
 
@@ -748,6 +806,7 @@ def main(args):
 
   template_dict = AttrDict()
   template_dict.TypeKind = TypeKind
+  template_dict.CursorKind = CursorKind
   template_dict.collector = collector
 
   out_text = easy_template.RunTemplateString(template, template_dict)

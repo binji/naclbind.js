@@ -26,11 +26,14 @@ var mod = require('mod'),
 [[  if type.kind == TypeKind.TYPEDEF:]]
 {{type.js_inline}} = type.Typedef('{{type.GetName()}}', {{type.get_canonical().js_inline}});
 [[  elif type.kind == TypeKind.RECORD:]]
-{{type.js_inline}} = type.Record('{{type.GetName()}}', [
+{{type.js_inline}} = type.Record('{{type.GetName()}}', {{type.get_size()}}, [
 [[    for name, ftype, offset in type.fields():]]
-  {name: '{{name}}', type: {{ftype.js_inline}}, offset: {{offset}}},
+  type.Field('{{name}}', {{ftype.js_inline}}, {{offset}}),
 [[    ]]
-], {{type.get_size()}});
+[[    if type.get_declaration().kind == CursorKind.UNION_DECL:]]
+], type.UNION);
+[[    else:]]
+], type.STRUCT);
 [[  elif type.kind == TypeKind.ENUM:]]
 {{type.js_inline}} = type.Enum('{{type.GetName()}}');
 [[  else:]]

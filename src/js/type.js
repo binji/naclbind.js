@@ -373,7 +373,7 @@ function Record(tag, size, fields, isUnion, cv) {
   }
 
   utils.checkNullOrString(tag, 'tag');
-  utils.checkNonnegativeNumber(size, 'size');
+  utils.checkNumber(size, 'size');
   utils.checkArray(fields, Field, 'fields');
 
   if (isUnion !== undefined && utils.getClass(isUnion) !== 'Boolean') {

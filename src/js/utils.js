@@ -57,11 +57,14 @@ function checkArray(x, elementType, varName) {
   }
 }
 
-function checkNonnegativeNumber(x, varName) {
+function checkNumber(x, varName) {
   if (getClass(x) !== 'Number') {
     throw new Error(varName + ' must be a number.');
   }
+}
 
+function checkNonnegativeNumber(x, varName) {
+  checkNumber(x, varName);
   if (x < 0) {
     throw new Error(varName + ' must be greater than 0.');
   }
@@ -88,6 +91,7 @@ isFloat.buffer = new Float32Array(1);
 
 module.exports = {
   checkArray: checkArray,
+  checkNumber: checkNumber,
   checkNonnegativeNumber: checkNonnegativeNumber,
   checkNullOrString: checkNullOrString,
   compose: compose,
