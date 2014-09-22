@@ -1,0 +1,13 @@
+void f1(char);
+void f2(signed char);
+void f3(unsigned char);
+void f4(short);
+void f5(unsigned short);
+void f6(int);
+void f7(unsigned int);
+void f8(long);
+void f9(unsigned long);
+void f10(long long);
+void f11(unsigned long long);
+void f12(float);
+void f13(double);

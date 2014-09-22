@@ -304,4 +304,57 @@ describe('Generate JS', function() {
       done();
     });
   });
+
+  it('should generate primitive types', function(done) {
+    genFile('../data/primitive.h', function(error, m) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(13, m.$functionsCount);
+
+      assert.strictEqual(m.f1.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.char]), m.f1.types[0]);
+
+      assert.strictEqual(m.f2.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.schar]), m.f2.types[0]);
+
+      assert.strictEqual(m.f3.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.uchar]), m.f3.types[0]);
+
+      assert.strictEqual(m.f4.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.short]), m.f4.types[0]);
+
+      assert.strictEqual(m.f5.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.ushort]), m.f5.types[0]);
+
+      assert.strictEqual(m.f6.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.int]), m.f6.types[0]);
+
+      assert.strictEqual(m.f7.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.uint]), m.f7.types[0]);
+
+      assert.strictEqual(m.f8.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.long]), m.f8.types[0]);
+
+      assert.strictEqual(m.f9.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.ulong]), m.f9.types[0]);
+
+      assert.strictEqual(m.f10.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.longlong]),
+                       m.f10.types[0]);
+
+      assert.strictEqual(m.f11.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.ulonglong]),
+                       m.f11.types[0]);
+
+      assert.strictEqual(m.f12.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.float]), m.f12.types[0]);
+
+      assert.strictEqual(m.f13.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.double]), m.f13.types[0]);
+
+      done();
+    })
+  });
 });
