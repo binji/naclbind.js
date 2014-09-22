@@ -46,7 +46,6 @@ struct s8 {
   int g;
 };
 
-// Structs
 void f1(struct s1);
 void f2(struct s2);
 void f3(struct s3);

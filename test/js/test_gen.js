@@ -95,6 +95,10 @@ describe('Generate JS', function() {
         nodePath = appendPath(process.env.NODE_PATH || '', srcDir);
     process.env.NODE_PATH = nodePath;
     require('module')._initPaths();
+
+    if (!process.env.NACL_SDK_ROOT) {
+      assert.ok(false, 'NACL_SDK_ROOT not set.');
+    }
   });
 
   it('should do work for a simple function', function(done) {
@@ -203,6 +207,99 @@ describe('Generate JS', function() {
       assert.strictEqual(1, m.$tags.s8.fields.length);
       assertFieldsEqual(m.$tags.s8.fields[0], 'g', type.int, 0);
       assert.strictEqual(false, m.$tags.s8.isUnion);
+
+      done();
+    });
+  });
+
+  it('should generate union types', function(done) {
+    genFile('../data/unions.h', function(error, m) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(8, m.$functionsCount);
+
+      // Incomplete union == s1
+      assert.ok(m.$tags.s1);
+      assert.strictEqual('s1', m.$tags.s1.tag);
+      assert.strictEqual(-2, m.$tags.s1.size);
+      assert.strictEqual(0, m.$tags.s1.fields.length);
+      assert.strictEqual(true, m.$tags.s1.isUnion);
+
+      // Empty union == s2
+      assert.ok(m.$tags.s2);
+      assert.strictEqual('s2', m.$tags.s2.tag);
+      assert.strictEqual(0, m.$tags.s2.size);
+      assert.strictEqual(0, m.$tags.s2.fields.length);
+      assert.strictEqual(true, m.$tags.s2.isUnion);
+
+      // Basic union == s3
+      assert.ok(m.$tags.s3);
+      assert.strictEqual('s3', m.$tags.s3.tag);
+      assert.strictEqual(4, m.$tags.s3.size);
+      assert.strictEqual(1, m.$tags.s3.fields.length);
+      assertFieldsEqual(m.$tags.s3.fields[0], 'f', type.int, 0);
+      assert.strictEqual(true, m.$tags.s3.isUnion);
+
+      // Union with typedef == s4, t1
+      assert.ok(m.$tags.s4);
+      assert.strictEqual('s4', m.$tags.s4.tag);
+      assert.strictEqual(4, m.$tags.s4.size);
+      assert.strictEqual(1, m.$tags.s4.fields.length);
+      assertFieldsEqual(m.$tags.s4.fields[0], 'g', type.int, 0);
+      assert.strictEqual(true, m.$tags.s4.isUnion);
+
+      assert.ok(m.$types.t1);
+      assert.strictEqual('t1', m.$types.t1.tag);
+      assertTypesEqual(m.$tags.s4, m.$types.t1.alias);
+      assert.strictEqual('t1', m.$types.t1.spelling);
+      assert.strictEqual();
+
+      // Anonymous nested union, named field == s5
+      assert.ok(m.$tags.s5);
+      assert.strictEqual('s5', m.$tags.s5.tag);
+      assert.strictEqual(4, m.$tags.s5.size);
+      assert.strictEqual(1, m.$tags.s5.fields.length);
+      assert.strictEqual('nested', m.$tags.s5.fields[0].name);
+      assert.strictEqual(0, m.$tags.s5.fields[0].offset);
+      assert.strictEqual(true, m.$tags.s5.isUnion);
+
+      assert.strictEqual(2, m.$tags.s5.fields[0].type.fields.length);
+      assertFieldsEqual(m.$tags.s5.fields[0].type.fields[0], 'f', type.int, 0);
+      assertFieldsEqual(m.$tags.s5.fields[0].type.fields[1], 'g', type.int, 0);
+
+      // Anonymous nested union, unnamed field == s6
+      assert.ok(m.$tags.s6);
+      assert.strictEqual('s6', m.$tags.s6.tag);
+      assert.strictEqual(4, m.$tags.s6.size);
+      assert.strictEqual(2, m.$tags.s6.fields.length);
+      assertFieldsEqual(m.$tags.s6.fields[0], 'f', type.int, 0);
+      assertFieldsEqual(m.$tags.s6.fields[1], 'g', type.int, 0);
+      assert.strictEqual(true, m.$tags.s6.isUnion);
+
+      // Named nested union, named field == s7
+      assert.ok(m.$tags.s7);
+      assert.strictEqual('s7', m.$tags.s7.tag);
+      assert.strictEqual(4, m.$tags.s7.size);
+      assert.strictEqual(2, m.$tags.s7.fields.length);
+      assertFieldsEqual(m.$tags.s7.fields[0], 'g', m.$tags.ns1, 0);
+      assertFieldsEqual(m.$tags.s7.fields[1], 'h', type.int, 0);
+      assert.strictEqual(true, m.$tags.s7.isUnion);
+
+      assert.ok(m.$tags.ns1);
+      assert.strictEqual('ns1', m.$tags.ns1.tag);
+      assert.strictEqual(4, m.$tags.ns1.size);
+      assert.strictEqual(1, m.$tags.ns1.fields.length);
+      assertFieldsEqual(m.$tags.ns1.fields[0], 'f', type.int, 0);
+
+      // Named nested union, unnamed field == s8
+      assert.ok(m.$tags.s8);
+      assert.strictEqual('s8', m.$tags.s8.tag);
+      assert.strictEqual(4, m.$tags.s8.size);
+      assert.strictEqual(1, m.$tags.s8.fields.length);
+      assertFieldsEqual(m.$tags.s8.fields[0], 'g', type.int, 0);
+      assert.strictEqual(true, m.$tags.s8.isUnion);
 
       done();
     });

@@ -582,7 +582,8 @@ class Type(object):
         yield f.spelling, Type(f.type), self.type.get_offset(f.spelling) / 8
 
     for f in self.type.get_declaration().get_children():
-      if f.kind == CursorKind.STRUCT_DECL and f.spelling == '':
+      if (f.kind in (CursorKind.STRUCT_DECL, CursorKind.UNION_DECL) and
+          f.spelling == ''):
         ftype = Type(f.type)
         # For unnamed nested structs, embed the fields directly
         for nf_spelling, nf_type, _ in ftype.fields():
@@ -718,7 +719,8 @@ class Collector(object):
       for c in t.get_declaration().get_children():
         if c.kind == CursorKind.FIELD_DECL:
           deps.append(c.type)
-        elif c.kind == CursorKind.STRUCT_DECL and c.spelling == '':
+        elif (c.kind in (CursorKind.STRUCT_DECL, CursorKind.UNION_DECL) and
+              c.spelling == ''):
           deps.append(c.type)
 
     self.types.add(t)
