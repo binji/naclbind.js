@@ -126,6 +126,8 @@ describe('Generate JS', function() {
       }
 
       assert.strictEqual(8, m.$functionsCount);
+      assert.strictEqual(1, m.$typesCount);  // t1
+      assert.strictEqual(11, m.$tagsCount);  // s1-s8, ns1, ns2, anonymous
 
       // Incomplete struct == s1
       assert.ok(m.$tags.s1);
@@ -219,6 +221,8 @@ describe('Generate JS', function() {
       }
 
       assert.strictEqual(8, m.$functionsCount);
+      assert.strictEqual(1, m.$typesCount);  // t1
+      assert.strictEqual(11, m.$tagsCount);  // s1-s8, ns1, ns2, anonymous
 
       // Incomplete union == s1
       assert.ok(m.$tags.s1);
@@ -312,6 +316,8 @@ describe('Generate JS', function() {
       }
 
       assert.strictEqual(13, m.$functionsCount);
+      assert.strictEqual(0, m.$typesCount);
+      assert.strictEqual(0, m.$tagsCount);
 
       assert.strictEqual(m.f1.types.length, 1);
       assertTypesEqual(type.Function(type.void, [type.char]), m.f1.types[0]);
@@ -353,6 +359,47 @@ describe('Generate JS', function() {
 
       assert.strictEqual(m.f13.types.length, 1);
       assertTypesEqual(type.Function(type.void, [type.double]), m.f13.types[0]);
+
+      done();
+    })
+  });
+
+  it('should generate typedefs', function(done) {
+    genFile('../data/typedefs.h', function(error, m) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      var voidp = type.Pointer(type.void),
+          charp = type.Pointer(type.char);
+
+      assert.strictEqual(3, m.$functionsCount);
+      assert.strictEqual(3, m.$typesCount);
+      assert.strictEqual(0, m.$tagsCount);
+
+      assert.ok(m.$types.t1);
+      assert.strictEqual('t1', m.$types.t1.tag);
+      assertTypesEqual(type.char, m.$types.t1.alias);
+
+      assert.ok(m.$types.t2);
+      assert.strictEqual('t2', m.$types.t2.tag);
+      assertTypesEqual(voidp, m.$types.t2.alias);
+
+      assert.ok(m.$types.t3);
+      assert.strictEqual('t3', m.$types.t3.tag);
+      assertTypesEqual(charp, m.$types.t3.alias);
+
+      assert.ok(m.f1);
+      assert.strictEqual(m.f1.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.char]), m.f1.types[0]);
+
+      assert.ok(m.f2);
+      assert.strictEqual(m.f2.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [voidp]), m.f2.types[0]);
+
+      assert.ok(m.f3);
+      assert.strictEqual(m.f3.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [charp]), m.f3.types[0]);
 
       done();
     })
