@@ -13,36 +13,12 @@
 // limitations under the License.
 
 var assert = require('assert'),
-    child_process = require('child_process'),
-    fs = require('fs'),
+    gen = require('../gen'),
     path = require('path'),
-    tmp = require('tmp'),
-    type = require('../../src/js/type'),
-    utils = require('../../src/js/utils'),
-    execFile = child_process.execFile;
+    type = require('../../src/js/type');
 
 function appendPath(s, path) {
   return s.split(':').concat([path]).join(':');
-}
-
-function genText(text, callback) {
-  var oldCallback = callback;
-
-  tmp.file(function(error, path, fd, cleanup) {
-    fs.writeFile(path, text, function(error) {
-      if (error) {
-        return callback(error);
-      }
-
-      genFile(path, function(error, m) {
-        if (error) {
-          return callback(error);
-        }
-
-        callback(null, m);
-      });
-    });
-  });
 }
 
 function assertTypesEqual(t1, t2) {
@@ -56,32 +32,18 @@ function assertFieldsEqual(f, name, type, offset) {
 }
 
 function genFile(inpath, callback) {
-  var genPy = path.resolve(__dirname, '../../bin/gen.py'),
-      glueJs = path.resolve(__dirname, '../../templates/glue.js'),
-      tmpOpts = {prefix: 'genjs', unsafeCleanup: true},
-      oldCallback = callback;
-
-  tmp.dir(tmpOpts, function(error, outdir, cleanup) {
+  gen.tmpDir(function(error, dirname) {
     if (error) {
       return callback(error);
     }
 
-    callback = function(error, genJs) {
-      cleanup();
-      oldCallback(error, genJs);
-    };
-
-    var outpath = path.join(outdir, 'gen.js'),
-        cmd = [genPy, '-t', glueJs, inpath, '-o', outpath],
-        execOpts = {cwd: __dirname};
-
-    execFile('python', cmd, execOpts, function(error, stdout, stderr) {
+    gen.file(inpath, dirname, 'gen.js', 'glue.js', function(error, outpath) {
       if (error) {
         return callback(error);
       }
 
-      var genJs = require(outpath);
-      callback(null, genJs);
+      var mod = require(outpath);
+      callback(null, mod);
     });
   });
 }
@@ -102,7 +64,7 @@ describe('Generate JS', function() {
   });
 
   it('should do work for a simple function', function(done) {
-    genText('void foo(void);\n', function(error, m) {
+    genFile('data/simple.h', function(error, m) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -120,7 +82,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate struct types', function(done) {
-    genFile('../data/structs.h', function(error, m) {
+    genFile('data/structs.h', function(error, m) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -215,7 +177,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate union types', function(done) {
-    genFile('../data/unions.h', function(error, m) {
+    genFile('data/unions.h', function(error, m) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -310,7 +272,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate primitive types', function(done) {
-    genFile('../data/primitive.h', function(error, m) {
+    genFile('data/primitive.h', function(error, m) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -365,7 +327,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate typedefs', function(done) {
-    genFile('../data/typedefs.h', function(error, m) {
+    genFile('data/typedefs.h', function(error, m) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -406,7 +368,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate enums', function(done) {
-    genFile('../data/enums.h', function(error, m) {
+    genFile('data/enums.h', function(error, m) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -441,7 +403,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate functions with various attributes', function(done) {
-    genFile('../data/functions.h', function(error, m) {
+    genFile('data/functions.h', function(error, m) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
