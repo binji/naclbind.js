@@ -404,4 +404,39 @@ describe('Generate JS', function() {
       done();
     })
   });
+
+  it('should generate enums', function(done) {
+    genFile('../data/enums.h', function(error, m) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      var e1 = type.Enum('e1'),
+          e2 = type.Enum('e2');
+
+      assert.strictEqual(2, m.$functionsCount);
+      assert.strictEqual(1, m.$typesCount);
+      assert.strictEqual(2, m.$tagsCount);
+
+      assert.ok(m.$tags.e1);
+      assert.strictEqual('e1', m.$tags.e1.tag);
+
+      assert.ok(m.$tags.e2);
+      assert.strictEqual('e2', m.$tags.e2.tag);
+
+      assert.ok(m.$types.t1);
+      assert.strictEqual('t1', m.$types.t1.tag);
+      assertTypesEqual(e2, m.$types.t1.alias);
+
+      assert.ok(m.f1);
+      assert.strictEqual(m.f1.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [e1]), m.f1.types[0]);
+
+      assert.ok(m.f2);
+      assert.strictEqual(m.f2.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [e2]), m.f2.types[0]);
+
+      done();
+    })
+  });
 });
