@@ -439,4 +439,90 @@ describe('Generate JS', function() {
       done();
     })
   });
+
+  it('should generate functions with various attributes', function(done) {
+    genFile('../data/functions.h', function(error, m) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      var s1 = type.Record('s1', 0, [], type.STRUCT),
+          s2 = type.Record('s2', 4, [type.Field('f', type.int, 0)], type.STRUCT);
+          u1 = type.Record('u1', 0, [], type.UNION),
+          voidp = type.Pointer(type.void),
+          s1p = type.Pointer(s1),
+          u1p = type.Pointer(u1),
+          PFviE = type.Pointer(type.Function(type.void, [type.int])),
+          // Array types decay to pointer types.
+          intArr = type.Pointer(type.int),
+          intArr10 = type.Pointer(type.int),
+          argv = type.Pointer(type.Pointer(type.char));
+
+      assert.strictEqual(13, m.$functionsCount);
+      assert.strictEqual(0, m.$typesCount);
+      assert.strictEqual(3, m.$tagsCount);
+
+      // Pointers
+      assert.ok(m.f1);
+      assert.strictEqual(m.f1.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [voidp]), m.f1.types[0]);
+
+      assert.ok(m.f2);
+      assert.strictEqual(m.f2.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [s1p]), m.f2.types[0]);
+
+      assert.ok(m.f3);
+      assert.strictEqual(m.f3.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [u1p]), m.f3.types[0]);
+
+      // Multiple params
+      assert.ok(m.f4);
+      assert.strictEqual(m.f4.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.int, type.int, voidp]),
+                       m.f4.types[0]);
+
+      assert.ok(m.f5);
+      assert.strictEqual(m.f5.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.int, s2]),
+                       m.f5.types[0]);
+
+      // Return values
+      assert.ok(m.f6);
+      assert.strictEqual(m.f6.types.length, 1);
+      assertTypesEqual(type.Function(type.int, [type.int]), m.f6.types[0]);
+
+      assert.ok(m.f7);
+      assert.strictEqual(m.f7.types.length, 1);
+      assertTypesEqual(type.Function(voidp, [type.uint]), m.f7.types[0]);
+
+      assert.ok(m.f8);
+      assert.strictEqual(m.f8.types.length, 1);
+      assertTypesEqual(type.Function(s1, []), m.f8.types[0]);
+
+      // Function pointers
+      assert.ok(m.f9);
+      assert.strictEqual(m.f9.types.length, 1);
+      assertTypesEqual(type.Function(type.int, [PFviE]), m.f9.types[0]);
+
+      assert.ok(m.f10);
+      assert.strictEqual(m.f10.types.length, 1);
+      assertTypesEqual(type.Function(PFviE, [type.int, PFviE]), m.f10.types[0]);
+
+      // Arrays
+      assert.ok(m.f11);
+      assert.strictEqual(m.f11.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [intArr]), m.f11.types[0]);
+
+      assert.ok(m.f12);
+      assert.strictEqual(m.f12.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [intArr10]), m.f12.types[0]);
+
+      assert.ok(m.f13);
+      assert.strictEqual(m.f13.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.int, argv]),
+                       m.f13.types[0]);
+
+      done();
+    })
+  });
 });
