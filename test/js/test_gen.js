@@ -31,18 +31,19 @@ function assertFieldsEqual(f, name, type, offset) {
   assert.strictEqual(offset, f.offset);
 }
 
-function genFile(inpath, callback) {
+function genFile(infile, callback) {
   gen.tmpDir(function(error, dirname) {
     if (error) {
       return callback(error);
     }
 
-    gen.file(inpath, dirname, 'gen.js', 'glue.js', function(error, outpath) {
+    var outfile = path.join(dirname, 'gen.js');
+    gen.file(infile, outfile, 'glue.js', function(error, outfile) {
       if (error) {
         return callback(error);
       }
 
-      var mod = require(outpath);
+      var mod = require(outfile);
       callback(null, mod);
     });
   });

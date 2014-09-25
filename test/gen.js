@@ -29,11 +29,10 @@ function tmpDir(callback) {
   });
 }
 
-function genFile(inpath, outdir, outname, templateName, callback) {
+function genFile(infile, outfile, templateName, callback) {
   var genPy = path.resolve(__dirname, '../bin/gen.py'),
       glueJs = path.resolve(__dirname, '../templates', templateName),
-      outpath = path.join(outdir, outname),
-      cmd = [genPy, '-t', glueJs, inpath, '-o', outpath],
+      cmd = [genPy, '-t', glueJs, infile, '-o', outfile],
       opts = {cwd: __dirname};
 
   execFile('python', cmd, opts, function(error, stdout, stderr) {
@@ -41,11 +40,24 @@ function genFile(inpath, outdir, outname, templateName, callback) {
       return callback(error);
     }
 
-    callback(null, outpath);
+    callback(null, outfile);
+  });
+}
+
+function genFilePromise(infile, outfile, templateName) {
+  return new Promise(function(resolve, reject) {
+    genFile(infile, outfile, templateName, function(error, outfile) {
+      if (error) {
+        return reject(error);
+      }
+
+      resolve(outfile);
+    });
   });
 }
 
 module.exports = {
   file: genFile,
+  filePromise: genFilePromise,
   tmpDir: tmpDir
 };
