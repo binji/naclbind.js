@@ -15,42 +15,125 @@
 
 /* DO NOT EDIT, this file is auto-generated from //templates/glue.gen.c */
 
+#define NB_ONE_FILE
+
+{{IncludeCFile('bool.h')}}
+{{IncludeCFile('error.h')}}
+{{IncludeCFile('handle.h')}}
+{{IncludeCFile('interfaces.h')}}
+{{IncludeCFile('message.h')}}
+{{IncludeCFile('queue.h')}}
+{{IncludeCFile('run.h')}}
+{{IncludeCFile('type.h')}}
+{{IncludeCFile('var.h')}}
+
+{{IncludeCFile('handle.c')}}
+{{IncludeCFile('interfaces.c')}}
+{{IncludeCFile('message.c')}}
+{{IncludeCFile('run.c')}}
+{{IncludeCFile('type.c')}}
+{{IncludeCFile('var.c')}}
+
+#ifndef NB_NO_APP
+{{IncludeCFile('queue.c')}}
+{{IncludeCFile('app.c')}}
+#endif
+
+/* ========================================================================== */
+
+#include "{{filename}}"
+
 [[for fn in collector.functions:]]
-static void Handle_{{fn.spelling}}(Command* command) {
+static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_idx) {
 [[  arguments = list(fn.type.argument_types())]]
+  int arg_count = nb_message_command_arg_count(message, command_idx);
+  if (arg_count != {{len(arguments)}}) {
+    return FALSE;
+  }
 [[  for i, arg in enumerate(arguments):]]
 [[    arg = arg.get_canonical()]]
+  Handle handle{{i}} = nb_message_command_arg(message, command_idx, {{i}});
 [[    if arg.kind == TypeKind.POINTER:]]
 [[      pointee = arg.get_pointee()]]
 [[      if pointee.kind in (TypeKind.CHAR_S, TypeKind.CHAR_U):]]
-  ARG_CHARP({{i}});
+  char* arg{{i}};
+  if (!nb_handle_get_charp(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[      elif pointee.kind == TypeKind.VOID:]]
-  ARG_VOIDP({{i}});
+  void* arg{{i}};
+  if (!nb_handle_get_voidp(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[      elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
   void* arg{{i}} = NULL;
 [[      else:]]
-  ARG_VOIDP_CAST({{i}}, {{arg.spelling}});
+  void* arg{{i}}x;
+  if (!nb_handle_get_voidp(handle{{i}}, &arg{{i}}x)) {
+    // print error.
+    return FALSE;
+  }
+  {{arg.spelling}}* arg{{i}} = ({{arg.spelling}}*) arg{{i}}x;
 [[    elif arg.kind == TypeKind.LONG:]]
-  ARG_INT_CAST({{i}}, long);
+  int32_t arg{{i}}x;
+  if (!nb_handle_get_int32(handle{{i}}, &arg{{i}}x)) {
+    // print error.
+    return FALSE;
+  }
+  long arg{{i}} = (long) arg{{i}}x;
 [[    elif arg.kind == TypeKind.ULONG:]]
-  ARG_UINT_CAST({{i}}, unsigned long);
+  uint32_t arg{{i}}x;
+  if (!nb_handle_get_uint32(handle{{i}}, &arg{{i}}x)) {
+    // print error.
+    return FALSE;
+  }
+  unsigned long arg{{i}} = (unsigned long) arg{{i}}x;
 [[    elif arg.kind == TypeKind.LONGLONG:]]
-  ARG_INT64({{i}});
+  int64_t arg{{i}};
+  if (!nb_handle_get_int64(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[    elif arg.kind == TypeKind.ULONGLONG:]]
-  ARG_UINT64({{i}});
+  uint64_t arg{{i}};
+  if (!nb_handle_get_uint64(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[    elif arg.kind in (TypeKind.INT, TypeKind.SHORT, TypeKind.SCHAR, TypeKind.CHAR_S):]]
-  ARG_INT({{i}});
+  int32_t arg{{i}};
+  if (!nb_handle_get_int32(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[    elif arg.kind in (TypeKind.UINT, TypeKind.USHORT, TypeKind.UCHAR, TypeKind.CHAR_U):]]
-  ARG_UINT({{i}});
-[[    elif arg.kind == TypeKind.ULONG:]]
-  ARG_UINT_CAST({{i}}, unsigned long);
+  uint32_t arg{{i}};
+  if (!nb_handle_get_uint32(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[    elif arg.kind == TypeKind.FLOAT:]]
-  ARG_FLOAT32({{i}});
+  float arg{{i}};
+  if (!nb_handle_get_float(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[    elif arg.kind == TypeKind.DOUBLE:]]
-  ARG_FLOAT64({{i}});
+  double arg{{i}};
+  if (!nb_handle_get_double(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[    elif arg.kind == TypeKind.ENUM:]]
-  ARG_INT_CAST({{i}}, {{arg.spelling}});
+  int32_t arg{{i}}x;
+  if (!nb_handle_get_int32(handle{{i}}, &arg{{i}}x)) {
+    // print error.
+    return FALSE;
+  }
+  {{arg.spelling}} arg{{i}} = ({{arg.spelling}}) arg{{i}}x;
 [[    elif arg.kind == TypeKind.CONSTANTARRAY:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
   void* arg{{i}} = NULL;
@@ -64,56 +147,57 @@ static void Handle_{{fn.spelling}}(Command* command) {
 [[  if result_type.kind != TypeKind.VOID:]]
   {{result_type.spelling}} result = {{fn.spelling}}({{', '.join('arg%d' % i for i in range(len(arguments)))}});
 [[    if result_type.kind in (TypeKind.SCHAR, TypeKind.CHAR_S):]]
-  RegisterHandleInt8(command->ret_handle, result);
+  return nb_handle_register_int8(command->ret_handle, result);
 [[    elif result_type.kind in (TypeKind.UCHAR, TypeKind.CHAR_U):]]
-  RegisterHandleUint8(command->ret_handle, result);
+  return nb_handle_register_uint8(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.SHORT:]]
-  RegisterHandleInt16(command->ret_handle, result);
+  return nb_handle_register_int16(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.USHORT:]]
-  RegisterHandleUint16(command->ret_handle, result);
+  return nb_handle_register_uint16(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.INT:]]
-  RegisterHandleInt32(command->ret_handle, result);
+  return nb_handle_register_int32(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.UINT:]]
-  RegisterHandleUint32(command->ret_handle, result);
+  return nb_handle_register_uint32(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.LONG:]]
-  RegisterHandleInt32(command->ret_handle, (int32_t)result);
+  return nb_handle_register_int32(command->ret_handle, (int32_t)result);
 [[    elif result_type.kind == TypeKind.ULONG:]]
-  RegisterHandleUint32(command->ret_handle, (uint32_t)result);
+  return nb_handle_register_uint32(command->ret_handle, (uint32_t)result);
 [[    elif result_type.kind == TypeKind.LONGLONG:]]
-  RegisterHandleInt64(command->ret_handle, result);
+  return nb_handle_register_int64(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.ULONGLONG:]]
-  RegisterHandleUint64(command->ret_handle, result);
+  return nb_handle_register_uint64(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.FLOAT:]]
-  RegisterHandleFloat(command->ret_handle, result);
+  return nb_handle_register_float(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.DOUBLE:]]
-  RegisterHandleDouble(command->ret_handle, result);
+  return nb_handle_register_double(command->ret_handle, result);
 [[    elif result_type.kind == TypeKind.POINTER:]]
-  RegisterHandleVoidp(command->ret_handle, result);
+  return nb_handle_register_voidp(command->ret_handle, result);
 [[    else:]]
   // UNSUPPORTED: {{result_type.kind}} {{result_type.spelling}}
-  RegisterHandleVoidp(command->ret_handle, NULL);
 [[  else:]]
   {{fn.spelling}}({{', '.join('arg%d' % i for i in range(len(arguments)))}});
+  return TRUE;
 [[  ]]
 }
 [[]]
 
 enum {
-  NUM_FUNCTIONS = {{len(collector.functions)}};
+  NUM_FUNCTIONS = {{len(collector.functions)}}
 };
 
-static HandleFunc g_FuncMap[] = {
+typedef bool (*nb_command_func_t)(struct Message*, int);
+static nb_command_func_t s_functions[] = {
+  NULL,  /* TODO(binji): This should be errorif */
 [[for fn in collector.functions:]]
-  Handle_{{fn.spelling}},
+  nb_command_run_{{fn.spelling}},
 [[]]
 };
 
-static bool HandleCommand(Command* command) {
-  if (command->command < 0 || command->command >= NUM_FUNCTIONS) {
+bool nb_message_command_run(struct Message* message, int command_idx) {
+  int function_idx = nb_message_command_function(message, command_idx);
+  if (function_idx < 0 || function_idx > NUM_FUNCTIONS) {
     return FALSE;
   }
 
-  HandleFunc func = &g_FuncMap[command->command];
-  func(command);
-  return TRUE;
+  return s_functions[function_idx](message, command_idx);
 }

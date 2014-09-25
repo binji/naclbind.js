@@ -89,6 +89,7 @@ class RunError(Error):
 
 def CreateTranslationUnit(args, detailed=False):
   new_args = GetIndexParseArgs(args)
+  filename = new_args[-1]
   logging.info('index.parse(None, %r)' % new_args)
   options = (TranslationUnit.PARSE_INCOMPLETE |
              TranslationUnit.PARSE_SKIP_FUNCTION_BODIES)
@@ -99,9 +100,9 @@ def CreateTranslationUnit(args, detailed=False):
 
   PrintTranslationUnitDiagnostics(tu)
   if TranslationUnitHasErrors(tu):
-    return None
+    return None, filename
 
-  return tu
+  return tu, filename
 
 
 def TranslationUnitHasErrors(tu):
@@ -741,18 +742,28 @@ class Collector(object):
     for fn_type in sorted(self.function_types.keys(), key=key):
       yield fn_type, self.function_types[fn_type]
 
+def StripCopyright(text):
+  # Assume that the first C-style comment is the copyright
+  m = re.match(r'/\*.*?\*/[\r\n]*(.*)', text, re.DOTALL)
+  if not m:
+    return text
+
+  return m.group(1)
+
 
 def IncludeCFile(name):
   # Search in src/c/.
+  path = os.path.join(ROOT_DIR, 'src', 'c', name)
+  rel_path = os.path.relpath(path, ROOT_DIR)
+
   try:
-    path = os.path.join(ROOT_DIR, 'src', 'c', name)
-    rel_path = os.path.relpath(path, ROOT_DIR)
     f = open(path)
   except IOError as e:
     raise Error('Failed to open file: %s: %s' % (rel_path, e))
 
   try:
-    text = f.read()
+    # Strip the copyright, it's already included at the top of the template.
+    text = StripCopyright(f.read())
     return """\
 /* +++ INCLUDE %(path)s +++ */
 %(text)s
@@ -779,7 +790,7 @@ def main(args):
   if not options.template:
     parser.error('--template argument required')
 
-  tu = CreateTranslationUnit(args)
+  tu, filename = CreateTranslationUnit(args)
   if not tu:
     return 1
 
@@ -810,6 +821,8 @@ def main(args):
   template_dict.TypeKind = TypeKind
   template_dict.CursorKind = CursorKind
   template_dict.collector = collector
+  template_dict.filename = filename
+  template_dict.IncludeCFile = IncludeCFile
 
   out_text = easy_template.RunTemplateString(template, template_dict)
 
