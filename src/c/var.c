@@ -1,24 +1,29 @@
-// Copyright 2014 Ben Smith. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* Copyright 2014 Ben Smith. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+#ifndef NB_ONE_FILE
 #include "var.h"
+#endif
 
 #include <assert.h>
 #include <string.h>
 
+#ifndef NB_ONE_FILE
 #include "error.h"
 #include "interfaces.h"
+#endif
 
 void nb_var_addref(struct PP_Var var) {
   g_ppb_var->AddRef(var);
@@ -204,12 +209,12 @@ bool nb_var_uint32(struct PP_Var var, uint32_t* out_value) {
 }
 
 bool nb_var_int64(struct PP_Var var, int64_t* out_value) {
-  // TODO: figure out how best to encode int64
+  /* TODO: figure out how best to encode int64 */
   return FALSE;
 }
 
 bool nb_var_uint64(struct PP_Var var, uint64_t* out_value) {
-  // TODO: figure out how best to encode int64
+  /* TODO: figure out how best to encode int64 */
   return FALSE;
 }
 

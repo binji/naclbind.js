@@ -1,26 +1,33 @@
-// Copyright 2014 Ben Smith. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* Copyright 2014 Ben Smith. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+#ifndef NB_ONE_FILE
 #include "handle.h"
+#endif
+
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ppapi/c/pp_var.h>
+
+#ifndef NB_ONE_FILE
 #include "error.h"
 #include "interfaces.h"
 #include "var.h"
+#endif
 
 #define HANDLE_MAP_INITIAL_CAPACITY 16
 
@@ -42,13 +49,14 @@ union HandleValue {
 struct HandleObject {
   Type type;
   union HandleValue value;
-  // PP_Var strings are not guaranteed to be NULL-terminated, so if we want to
-  // use it as a C string, we have to allocate space for a NULL and remember to
-  // free it later.
-  //
-  // This field will be non-NULL when type == TYPE_VAR and
-  // nb_handle_get_charp() has been called. The memory will be free'd in
-  // DestroyHandle.
+  /* PP_Var strings are not guaranteed to be NULL-terminated, so if we want to
+   * use it as a C string, we have to allocate space for a NULL and remember to
+   * free it later.
+   *
+   * This field will be non-NULL when type == TYPE_VAR and
+   * nb_handle_get_charp() has been called. The memory will be free'd in
+   * DestroyHandle.
+   */
   char* string_value;
 };
 
@@ -58,7 +66,7 @@ struct HandleMapPair {
   struct HandleObject object;
 };
 
-// TODO(binji): use hashmap instead of sorted array.
+/* TODO(binji): use hashmap instead of sorted array. */
 static struct HandleMapPair* s_handle_map = NULL;
 static size_t s_handle_map_size = 0;
 static size_t s_handle_map_capacity = 0;
@@ -94,13 +102,13 @@ static bool register_handle(Handle handle, Type type, union HandleValue value) {
     assert(s_handle_map_capacity > 0);
     pair = &s_handle_map[0];
   } else {
-    // Fast case, the new handle is larger than all other handles.
+    /* Fast case, the new handle is larger than all other handles. */
     if (handle > s_handle_map[s_handle_map_size - 1].handle) {
       pair = &s_handle_map[s_handle_map_size];
     } else {
-      // Binary search to find the insertion point.
-      size_t lo_ix = 0;  // Inclusive
-      size_t hi_ix = s_handle_map_size;  // Exclusive
+      /* Binary search to find the insertion point. */
+      size_t lo_ix = 0;  /* Inclusive */
+      size_t hi_ix = s_handle_map_size;  /* Exclusive */
       while (lo_ix < hi_ix) {
         size_t mid_ix = (lo_ix + hi_ix) / 2;
         Handle mid_handle = s_handle_map[mid_ix].handle;
@@ -114,7 +122,7 @@ static bool register_handle(Handle handle, Type type, union HandleValue value) {
         }
       }
 
-      // Move everything after the insertion point down.
+      /* Move everything after the insertion point down. */
       size_t insert_ix = lo_ix;
       if (insert_ix < s_handle_map_size) {
         memmove(&s_handle_map[insert_ix + 1], &s_handle_map[insert_ix],
@@ -220,9 +228,9 @@ bool nb_handle_register_var(Handle handle, struct PP_Var value) {
 }
 
 static bool get_handle(Handle handle, struct HandleObject* out_handle_object) {
-  // Binary search.
-  size_t lo_ix = 0;  // Inclusive
-  size_t hi_ix = s_handle_map_size;  // Exclusive
+  /* Binary search. */
+  size_t lo_ix = 0;  /* Inclusive */
+  size_t hi_ix = s_handle_map_size;  /* Exclusive */
   while (lo_ix < hi_ix) {
     size_t mid_ix = (lo_ix + hi_ix) / 2;
     Handle mid_handle = s_handle_map[mid_ix].handle;
@@ -304,7 +312,7 @@ static bool get_handle(Handle handle, struct HandleObject* out_handle_object) {
   case from_type: \
     CHECK_##to_type##_##from_type(); \
     *out_value = HOBJ_FIELD(from_type); \
-    return TRUE  // no semicolon
+    return TRUE  /* no semicolon */
 
 #define CHECK_TYPE_INT8_TYPE_INT8()
 #define CHECK_TYPE_INT8_TYPE_INT16() CHECK(TYPE_INT8, TYPE_INT16);
@@ -421,7 +429,7 @@ static bool get_handle(Handle handle, struct HandleObject* out_handle_object) {
     VERROR("handle %d is of type %s. Expected %s.", handle, \
            nb_type_to_string(hobj.type), \
            nb_type_to_string(to_type)); \
-    return FALSE  // no semicolon
+    return FALSE  /* no semicolon */
 
 #define CHECK(to_type, from_type) \
   if (HOBJ_FIELD(from_type) < to_type##_MIN || \
@@ -661,9 +669,9 @@ void nb_handle_destroy(Handle handle) {
   struct HandleMapPair* pair = NULL;
 
 
-  // Binary search.
-  size_t lo_ix = 0;  // Inclusive
-  size_t hi_ix = s_handle_map_size;  // Exclusive
+  /* Binary search. */
+  size_t lo_ix = 0;  /* Inclusive */
+  size_t hi_ix = s_handle_map_size;  /* Exclusive */
   size_t mid_ix;
 
   while (lo_ix < hi_ix) {
@@ -700,7 +708,7 @@ void nb_handle_destroy(Handle handle) {
 }
 
 void nb_handle_destroy_many(Handle* handles, uint32_t handles_count) {
-  // TODO(binji): optimize
+  /* TODO(binji): optimize */
   uint32_t i;
   for (i = 0; i < handles_count; ++i) {
     Handle handle = handles[i];

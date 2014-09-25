@@ -1,18 +1,21 @@
-// Copyright 2014 Ben Smith. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* Copyright 2014 Ben Smith. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+#ifndef NB_ONE_FILE
 #include "message.h"
+#endif
 
 #include <assert.h>
 #include <errno.h>
@@ -20,9 +23,11 @@
 #include <string.h>
 #include <ppapi/c/pp_var.h>
 
+#ifndef NB_ONE_FILE
 #include "error.h"
 #include "handle.h"
 #include "var.h"
+#endif
 
 struct Message;
 struct Command;
@@ -214,7 +219,7 @@ bool parse_gethandles(struct Message* message, struct PP_Var var) {
   message->gethandles_count = len;
 
   result = TRUE;
-  gethandles = NULL;  // Pass ownership to the message.
+  gethandles = NULL;  /* Pass ownership to the message. */
 cleanup:
   free(gethandles);
   nb_var_release(gethandles_var);
@@ -253,10 +258,11 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
     value = nb_var_dict_get_var(sethandles_var, key);
     nb_var_release(key);
 
-    // TODO(binji): for now, only support int/double.
+    /* TODO(binji): for now, only support int/double/NULL. */
     switch (value.type) {
       case PP_VARTYPE_INT32:
       case PP_VARTYPE_DOUBLE:
+      case PP_VARTYPE_NULL:
         break;
 
       default:
@@ -267,15 +273,15 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
     }
 
     sethandles[i].id = key_long;
-    // NOTE: this passes the reference from nb_var_dict_get_var above to
-    // sethandles[i].var.
+    /* NOTE: this passes the reference from nb_var_dict_get_var above to
+       sethandles[i].var. */
     sethandles[i].var = value;
   }
 
   message->sethandles = sethandles;
   message->sethandles_count = len;
   result = TRUE;
-  sethandles = NULL;  // Pass ownership to the message.
+  sethandles = NULL;  /* Pass ownership to the message. */
 cleanup:
   free(sethandles);
   nb_var_release(keys);
@@ -314,7 +320,7 @@ bool parse_destroyhandles(struct Message* message, struct PP_Var var) {
   message->destroyhandles = destroyhandles;
   message->destroyhandles_count = len;
   result = TRUE;
-  destroyhandles = NULL;  // Pass ownership to the message.
+  destroyhandles = NULL;  /* Pass ownership to the message. */
 cleanup:
   free(destroyhandles);
   nb_var_release(destroyhandles_var);
@@ -351,7 +357,7 @@ bool parse_commands(struct Message* message, struct PP_Var var) {
   message->commands = commands;
   message->commands_count = len;
   result = TRUE;
-  commands = NULL;  // Pass ownership to the message.
+  commands = NULL;  /* Pass ownership to the message. */
 cleanup:
   free(commands);
   nb_var_release(commands_var);
@@ -390,7 +396,7 @@ bool parse_command(struct Command* command, struct PP_Var var) {
     goto cleanup;
   }
 
-  // Check that args_var is an array of ints.
+  /* Check that args_var is an array of ints. */
   len = nb_var_array_length(args_var);
   args = calloc_list(len, sizeof(Handle));
   for (i = 0; i < len; ++i) {
@@ -411,7 +417,7 @@ bool parse_command(struct Command* command, struct PP_Var var) {
     command->ret = ret_var.value.as_int;
   }
   result = TRUE;
-  args = NULL;  // Pass ownership to the message.
+  args = NULL;  /* Pass ownership to the message. */
 cleanup:
   free(args);
   nb_var_release(ret_var);

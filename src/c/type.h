@@ -46,4 +46,4 @@ const char* nb_type_to_string(Type);
 }
 #endif
 
-#endif  // TYPE_H_
+#endif  /* TYPE_H_ */

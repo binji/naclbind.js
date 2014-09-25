@@ -20,4 +20,4 @@
 #define ASSERT_SYM_X(line) ASSERT_SYM(line)
 #define COMPILE_ASSERT(x) typedef char ASSERT_SYM_X(__LINE__)[(x) ? 1 : -1];
 
-#endif  // MACROS_H_
+#endif  /* MACROS_H_ */

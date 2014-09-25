@@ -13,8 +13,11 @@
  * limitations under the License.
  */
 
-#include <stdlib.h>
+#ifndef NB_ONE_FILE
 #include "type.h"
+#endif
+
+#include <stdlib.h>
 
 static const char* kTypeString[] = {
   "(invalid)",
