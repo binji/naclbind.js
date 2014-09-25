@@ -29,7 +29,7 @@ SOURCES = \
   $(SRC_DIR)/type.c \
   fake_interfaces.c \
   json.cc \
-  test.cc \
+  main.cc \
   test_handle.cc \
   test_message.cc \
   test_json.cc
