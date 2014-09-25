@@ -14,6 +14,7 @@
 
 var assert = require('assert'),
     child_process = require('child_process'),
+    fs = require('fs'),
     gen = require('../gen'),
     path = require('path'),
     Promise = require('bluebird'),
@@ -227,58 +228,89 @@ function run(nexe, args, callback) {
   });
 }
 
-describe('Generate C', function() {
-  this.slow(5000);
-  this.timeout(30000);
+function genAndRun(header, source, testSource, callback) {
+  var opts = {
+    compile: {
+      infiles: [
+        source,
+        testSource,
+        path.resolve(__dirname, 'fake_interfaces.c'),
+        path.resolve(__dirname, 'json.cc'),
+        path.resolve(__dirname, 'main.cc')
+      ],
+      args: ['-Wall', '-Werror', '-pthread'],
+      defines: ['NB_NO_APP'],
+      includeDirs: [
+        path.resolve(__dirname),
+        path.resolve(__dirname, '..'),
+        path.resolve(__dirname, '../../src/c')
+      ],
+      libs: [
+        'jsoncpp', 'ppapi_simple', 'gtest', 'nacl_io', 'ppapi_cpp', 'ppapi'
+      ]
+    },
+    translate: {
+      arch: arch
+    }
+  };
 
-  before(function() {
-    if (!process.env.NACL_SDK_ROOT) {
-      assert.ok(false, 'NACL_SDK_ROOT not set.');
+  genFile(header, opts, function(error, nexe) {
+    if (error) {
+      return callback(error);
     }
 
-    var toolsDir = path.resolve(process.env.NACL_SDK_ROOT, 'tools'),
-
-    naclConfig = path.join(toolsDir, 'nacl_config.py');
-
-    return runNaclConfigMulti(naclConfig, tools).then(function(hash) {
-      toolsHash = hash;
-    }).catch(function(error) {
-      assert.ok(false, 'Failed to run nacl_config:\n' + error);
-    });
+    run(nexe, null, callback);
   });
+}
 
-  it('should work for a simple function', function(done) {
-    var opts = {
-      compile: {
-        infiles: [
-          path.resolve(__dirname, '../data/simple.c'),
-          path.resolve(__dirname, '../data/test_simple.cc'),
-          path.resolve(__dirname, 'fake_interfaces.c'),
-          path.resolve(__dirname, 'json.cc'),
-          path.resolve(__dirname, 'main.cc')
-        ],
-        args: ['-Wall', '-Werror', '-pthread'],
-        defines: ['NB_NO_APP'],
-        includeDirs: [
-          path.resolve(__dirname),
-          path.resolve(__dirname, '..'),
-          path.resolve(__dirname, '../../src/c')
-        ],
-        libs: [
-          'jsoncpp', 'ppapi_simple', 'gtest', 'nacl_io', 'ppapi_cpp', 'ppapi'
-        ]
-      },
-      translate: {
-        arch: arch
-      }
-    };
-
-    genFile('data/simple.h', opts, function(error, nexe) {
+describe('Collect C Generator Tests', function() {
+  it('should succeed', function(done) {
+    var testDataDir = path.resolve(__dirname, '../data');
+    fs.readdir(testDataDir, function(error, files) {
       if (error) {
         return done(error);
       }
 
-      run(nexe, null, done);
+      var matchesTest = function(f) { return /^test_.*\.cc$/.test(f); },
+          tests = Array.prototype.filter.call(files, matchesTest);
+
+      if (tests.length === 0) {
+        return done();
+      }
+
+      describe('Generate C', function() {
+        this.slow(5000);
+        this.timeout(30000);
+
+        before(function() {
+          if (!process.env.NACL_SDK_ROOT) {
+            assert.ok(false, 'NACL_SDK_ROOT not set.');
+          }
+
+          var toolsDir = path.resolve(process.env.NACL_SDK_ROOT, 'tools'),
+
+          naclConfig = path.join(toolsDir, 'nacl_config.py');
+
+          return runNaclConfigMulti(naclConfig, tools).then(function(hash) {
+            toolsHash = hash;
+          }).catch(function(error) {
+            assert.ok(false, 'Failed to run nacl_config:\n' + error);
+          });
+        });
+
+        tests.forEach(function(testName) {
+          var baseName = testName.match(/^test_(.*)\.cc$/)[1],
+              header = path.join(testDataDir, baseName + '.h'),
+              source = path.join(testDataDir, baseName + '.c'),
+              testSource = path.join(testDataDir, testName);
+
+          it('should succeed for ' + testName, function(done) {
+            genAndRun(header, source, testSource, done);
+          });
+        });
+      });
+
+      done();
     });
   });
 });
