@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+var Promise = require('bluebird');
+
 var child_process = require('child_process'),
     fs = require('fs'),
     path = require('path'),
@@ -44,20 +46,8 @@ function genFile(infile, outfile, templateName, callback) {
   });
 }
 
-function genFilePromise(infile, outfile, templateName) {
-  return new Promise(function(resolve, reject) {
-    genFile(infile, outfile, templateName, function(error, outfile) {
-      if (error) {
-        return reject(error);
-      }
-
-      resolve(outfile);
-    });
-  });
-}
-
 module.exports = {
   file: genFile,
-  filePromise: genFilePromise,
+  filePromise: Promise.promisify(genFile),
   tmpDir: tmpDir
 };

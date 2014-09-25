@@ -16,6 +16,7 @@ var assert = require('assert'),
     child_process = require('child_process'),
     gen = require('../gen'),
     path = require('path'),
+    Promise = require('bluebird'),
     execFile = child_process.execFile,
 
     toolchain = 'newlib',
