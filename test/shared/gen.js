@@ -32,12 +32,11 @@ function tmpDir(callback) {
 }
 
 function genFile(infile, outfile, templateName, callback) {
-  var genPy = path.resolve(__dirname, '../bin/gen.py'),
-      glueJs = path.resolve(__dirname, '../templates', templateName),
-      cmd = [genPy, '-t', glueJs, infile, '-o', outfile],
-      opts = {cwd: __dirname};
+  var genPy = path.resolve(__dirname, '../../bin/gen.py'),
+      glueJs = path.resolve(__dirname, '../../templates', templateName),
+      cmd = [genPy, '-t', glueJs, infile, '-o', outfile];
 
-  execFile('python', cmd, opts, function(error, stdout, stderr) {
+  execFile('python', cmd, function(error, stdout, stderr) {
     if (error) {
       return callback(error);
     }

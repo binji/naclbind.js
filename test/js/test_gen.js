@@ -13,7 +13,7 @@
 // limitations under the License.
 
 var assert = require('assert'),
-    gen = require('../gen'),
+    gen = require('../shared/gen'),
     path = require('path'),
     type = require('../../src/js/type');
 
@@ -37,8 +37,10 @@ function genFile(infile, callback) {
       return callback(error);
     }
 
-    var outfile = path.join(dirname, 'gen.js');
-    gen.file(infile, outfile, 'glue.js', function(error, outfile) {
+    var outfile = path.join(dirname, 'gen.js'),
+        inpath = path.join(__dirname, infile);
+
+    gen.file(inpath, outfile, 'glue.js', function(error, outfile) {
       if (error) {
         return callback(error);
       }

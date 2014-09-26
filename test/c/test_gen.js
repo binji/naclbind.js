@@ -15,7 +15,7 @@
 var assert = require('assert'),
     child_process = require('child_process'),
     fs = require('fs'),
-    gen = require('../gen'),
+    gen = require('../shared/gen'),
     path = require('path'),
     Promise = require('bluebird'),
     execFile = child_process.execFile,
@@ -265,7 +265,7 @@ function genAndRun(header, source, testSource, callback) {
 
 describe('Collect C Generator Tests', function() {
   it('should succeed', function(done) {
-    var testDataDir = path.resolve(__dirname, '../data');
+    var testDataDir = path.resolve(__dirname, 'data');
     fs.readdir(testDataDir, function(error, files) {
       if (error) {
         return done(error);
