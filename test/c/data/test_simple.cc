@@ -17,6 +17,7 @@
 #include "bool.h"
 #include "json.h"
 #include "run.h"
+#include "var.h"
 
 extern "C" {
 int g_foo_called = 0;
@@ -34,5 +35,7 @@ TEST(SimpleTest, Basic) {
   EXPECT_STREQ("{\"id\":1,\"values\":[]}\n", response_json);
   EXPECT_EQ(1, g_foo_called);
 
+  nb_var_release(request);
+  nb_var_release(response);
   free(response_json);
 }

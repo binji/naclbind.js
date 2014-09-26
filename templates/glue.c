@@ -145,33 +145,38 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
 [[  ]]
 [[  result_type = fn.type.get_result().get_canonical()]]
 [[  if result_type.kind != TypeKind.VOID:]]
+  if (!nb_message_command_has_ret(message, command_idx)) {
+    // print error.
+    return FALSE;
+  }
+  Handle ret = nb_message_command_ret(message, command_idx);
   {{result_type.spelling}} result = {{fn.spelling}}({{', '.join('arg%d' % i for i in range(len(arguments)))}});
 [[    if result_type.kind in (TypeKind.SCHAR, TypeKind.CHAR_S):]]
-  return nb_handle_register_int8(command->ret_handle, result);
+  return nb_handle_register_int8(ret, result);
 [[    elif result_type.kind in (TypeKind.UCHAR, TypeKind.CHAR_U):]]
-  return nb_handle_register_uint8(command->ret_handle, result);
+  return nb_handle_register_uint8(ret, result);
 [[    elif result_type.kind == TypeKind.SHORT:]]
-  return nb_handle_register_int16(command->ret_handle, result);
+  return nb_handle_register_int16(ret, result);
 [[    elif result_type.kind == TypeKind.USHORT:]]
-  return nb_handle_register_uint16(command->ret_handle, result);
+  return nb_handle_register_uint16(ret, result);
 [[    elif result_type.kind == TypeKind.INT:]]
-  return nb_handle_register_int32(command->ret_handle, result);
+  return nb_handle_register_int32(ret, result);
 [[    elif result_type.kind == TypeKind.UINT:]]
-  return nb_handle_register_uint32(command->ret_handle, result);
+  return nb_handle_register_uint32(ret, result);
 [[    elif result_type.kind == TypeKind.LONG:]]
-  return nb_handle_register_int32(command->ret_handle, (int32_t)result);
+  return nb_handle_register_int32(ret, (int32_t)result);
 [[    elif result_type.kind == TypeKind.ULONG:]]
-  return nb_handle_register_uint32(command->ret_handle, (uint32_t)result);
+  return nb_handle_register_uint32(ret, (uint32_t)result);
 [[    elif result_type.kind == TypeKind.LONGLONG:]]
-  return nb_handle_register_int64(command->ret_handle, result);
+  return nb_handle_register_int64(ret, result);
 [[    elif result_type.kind == TypeKind.ULONGLONG:]]
-  return nb_handle_register_uint64(command->ret_handle, result);
+  return nb_handle_register_uint64(ret, result);
 [[    elif result_type.kind == TypeKind.FLOAT:]]
-  return nb_handle_register_float(command->ret_handle, result);
+  return nb_handle_register_float(ret, result);
 [[    elif result_type.kind == TypeKind.DOUBLE:]]
-  return nb_handle_register_double(command->ret_handle, result);
+  return nb_handle_register_double(ret, result);
 [[    elif result_type.kind == TypeKind.POINTER:]]
-  return nb_handle_register_voidp(command->ret_handle, result);
+  return nb_handle_register_voidp(ret, result);
 [[    else:]]
   // UNSUPPORTED: {{result_type.kind}} {{result_type.spelling}}
 [[  else:]]
@@ -179,6 +184,7 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
   return TRUE;
 [[  ]]
 }
+
 [[]]
 
 enum {

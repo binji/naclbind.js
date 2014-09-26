@@ -1,0 +1,21 @@
+typedef signed char schar;
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned int uint;
+typedef unsigned long ulong;
+typedef long long longlong;
+typedef unsigned long long ulonglong;
+
+char f1(char);
+schar f2(schar);
+uchar f3(uchar);
+short f4(short);
+ushort f5(ushort);
+int f6(int);
+uint f7(uint);
+long f8(long);
+ulong f9(ulong);
+longlong f10(longlong);
+ulonglong f11(ulonglong);
+float f12(float);
+double f13(double);
