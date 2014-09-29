@@ -13,8 +13,7 @@
 // limitations under the License.
 
 var assert = require('assert'),
-    long = require('../../src/js/long'),
-    Long = long.Long;
+    Long = require('../../src/js/long');
 
 describe('Long', function() {
   describe('fromInt', function() {

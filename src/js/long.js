@@ -515,8 +515,7 @@ Long.prototype.not = function() {
  * @return {!Long} The bitwise-AND of this and the other.
  */
 Long.prototype.and = function(other) {
-  return Long.fromBits(this.low_ & other.low_,
-                                 this.high_ & other.high_);
+  return Long.fromBits(this.low_ & other.low_, this.high_ & other.high_);
 };
 
 
@@ -526,8 +525,7 @@ Long.prototype.and = function(other) {
  * @return {!Long} The bitwise-OR of this and the other.
  */
 Long.prototype.or = function(other) {
-  return Long.fromBits(this.low_ | other.low_,
-                                 this.high_ | other.high_);
+  return Long.fromBits(this.low_ | other.low_, this.high_ | other.high_);
 };
 
 
@@ -537,8 +535,7 @@ Long.prototype.or = function(other) {
  * @return {!Long} The bitwise-XOR of this and the other.
  */
 Long.prototype.xor = function(other) {
-  return Long.fromBits(this.low_ ^ other.low_,
-                                 this.high_ ^ other.high_);
+  return Long.fromBits(this.low_ ^ other.low_, this.high_ ^ other.high_);
 };
 
 
@@ -616,6 +613,4 @@ Long.prototype.shiftRightUnsigned = function(numBits) {
   }
 };
 
-module.exports = {
-  Long: Long
-};
+module.exports = Long;

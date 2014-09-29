@@ -13,6 +13,7 @@
 // limitations under the License.
 
 var assert = require('assert'),
+    Long = require('../../src/js/long'),
     mod = require('../../src/js/mod'),
     type = require('../../src/js/type'),
     NaClEmbed = require('./nacl_embed_for_testing'),
@@ -27,7 +28,7 @@ emptyMessage = {
 };
 
 function assertTypesEqual(t1, t2) {
-  assert.ok(t1.equals(t2));
+  assert.ok(t1.equals(t2), t1.spelling + ' != ' + t2.spelling);
 }
 
 describe('Module', function() {
@@ -425,6 +426,68 @@ describe('Module', function() {
     });
   });
 
+  describe('longToType', function() {
+    it('should return smallest type for a given positive number', function() {
+      var l = Long.ONE,
+          two = Long.fromInt(2),
+          i;
+      assertTypesEqual(mod.longToType(Long.ZERO), type.schar);
+      for (i = 1; i <= 7; ++i) {
+        assertTypesEqual(mod.longToType(l), type.schar);
+        l = l.multiply(two);
+      }
+
+      assertTypesEqual(mod.longToType(l), type.uchar);
+      l = l.multiply(two);
+
+      for (i = 9; i <= 15; ++i) {
+        assertTypesEqual(mod.longToType(l), type.short);
+        l = l.multiply(two);
+      }
+
+      assertTypesEqual(mod.longToType(l), type.ushort);
+      l = l.multiply(two);
+
+      for (i = 17; i <= 31; ++i) {
+        assertTypesEqual(mod.longToType(l), type.int);
+        l = l.multiply(two);
+      }
+
+      assertTypesEqual(mod.longToType(l), type.uint);
+      l = l.multiply(two);
+
+      for (i = 33; i <= 63; ++i) {
+        assertTypesEqual(mod.longToType(l), type.longlong);
+        l = l.multiply(two);
+      }
+    });
+
+    it('should return smallest type for a given negative number', function() {
+      var l = Long.NEG_ONE,
+          two = Long.fromInt(2),
+          i;
+      for (i = 1; i <= 8; ++i) {
+        assertTypesEqual(mod.longToType(l), type.schar);
+        l = l.multiply(two);
+      }
+
+      for (i = 9; i <= 16; ++i) {
+        assertTypesEqual(mod.longToType(l), type.short);
+        l = l.multiply(two);
+      }
+
+      for (i = 17; i <= 32; ++i) {
+        assertTypesEqual(mod.longToType(l), type.int);
+        l = l.multiply(two);
+      }
+
+      for (i = 33; i <= 63; ++i) {
+        assertTypesEqual(mod.longToType(l), type.longlong);
+        l = l.multiply(two);
+      }
+    });
+  });
+
   describe('objectToType', function() {
     it('should work for numbers', function() {
       assertTypesEqual(mod.objectToType(100), type.schar);
@@ -447,6 +510,17 @@ describe('Module', function() {
     it('should work for bools', function() {
       assertTypesEqual(type.schar, mod.objectToType(true));
       assertTypesEqual(type.schar, mod.objectToType(false));
+    });
+
+    it('should work for 64-bit ints', function() {
+      var two_to_the_fortieth = Long.fromNumber(Math.pow(2, 40)),
+          neg_two_to_the_fortieth = two_to_the_fortieth.negate();
+      assertTypesEqual(type.longlong, mod.objectToType(two_to_the_fortieth));
+      assertTypesEqual(type.longlong, mod.objectToType(neg_two_to_the_fortieth));
+      // TODO(binji): Fix unsigned long long. Long type represents s64 not u64.
+      // assertTypesEqual(type.ulonglong, mod.objectToType(Long.MAX_VALUE));
+
+      assertTypesEqual(type.schar, mod.objectToType(Long.ZERO));
     });
 
     it('should fail for anything else', function() {

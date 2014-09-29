@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var type = require('./type'),
+var Long = require('../../src/js/long'),
+    type = require('./type'),
     utils = require('./utils'),
     ERROR_IF_ID = 0;
 
@@ -49,7 +50,24 @@ function numberToType(n) {
   }
 }
 
+function longToType(l) {
+  var bits = l.getNumBitsAbs();
+  if (bits > 32) {
+    if (l.isNegative() || bits < 64) {
+      return type.longlong;
+    } else {
+      return type.ulonglong;
+    }
+  } else {
+    return numberToType(l.toNumber());
+  }
+}
+
 function objectToType(obj) {
+  if (obj instanceof Long) {
+    return longToType(obj);
+  }
+
   var klass = utils.getClass(obj);
   switch (klass) {
     case 'Null':
@@ -330,6 +348,7 @@ module.exports = {
   Function: IdFunction,
 
   numberToType: numberToType,
+  longToType: longToType,
   objectToType: objectToType,
 
   ERROR_IF_ID: ERROR_IF_ID,
