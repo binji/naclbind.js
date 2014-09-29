@@ -106,11 +106,13 @@ bool nb_request_set_handles(struct Message* message) {
       }
 
       case PP_VARTYPE_ARRAY: {
-        /* It's safe to access these values directly here, we've already
-         * validated the message. */
-        int64_t low = nb_var_array_get(value, 0).value.as_int;
-        int64_t high = nb_var_array_get(value, 1).value.as_int;
-        int64_t num = (high << 32) | low;
+        int64_t num;
+        if (!nb_var_int64(value, &num)) {
+          VERROR("nb_var_int64(%d, %s) failed, i=%d.",
+                 handle, nb_var_type_to_string(value.type), i);
+          goto cleanup;
+        }
+
         if (!nb_handle_register_int64(handle, num)) {
           VERROR("nb_handle_register_int64(%d, %lld) failed, i=%d.",
                  handle, num, i);

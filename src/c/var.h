@@ -54,6 +54,8 @@ uint32_t nb_var_buffer_byte_length(struct PP_Var);
 void nb_var_buffer_map(struct PP_Var);
 void nb_var_buffer_unmap(struct PP_Var);
 
+struct PP_Var nb_var_int64_create(int64_t);
+
 bool nb_var_int8(struct PP_Var, int8_t*);
 bool nb_var_uint8(struct PP_Var, uint8_t*);
 bool nb_var_int16(struct PP_Var, int16_t*);

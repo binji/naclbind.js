@@ -154,6 +154,13 @@ void nb_var_buffer_unmap(struct PP_Var var) {
   g_ppb_var_array_buffer->Unmap(var);
 }
 
+struct PP_Var nb_var_int64_create(int64_t value) {
+  struct PP_Var result = nb_var_array_create();
+  nb_var_array_set(result, 0, PP_MakeInt32((int32_t) (value & 0xFFFFFFFF)));
+  nb_var_array_set(result, 1, PP_MakeInt32((int32_t) (value >> 32)));
+  return result;
+}
+
 bool nb_var_int8(struct PP_Var var, int8_t* out_value) {
   if (!nb_var_check_type_with_error(var, PP_VARTYPE_INT32)) {
     return FALSE;
@@ -209,13 +216,45 @@ bool nb_var_uint32(struct PP_Var var, uint32_t* out_value) {
 }
 
 bool nb_var_int64(struct PP_Var var, int64_t* out_value) {
-  /* TODO: figure out how best to encode int64 */
-  return FALSE;
+  uint32_t len;
+  struct PP_Var low_var;
+  struct PP_Var high_var;
+
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_ARRAY)) {
+    return FALSE;
+  }
+
+  len = nb_var_array_length(var);
+
+  if (len != 2) {
+    VERROR("Expected int64 var to be an array of length 2, not %u.", len);
+    return FALSE;
+  }
+
+  low_var = nb_var_array_get(var, 0);
+  if (!nb_var_check_type_with_error(low_var, PP_VARTYPE_INT32)) {
+    nb_var_release(low_var);
+    return FALSE;
+  }
+
+  high_var = nb_var_array_get(var, 1);
+  if (!nb_var_check_type_with_error(high_var, PP_VARTYPE_INT32)) {
+    nb_var_release(high_var);
+    return FALSE;
+  }
+
+  *out_value = ((int64_t) high_var.value.as_int << 32) | low_var.value.as_int;
+  return TRUE;
 }
 
 bool nb_var_uint64(struct PP_Var var, uint64_t* out_value) {
-  /* TODO: figure out how best to encode int64 */
-  return FALSE;
+  int64_t signed_value;
+  if (!nb_var_int64(var, &signed_value)) {
+    return FALSE;
+  }
+
+  *out_value = (uint64_t) signed_value;
+  return TRUE;
 }
 
 bool nb_var_float(struct PP_Var var, float* out_value) {

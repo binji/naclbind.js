@@ -768,12 +768,10 @@ bool nb_handle_convert_to_var(Handle handle, struct PP_Var* var) {
       var->value.as_int = hobj.value.uint32;
       break;
     case TYPE_INT64:
+      *var = nb_var_int64_create(hobj.value.int64);
+      break;
     case TYPE_UINT64:
-      *var = nb_var_array_create();
-      nb_var_array_set(
-          *var, 0, PP_MakeInt32((int32_t) (hobj.value.int64 & 0xFFFFFFFF)));
-      nb_var_array_set(
-          *var, 1, PP_MakeInt32((int32_t) (hobj.value.int64 >> 32)));
+      *var = nb_var_int64_create((int64_t) hobj.value.uint64);
       break;
     case TYPE_FLOAT:
       var->type = PP_VARTYPE_DOUBLE;
