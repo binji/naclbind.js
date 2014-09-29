@@ -232,6 +232,7 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
   struct PP_Var keys = PP_MakeUndefined();
   struct HandleVarPair* sethandles = NULL;
   uint32_t i, len;
+  struct PP_Var value;
 
   if (!optional_key(var, "set", &sethandles_var)) {
     result = TRUE;
@@ -248,7 +249,6 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
   for (i = 0; i < len; ++i) {
     struct PP_Var key = nb_var_array_get(keys, i);
     long key_long;
-    struct PP_Var value;
 
     if (!var_string_to_long(key, &key_long)) {
       nb_var_release(key);
@@ -266,10 +266,33 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
       case PP_VARTYPE_STRING:
         break;
 
+      case PP_VARTYPE_ARRAY: {
+        /* An array is the representation of a Long type (i.e. 64-bit int).
+         * It should always have length 2 and both elements should be ints. */
+        uint32_t len = nb_var_array_length(value);
+        uint32_t i;
+        if (len != 2) {
+          VERROR("Expected set handle value array to be of length 2, not %u",
+                 len);
+          goto cleanup;
+        }
+
+        for (i = 0; i < len; ++i) {
+          struct PP_Var element = nb_var_array_get(value, i);
+          if (element.type != PP_VARTYPE_INT32) {
+            nb_var_release(element);
+            VERROR("Expected set handle value array to have elements of type "
+                   "%s, not %s.", nb_var_type_to_string(PP_VARTYPE_INT32),
+                   nb_var_type_to_string(element.type));
+            goto cleanup;
+          }
+        }
+        break;
+      }
+
       default:
         VERROR("Unexpected set handle value type: %s.",
                nb_var_type_to_string(value.type));
-        nb_var_release(value);
         goto cleanup;
     }
 
@@ -277,6 +300,7 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
     /* NOTE: this passes the reference from nb_var_dict_get_var above to
        sethandles[i].var. */
     sethandles[i].var = value;
+    value = PP_MakeUndefined();  /* Don't release below in cleanup */
   }
 
   message->sethandles = sethandles;
@@ -284,6 +308,7 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
   result = TRUE;
   sethandles = NULL;  /* Pass ownership to the message. */
 cleanup:
+  nb_var_release(value);
   free(sethandles);
   nb_var_release(keys);
   nb_var_release(sethandles_var);

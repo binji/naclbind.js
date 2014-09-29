@@ -61,6 +61,7 @@ TEST_F(MessageTest, Valid) {
     "{\"id\": 1, \"set\": {\"1\": 3.5}}",
     "{\"id\": 1, \"set\": {\"1\": \"hi\"}}",
     "{\"id\": 1, \"set\": {\"1\": null}}",
+    "{\"id\": 1, \"set\": {\"1\": [0, 256]}}",
     "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [2, 3]}]}",
     "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [2, 3], \"ret\": 4}]}",
     "{\"id\": 1, \"get\": [10], \"destroy\": []}",
@@ -85,9 +86,9 @@ TEST_F(MessageTest, Invalid) {
     "{\"id\": 1, \"get\": [4.3]}",  // "get" must be array of ints
     "{\"id\": 1, \"set\": [1, 2]}",  // "set" must be dictionary
     "{\"id\": 1, \"set\": {\"hi\": 3}}",  // "set" keys must be ints
-    // "set" values must be number/string
-    // TODO(binji): relax this restriction.
-    "{\"id\": 1, \"set\": {\"1\": [1, 2]}}",
+    "{\"id\": 1, \"set\": {\"1\": {}}}",  // "set" values can't be object
+    "{\"id\": 1, \"set\": {\"1\": [1]}}",  // "set" values array must have len 2
+    "{\"id\": 1, \"set\": {\"1\": [null]}}",  // "set" values array must be ints
     "{\"id\": 1, \"destroy\": {}}",  // "destroy" must be array
     "{\"id\": 1, \"destroy\": [null]}",  // "destroy" must be array of ints
     "{\"id\": 1, \"commands\": null}",  // "commands" must be array
@@ -142,6 +143,68 @@ TEST_F(MessageTest, SetHandles) {
   EXPECT_EQ(2, handle);
   EXPECT_EQ(PP_VARTYPE_INT32, value.type);
   EXPECT_EQ(5, value.value.as_int);
+  nb_var_release(value);
+}
+
+TEST_F(MessageTest, SetHandles_String) {
+  const char* json = "{\"id\": 1, \"set\": {\"1\": \"Hi\"}}";
+  JsonToMessage(json);
+  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+
+  EXPECT_EQ(1, nb_message_id(message));
+  EXPECT_EQ(1, nb_message_sethandles_count(message));
+
+  Handle handle;
+  struct PP_Var value;
+
+  nb_message_sethandle(message, 0, &handle, &value);
+  EXPECT_EQ(1, handle);
+  EXPECT_EQ(PP_VARTYPE_STRING, value.type);
+
+  const char* s;
+  uint32_t len;
+  EXPECT_EQ(TRUE, nb_var_string(value, &s, &len));
+  EXPECT_EQ(2, len);
+  EXPECT_STREQ("Hi", s);
+  nb_var_release(value);
+}
+
+TEST_F(MessageTest, SetHandles_Null) {
+  const char* json = "{\"id\": 1, \"set\": {\"1\": null}}";
+  JsonToMessage(json);
+  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+
+  EXPECT_EQ(1, nb_message_id(message));
+  EXPECT_EQ(1, nb_message_sethandles_count(message));
+
+  Handle handle;
+  struct PP_Var value;
+
+  nb_message_sethandle(message, 0, &handle, &value);
+  EXPECT_EQ(1, handle);
+  EXPECT_EQ(PP_VARTYPE_NULL, value.type);
+  nb_var_release(value);
+}
+
+TEST_F(MessageTest, SetHandles_Long) {
+  const char* json = "{\"id\": 1, \"set\": {\"1\": [0, 1]}}";
+  JsonToMessage(json);
+  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+
+  EXPECT_EQ(1, nb_message_id(message));
+  EXPECT_EQ(1, nb_message_sethandles_count(message));
+
+  Handle handle;
+  struct PP_Var value;
+
+  nb_message_sethandle(message, 0, &handle, &value);
+  EXPECT_EQ(1, handle);
+  EXPECT_EQ(PP_VARTYPE_ARRAY, value.type);
+  EXPECT_EQ(2, nb_var_array_length(value));
+  EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(value, 0).type);
+  EXPECT_EQ(0, nb_var_array_get(value, 0).value.as_int);
+  EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(value, 1).type);
+  EXPECT_EQ(1, nb_var_array_get(value, 1).value.as_int);
   nb_var_release(value);
 }
 
