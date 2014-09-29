@@ -660,16 +660,16 @@ describe('Module', function() {
         finalizer = function(handle) {
           switch (count++) {
             case 0:
-              assert.equal(handle.id, 2);
+              assert.strictEqual(handle.id, 2);
               break;
             case 1:
-              assert.equal(handle.id, 1);
+              assert.strictEqual(handle.id, 1);
               break;
             case 2:
-              assert.equal(handle.id, 4);
+              assert.strictEqual(handle.id, 4);
               break;
             case 3:
-              assert.equal(handle.id, 3);
+              assert.strictEqual(handle.id, 3);
               done();
               break;
           }

@@ -36,7 +36,8 @@ describe('Embed', function() {
         notCalled = function() { assert.ok(false, 'Shouldn\'t be called'); }
 
     ne.setPostMessageCallback(function(msg) {
-      assert.equal(loaded, true, 'postMessage called before embed loaded');
+      assert.strictEqual(loaded, true,
+                         'postMessage called before embed loaded');
       if (callCount === 0) {
         assert.deepEqual(msg, {id: 1, test: 'hello'});
       } else if (callCount === 1) {
