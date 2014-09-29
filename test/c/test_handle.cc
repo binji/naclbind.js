@@ -406,7 +406,32 @@ TEST_F(HandleTest, ConvertToVar) {
     nb_var_release(var);
     nb_handle_destroy(1);
   }
-  // TODO(binji): implement
-  CONVERT_FAIL(int64, 0);
-  CONVERT_FAIL(uint64, 0);
+  // int64
+  {
+    struct PP_Var var;
+    EXPECT_EQ(TRUE, nb_handle_register_int64(1, 0x10000000000LL));
+    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(PP_VARTYPE_ARRAY, var.type);
+    EXPECT_EQ(2, nb_var_array_length(var));
+    EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 0).type);
+    EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 1).type);
+    EXPECT_EQ(0, nb_var_array_get(var, 0).value.as_int);
+    EXPECT_EQ(256, nb_var_array_get(var, 1).value.as_int);
+    nb_var_release(var);
+    nb_handle_destroy(1);
+  }
+  // uint64
+  {
+    struct PP_Var var;
+    EXPECT_EQ(TRUE, nb_handle_register_uint64(1, 0xf00000000000000fLL));
+    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(PP_VARTYPE_ARRAY, var.type);
+    EXPECT_EQ(2, nb_var_array_length(var));
+    EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 0).type);
+    EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 1).type);
+    EXPECT_EQ(15, nb_var_array_get(var, 0).value.as_int);
+    EXPECT_EQ(-0x10000000, nb_var_array_get(var, 1).value.as_int);
+    nb_var_release(var);
+    nb_handle_destroy(1);
+  }
 }

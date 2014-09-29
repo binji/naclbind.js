@@ -27,14 +27,15 @@ void GeneratorTest::SetUp() {
 }
 
 void GeneratorTest::TearDown() {
-  free(response_json_);
-  nb_var_release(request_);
-  nb_var_release(response_);
+  CleanUp();
   EXPECT_EQ(TRUE, fake_var_check_no_references());
 }
 
 void GeneratorTest::RunTest(const char* request_json,
                             const char* expected_response_json) {
+  CleanUp();
+  SetUp();
+
   request_ = json_to_var(request_json);
   ASSERT_EQ(PP_VARTYPE_DICTIONARY, request_.type);
 
@@ -42,4 +43,10 @@ void GeneratorTest::RunTest(const char* request_json,
 
   response_json_ = var_to_json_flat(response_);
   EXPECT_STREQ(expected_response_json, response_json_);
+}
+
+void GeneratorTest::CleanUp() {
+  free(response_json_);
+  nb_var_release(request_);
+  nb_var_release(response_);
 }

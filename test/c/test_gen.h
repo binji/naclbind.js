@@ -19,6 +19,7 @@ class GeneratorTest : public ::testing::Test {
  public:
   virtual void SetUp();
   virtual void TearDown();
+  void CleanUp();
   void RunTest(const char* request_json, const char* expected_response_json);
 
  private:
