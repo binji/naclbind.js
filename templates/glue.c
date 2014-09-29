@@ -134,6 +134,12 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     return FALSE;
   }
   {{arg.spelling}} arg{{i}} = ({{arg.spelling}}) arg{{i}}x;
+[[    elif arg.kind == TypeKind.RECORD and arg.spelling == 'struct PP_Var':]]
+  struct PP_Var arg{{i}};
+  if (!nb_handle_get_var(handle{{i}}, &arg{{i}})) {
+    // print error.
+    return FALSE;
+  }
 [[    elif arg.kind == TypeKind.CONSTANTARRAY:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
   void* arg{{i}} = NULL;
@@ -177,6 +183,8 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
   return nb_handle_register_double(ret, result);
 [[    elif result_type.kind == TypeKind.POINTER:]]
   return nb_handle_register_voidp(ret, result);
+[[    elif result_type.kind == TypeKind.RECORD and result_type.spelling == 'struct PP_Var':]]
+  return nb_handle_register_var(ret, result);
 [[    else:]]
   // UNSUPPORTED: {{result_type.kind}} {{result_type.spelling}}
 [[  else:]]
