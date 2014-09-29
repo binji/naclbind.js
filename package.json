@@ -10,8 +10,13 @@
     "chai": "^1.9.1",
     "istanbul": "^0.3.0",
     "jshint": "^2.5.4",
+    "karma-bro": "^0.8.0",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^0.1.4",
+    "karma-mocha": "^0.1.9",
     "mocha": "^1.21.0",
-    "tmp": "0.0.24"
+    "tmp": "0.0.24",
+    "uglifyify": "^2.5.0"
   },
   "scripts": {
     "pretest": "jshint src",
