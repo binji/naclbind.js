@@ -606,19 +606,42 @@ bool nb_handle_get_double(Handle handle, double* out_value) {
   TYPE_SWITCH(TYPE_DOUBLE);
 }
 
+static bool nb_hobj_string_value(struct HandleObject* hobj, char** out_value) {
+  if (hobj->string_value == NULL) {
+    uint32_t len;
+    const char* str;
+    if (!nb_var_string(hobj->value.var, &str, &len)) {
+      return FALSE;
+    }
+
+    hobj->string_value = strndup(str, len);
+  }
+
+  *out_value = hobj->string_value;
+  return TRUE;
+}
+
 bool nb_handle_get_voidp(Handle handle, void** out_value) {
   struct HandleObject hobj;
   if (!get_handle(handle, &hobj)) {
     return FALSE;
   }
 
-  if (hobj.type != TYPE_VOID_P) {
+  if (hobj.type == TYPE_VAR) {
+    char* string_value;
+    if (!nb_hobj_string_value(&hobj, &string_value)) {
+      VERROR("unable to get string for handle %d", handle);
+      return FALSE;
+    }
+    *out_value = string_value;
+  } else if (hobj.type == TYPE_VOID_P) {
+    *out_value = hobj.value.voidp;
+  } else {
     VERROR("handle %d is of type %s. Expected %s.", handle,
            nb_type_to_string(hobj.type), nb_type_to_string(TYPE_VOID_P));
     return FALSE;
   }
 
-  *out_value = hobj.value.voidp;
   return TRUE;
 }
 
@@ -629,15 +652,12 @@ bool nb_handle_get_charp(Handle handle, char** out_value) {
   }
 
   if (hobj.type == TYPE_VAR) {
-    uint32_t len;
-    const char* str;
-    if (!nb_var_string(hobj.value.var, &str, &len)) {
+    char* string_value;
+    if (!nb_hobj_string_value(&hobj, &string_value)) {
       VERROR("unable to get string for handle %d", handle);
       return FALSE;
     }
-
-    hobj.string_value = strndup(str, len);
-    *out_value = hobj.string_value;
+    *out_value = string_value;
   } else if (hobj.type == TYPE_VOID_P) {
     *out_value = (char*)hobj.value.voidp;
   } else {

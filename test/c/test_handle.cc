@@ -51,6 +51,30 @@ bool operator ==(struct PP_Var v1, struct PP_Var v2) {
   }
 }
 
+bool operator ==(struct PP_Var v, void* p) {
+  switch (v.type) {
+    case PP_VARTYPE_STRING: {
+      const char* s;
+      uint32_t len;
+      if (!nb_var_string(v, &s, &len)) {
+        return false;
+      }
+
+      return strcmp(s, (char*) p) == 0;
+    }
+
+    case PP_VARTYPE_NULL:
+      return p == NULL;
+
+    default:
+      return false;
+  }
+}
+
+bool operator ==(void* p, struct PP_Var v) {
+  return v == p;
+}
+
 class HandleTest : public ::testing::Test {
  public:
   HandleTest() {}
@@ -278,7 +302,7 @@ TEST_F(HandleTest, Var) {
   {
     struct PP_Var v = nb_var_string_create("hi", 2);
     //           i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 vp  v
-    ROW(var, v,   _, _, _,   _,  _,  _,  _,  _,  _,  _, _, O);
+    ROW(var, v,   _, _, _,   _,  _,  _,  _,  _,  _,  _, O, O);
     nb_var_release(v);
   }
 
@@ -312,6 +336,11 @@ TEST_F(HandleTest, Charp) {
   char* s;
   EXPECT_EQ(TRUE, nb_handle_get_charp(1, &s));
   EXPECT_STREQ("hi", s);
+
+  void* p;
+  EXPECT_EQ(TRUE, nb_handle_get_voidp(1, &p));
+  EXPECT_STREQ("hi", (char*) p);
+
   nb_handle_destroy(1);
 }
 
