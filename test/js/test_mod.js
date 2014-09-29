@@ -26,6 +26,10 @@ emptyMessage = {
   commands: []
 };
 
+function assertTypesEqual(t1, t2) {
+  assert.ok(t1.equals(t2));
+}
+
 describe('Module', function() {
   it('should start with an empty message', function() {
     var m = mod.Module();
@@ -98,8 +102,8 @@ describe('Module', function() {
     h1 = m.$handle(4);
     h2 = m.$handle(4, type.float);
 
-    assert.strictEqual(h1.type, type.schar);
-    assert.strictEqual(h2.type, type.float);
+    assertTypesEqual(h1.type, type.schar);
+    assertTypesEqual(h2.type, type.float);
 
     assert.deepEqual(m.$getMessage(), {
       getHandles: [],
@@ -386,38 +390,70 @@ describe('Module', function() {
 
   describe('numberToType', function() {
     it('should return smallest type for a given number', function() {
-      assert.strictEqual(mod.numberToType(0), type.schar);
-      assert.strictEqual(mod.numberToType(127), type.schar);
-      assert.strictEqual(mod.numberToType(128), type.uchar);
-      assert.strictEqual(mod.numberToType(255), type.uchar);
-      assert.strictEqual(mod.numberToType(256), type.short);
-      assert.strictEqual(mod.numberToType(32767), type.short);
-      assert.strictEqual(mod.numberToType(32768), type.ushort);
-      assert.strictEqual(mod.numberToType(2147483647), type.int);
-      assert.strictEqual(mod.numberToType(2147483648), type.uint);
-      assert.strictEqual(mod.numberToType(4294967295), type.uint);
-      assert.strictEqual(mod.numberToType(-1), type.schar);
-      assert.strictEqual(mod.numberToType(-128), type.schar);
-      assert.strictEqual(mod.numberToType(-129), type.short);
-      assert.strictEqual(mod.numberToType(-32768), type.short);
-      assert.strictEqual(mod.numberToType(-32769), type.int);
-      assert.strictEqual(mod.numberToType(-2147483648), type.int);
+      assertTypesEqual(mod.numberToType(0), type.schar);
+      assertTypesEqual(mod.numberToType(127), type.schar);
+      assertTypesEqual(mod.numberToType(128), type.uchar);
+      assertTypesEqual(mod.numberToType(255), type.uchar);
+      assertTypesEqual(mod.numberToType(256), type.short);
+      assertTypesEqual(mod.numberToType(32767), type.short);
+      assertTypesEqual(mod.numberToType(32768), type.ushort);
+      assertTypesEqual(mod.numberToType(2147483647), type.int);
+      assertTypesEqual(mod.numberToType(2147483648), type.uint);
+      assertTypesEqual(mod.numberToType(4294967295), type.uint);
+      assertTypesEqual(mod.numberToType(-1), type.schar);
+      assertTypesEqual(mod.numberToType(-128), type.schar);
+      assertTypesEqual(mod.numberToType(-129), type.short);
+      assertTypesEqual(mod.numberToType(-32768), type.short);
+      assertTypesEqual(mod.numberToType(-32769), type.int);
+      assertTypesEqual(mod.numberToType(-2147483648), type.int);
     });
 
     it('should return double if value is out of integer range', function() {
-      assert.strictEqual(mod.numberToType(4294967297), type.double);
-      assert.strictEqual(mod.numberToType(-2147483649), type.double);
+      assertTypesEqual(mod.numberToType(4294967297), type.double);
+      assertTypesEqual(mod.numberToType(-2147483649), type.double);
     });
 
     it('should return float if value is non-finite', function() {
-      assert.strictEqual(mod.numberToType(Infinity), type.float);
-      assert.strictEqual(mod.numberToType(-Infinity), type.float);
-      assert.strictEqual(mod.numberToType(NaN), type.float);
+      assertTypesEqual(mod.numberToType(Infinity), type.float);
+      assertTypesEqual(mod.numberToType(-Infinity), type.float);
+      assertTypesEqual(mod.numberToType(NaN), type.float);
     });
 
     it('should return float/double if value has decimal component', function() {
-      assert.strictEqual(mod.numberToType(3.5), type.float);
-      assert.strictEqual(mod.numberToType(3.14159), type.double);
+      assertTypesEqual(mod.numberToType(3.5), type.float);
+      assertTypesEqual(mod.numberToType(3.14159), type.double);
+    });
+  });
+
+  describe('objectToType', function() {
+    it('should work for numbers', function() {
+      assertTypesEqual(mod.objectToType(100), type.schar);
+      assertTypesEqual(mod.objectToType(-2000), type.short);
+      assertTypesEqual(mod.objectToType(159256), type.int);
+      assertTypesEqual(mod.objectToType(3.5), type.float);
+      assertTypesEqual(mod.objectToType(Infinity), type.float);
+    });
+
+    it('should work for strings', function() {
+      var charp = type.Pointer(type.char.qualify(type.CONST));
+      assertTypesEqual(charp, mod.objectToType("hi"));
+    });
+
+    it('should return void* for null', function() {
+      var voidp = type.Pointer(type.void);
+      assertTypesEqual(voidp, mod.objectToType(null));
+    });
+
+    it('should work for bools', function() {
+      assertTypesEqual(type.schar, mod.objectToType(true));
+      assertTypesEqual(type.schar, mod.objectToType(false));
+    });
+
+    it('should fail for anything else', function() {
+      assert.throws(function() { mod.objectToType(undefined); });
+      assert.throws(function() { mod.objectToType([1, 2]); });
+      assert.throws(function() { mod.objectToType({a: 1}); });
+      assert.throws(function() { mod.objectToType(new Date); });
     });
   });
 

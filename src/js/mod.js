@@ -52,6 +52,10 @@ function numberToType(n) {
 function objectToType(obj) {
   var klass = utils.getClass(obj);
   switch (klass) {
+    case 'Null':
+      return type.Pointer(type.void);
+    case 'Boolean':
+      return type.schar;
     case 'Number':
       return numberToType(obj);
     case 'String':
