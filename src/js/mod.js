@@ -185,11 +185,17 @@ Module.prototype.$handle = function(value, type) {
   return handle;
 };
 Module.prototype.$registerHandleWithValue_ = function(handle) {
-  if (handle.value === null) {
+  if (handle.value === undefined) {
     return;
   }
 
-  this.$message_.setHandles[handle.id] = handle.value;
+  var value = handle.value;
+
+  if (value instanceof Long) {
+    value = [value.getLowBits(), value.getHighBits()];
+  }
+
+  this.$message_.setHandles[handle.id] = value;
 };
 Module.prototype.$registerHandlesWithValues_ = function(handles) {
   var i;
@@ -318,7 +324,7 @@ Context.prototype.destroyHandles = function() {
 function Handle(context, type, value, id) {
   this.id = id;
   this.type = type;
-  this.value = value || null;
+  this.value = value;
   this.finalizer = null;
   this.context = context;
 }

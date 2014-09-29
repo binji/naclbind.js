@@ -95,47 +95,6 @@ describe('Module', function() {
     });
   });
 
-  it('should allow creation of handles', function() {
-    var m = mod.Module(),
-        h1,
-        h2;
-
-    h1 = m.$handle(4);
-    h2 = m.$handle(4, type.float);
-
-    assertTypesEqual(h1.type, type.schar);
-    assertTypesEqual(h2.type, type.float);
-
-    assert.deepEqual(m.$getMessage(), {
-      getHandles: [],
-      setHandles: {
-        1: 4,
-        2: 4
-      },
-      destroyHandles: [],
-      commands: []
-    });
-  });
-
-  it('should allow use of explicitly-created handles', function() {
-    var addType = type.Function(type.int, [type.int, type.int]),
-        m = mod.Module(),
-        h;
-
-    m.$defineFunction('add', [mod.Function(1, addType)]);
-    h = m.$handle(4);
-    m.add(h, h);
-
-    assert.deepEqual(m.$getMessage(), {
-      getHandles: [],
-      setHandles: { 1: 4 },
-      destroyHandles: [],
-      commands: [
-        {id: 1, args: [1, 1], ret: 2}
-      ]
-    });
-  });
-
   it('should allow handle pipelining', function() {
     var voidp = type.Pointer(type.void),
         intp = type.Pointer(type.int),
@@ -532,6 +491,134 @@ describe('Module', function() {
   });
 
   describe('Handle', function() {
+    describe('create', function() {
+      it('should allow creation of handles', function() {
+        var m = mod.Module(),
+            h1 = m.$handle(4),
+            h2 = m.$handle(4, type.float);
+
+        assertTypesEqual(h1.type, type.schar);
+        assertTypesEqual(h2.type, type.float);
+
+        assert.deepEqual(m.$getMessage(), {
+          getHandles: [],
+          setHandles: {
+            1: 4,
+            2: 4
+          },
+          destroyHandles: [],
+          commands: []
+        });
+      });
+
+      it('should allow use of explicitly-created handles', function() {
+        var addType = type.Function(type.int, [type.int, type.int]),
+            m = mod.Module(),
+            h;
+
+        m.$defineFunction('add', [mod.Function(1, addType)]);
+        h = m.$handle(4);
+        m.add(h, h);
+
+        assert.deepEqual(m.$getMessage(), {
+          getHandles: [],
+          setHandles: { 1: 4 },
+          destroyHandles: [],
+          commands: [
+            {id: 1, args: [1, 1], ret: 2}
+          ]
+        });
+      });
+
+      it('should allow creation of int handles', function() {
+        var m = mod.Module(),
+            h1 = m.$handle(0),
+            h2 = m.$handle(1000);
+
+        assertTypesEqual(h1.type, type.schar);
+        assertTypesEqual(h2.type, type.short);
+
+        assert.deepEqual(m.$getMessage(), {
+          getHandles: [],
+          setHandles: {
+            1: 0,
+            2: 1000,
+          },
+          destroyHandles: [],
+          commands: []
+        });
+      });
+
+
+      it('should allow creation of float handles', function() {
+        var m = mod.Module(),
+            h1 = m.$handle(Infinity),
+            h2 = m.$handle(1e10);
+
+        assertTypesEqual(h1.type, type.float);
+        assertTypesEqual(h2.type, type.float);
+
+        assert.deepEqual(m.$getMessage(), {
+          getHandles: [],
+          setHandles: {
+            1: Infinity,
+            2: 1e10,
+          },
+          destroyHandles: [],
+          commands: []
+        });
+      });
+
+      it('should allow creation of string handles', function() {
+        var m = mod.Module(),
+            h = m.$handle("Hello");
+
+        assertTypesEqual(h.type, type.Pointer(type.char.qualify(type.CONST)));
+
+        assert.deepEqual(m.$getMessage(), {
+          getHandles: [],
+          setHandles: {
+            1: "Hello",
+          },
+          destroyHandles: [],
+          commands: []
+        });
+      });
+
+      it('should allow creation of null handles', function() {
+        var m = mod.Module(),
+            h = m.$handle(null);
+
+        assertTypesEqual(h.type, type.Pointer(type.void));
+
+        assert.deepEqual(m.$getMessage(), {
+          getHandles: [],
+          setHandles: {
+            1: null,
+          },
+          destroyHandles: [],
+          commands: []
+        });
+      });
+
+      it('should allow creation of long handles', function() {
+        var m = mod.Module(),
+            two_to_the_fortieth = Long.fromBits(0, 256),
+            h = m.$handle(two_to_the_fortieth);
+
+        assertTypesEqual(h.type, type.longlong);
+
+        assert.deepEqual(m.$getMessage(), {
+          getHandles: [],
+          setHandles: {
+            1: [0, 256],
+          },
+          destroyHandles: [],
+          commands: []
+        });
+      });
+    });
+
     describe('cast', function() {
       it('should create a new handle with the same id', function() {
         var m = mod.Module(),
