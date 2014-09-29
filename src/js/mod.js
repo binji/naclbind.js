@@ -215,6 +215,27 @@ Module.prototype.$pushCommand_ = function(id, argHandles, retHandle) {
 
   this.$message_.commands.push(command);
 };
+Module.prototype.$processValues_ = function(handles, values) {
+  var i;
+
+  for (i = 0; i < handles.length; ++i) {
+    if (handles[i].type.kind === type.LONGLONG ||
+        handles[i].type.kind === type.ULONGLONG) {
+      if (utils.getClass(values[i]) !== 'Array') {
+        throw new Error('Expected longlong to have Array value type, not ' +
+                        utils.getClass(values[i]));
+      }
+
+      if (values[i].length !== 2) {
+        throw new Error('Expected longlong value to be Array of length 2, ' +
+                        'not ' + values[i].length);
+      }
+      values[i] = Long(values[i][0], values[i][1]);
+    }
+  }
+
+  return values;
+};
 Module.prototype.$commit = function(handles, callback) {
   var self = this,
       context = this.$context;
@@ -224,7 +245,7 @@ Module.prototype.$commit = function(handles, callback) {
     // called, then reset to the previous value.
     var oldContext = self.$context;
     self.$context = context;
-    callback.apply(null, msg.values);
+    callback.apply(null, self.$processValues_(handles, msg.values));
     self.$context = oldContext;
   });
   this.$initMessage_();

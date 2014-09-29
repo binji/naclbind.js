@@ -213,6 +213,36 @@ describe('Module', function() {
       // c.
       m.$context = oldC;
     });
+
+    it('should convert longs back to objects in callback', function(done) {
+      var ne = NaClEmbed(),
+          e = Embed(ne),
+          m = mod.Module(e),
+          getLongLongType = type.Function(type.longlong, []),
+          h;
+
+      m.$defineFunction('getLongLong', [mod.Function(1, getLongLongType)]);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        assert.deepEqual(msg, {
+          id: 1,
+          getHandles: [1],
+          setHandles: {},
+          destroyHandles: [],
+          commands: [ {id: 1, args: [], ret: 1} ]
+        });
+
+        ne.message({id: 1, values: [[0, 256]]});
+      });
+
+      h = m.getLongLong();
+      m.$commit([h], function(hVal) {
+        assert.ok(hVal instanceof Long);
+        assert.ok(hVal.equals(Long.fromBits(0, 256)));
+        done();
+      });
+    });
   });
 
   describe('$destroyHandles', function() {
