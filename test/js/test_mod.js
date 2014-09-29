@@ -384,6 +384,43 @@ describe('Module', function() {
     });
   });
 
+  describe('numberToType', function() {
+    it('should return smallest type for a given number', function() {
+      assert.strictEqual(mod.numberToType(0), type.schar);
+      assert.strictEqual(mod.numberToType(127), type.schar);
+      assert.strictEqual(mod.numberToType(128), type.uchar);
+      assert.strictEqual(mod.numberToType(255), type.uchar);
+      assert.strictEqual(mod.numberToType(256), type.short);
+      assert.strictEqual(mod.numberToType(32767), type.short);
+      assert.strictEqual(mod.numberToType(32768), type.ushort);
+      assert.strictEqual(mod.numberToType(2147483647), type.int);
+      assert.strictEqual(mod.numberToType(2147483648), type.uint);
+      assert.strictEqual(mod.numberToType(4294967295), type.uint);
+      assert.strictEqual(mod.numberToType(-1), type.schar);
+      assert.strictEqual(mod.numberToType(-128), type.schar);
+      assert.strictEqual(mod.numberToType(-129), type.short);
+      assert.strictEqual(mod.numberToType(-32768), type.short);
+      assert.strictEqual(mod.numberToType(-32769), type.int);
+      assert.strictEqual(mod.numberToType(-2147483648), type.int);
+    });
+
+    it('should return double if value is out of integer range', function() {
+      assert.strictEqual(mod.numberToType(4294967297), type.double);
+      assert.strictEqual(mod.numberToType(-2147483649), type.double);
+    });
+
+    it('should return float if value is non-finite', function() {
+      assert.strictEqual(mod.numberToType(Infinity), type.float);
+      assert.strictEqual(mod.numberToType(-Infinity), type.float);
+      assert.strictEqual(mod.numberToType(NaN), type.float);
+    });
+
+    it('should return float/double if value has decimal component', function() {
+      assert.strictEqual(mod.numberToType(3.5), type.float);
+      assert.strictEqual(mod.numberToType(3.14159), type.double);
+    });
+  });
+
   describe('Handle', function() {
     describe('cast', function() {
       it('should create a new handle with the same id', function() {

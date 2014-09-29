@@ -17,7 +17,7 @@ var type = require('./type'),
     ERROR_IF_ID = 0;
 
 function numberToType(n) {
-  if (!isFinite(n) || !utils.isInteger(n)) {
+  if (!(isFinite(n) && (utils.isInteger(n) || utils.isUnsignedInteger(n)))) {
     if (utils.isFloat(n)) {
       return type.float;
     } else {
@@ -41,8 +41,10 @@ function numberToType(n) {
       return type.short;
     } else if (n <= utils.U16_MAX) {
       return type.ushort;
-    } else {
+    } else if (n <= utils.S32_MAX) {
       return type.int;
+    } else {
+      return type.uint;
     }
   }
 }

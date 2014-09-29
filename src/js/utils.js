@@ -78,6 +78,10 @@ function isInteger(n) {
   return n === (n | 0);
 }
 
+function isUnsignedInteger(n) {
+  return n === (n >>> 0);
+}
+
 function isFloat(n) {
   if (!isFinite(n)) {
     return true;
@@ -99,6 +103,7 @@ module.exports = {
   getClass: getClass,
   isNumber: isNumber,
   isInteger: isInteger,
+  isUnsignedInteger: isUnsignedInteger,
   isFloat: isFloat,
 
   S8_MIN: -128,
