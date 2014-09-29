@@ -7,6 +7,7 @@
   "devDependencies": {
     "bluebird": "^2.3.2",
     "browserify": "^5.9.1",
+    "chai": "^1.9.1",
     "istanbul": "^0.3.0",
     "jshint": "^2.5.4",
     "mocha": "^1.21.0",

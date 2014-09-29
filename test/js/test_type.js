@@ -13,7 +13,7 @@
 // limitations under the License.
 
 var type = require('../../src/js/type'),
-    assert = require('assert'),
+    assert = require('chai').assert,
     spell = type.getSpelling,
     qual = type.describeQualifier,
     canon = type.getCanonical,

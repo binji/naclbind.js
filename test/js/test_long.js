@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('assert'),
+var assert = require('chai').assert,
     Long = require('../../src/js/long');
 
 describe('Long', function() {

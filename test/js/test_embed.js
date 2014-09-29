@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('assert'),
+var assert = require('chai').assert,
     Embed = require('../../src/js/embed'),
     NaClEmbed = require('./nacl_embed_for_testing');
 
