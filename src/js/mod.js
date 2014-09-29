@@ -170,10 +170,6 @@ Module.prototype.$createContext = function() {
 };
 Module.prototype.$initMessage_ = function() {
   this.$message_ = {
-    setHandles: {},
-    getHandles: [],
-    destroyHandles: [],
-    commands:[]
   };
 };
 Module.prototype.$getMessage = function() {
@@ -195,6 +191,10 @@ Module.prototype.$registerHandleWithValue_ = function(handle) {
     value = [value.getLowBits(), value.getHighBits()];
   }
 
+  if (!this.$message_.setHandles) {
+    this.$message_.setHandles = {};
+  }
+
   this.$message_.setHandles[handle.id] = value;
 };
 Module.prototype.$registerHandlesWithValues_ = function(handles) {
@@ -211,6 +211,10 @@ Module.prototype.$pushCommand_ = function(id, argHandles, retHandle) {
 
   if (retHandle) {
     command.ret = retHandle.id;
+  }
+
+  if (!this.$message_.commands) {
+    this.$message_.commands = [];
   }
 
   this.$message_.commands.push(command);
@@ -239,6 +243,11 @@ Module.prototype.$processValues_ = function(handles, values) {
 Module.prototype.$commit = function(handles, callback) {
   var self = this,
       context = this.$context;
+
+  if (!this.$message_.getHandles) {
+    this.$message_.getHandles = [];
+  }
+
   this.$message_.getHandles = handlesToIds(handles);
   this.$embed_.postMessage(this.$message_, function(msg) {
     // Call the callback with the same context as was set when $commit() was
@@ -254,6 +263,11 @@ Module.prototype.$destroyHandles = function(context) {
   var c = context || this.$context,
       handles = c.handles,
       i;
+
+  if (!this.$message_.destroyHandles) {
+    this.$message_.destroyHandles = [];
+  }
+
   for (i = 0; i < handles.length; ++i) {
     this.$message_.destroyHandles.push(handles[i].id);
   }

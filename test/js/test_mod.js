@@ -17,15 +17,7 @@ var assert = require('assert'),
     mod = require('../../src/js/mod'),
     type = require('../../src/js/type'),
     NaClEmbed = require('./nacl_embed_for_testing'),
-    Embed = require('../../src/js/embed'),
-    emptyMessage;
-
-emptyMessage = {
-  setHandles: {},
-  getHandles: [],
-  destroyHandles: [],
-  commands: []
-};
+    Embed = require('../../src/js/embed');
 
 function assertTypesEqual(t1, t2) {
   assert.ok(t1.equals(t2), t1.spelling + ' != ' + t2.spelling);
@@ -34,7 +26,7 @@ function assertTypesEqual(t1, t2) {
 describe('Module', function() {
   it('should start with an empty message', function() {
     var m = mod.Module();
-    assert.deepEqual(m.$getMessage(), emptyMessage);
+    assert.deepEqual(m.$getMessage(), {});
   });
 
   it('should throw when defining a function with id ERROR_IF_ID', function() {
@@ -54,12 +46,10 @@ describe('Module', function() {
     m.add(3, 4);
 
     assert.deepEqual(m.$getMessage(), {
-      getHandles: [],
       setHandles: {
         1: 3,
         2: 4
       },
-      destroyHandles: [],
       commands: [
         {id: 1, args: [1, 2], ret: 3}
       ]
@@ -80,14 +70,12 @@ describe('Module', function() {
     m.add(3.5, 4);
 
     assert.deepEqual(m.$getMessage(), {
-      getHandles: [],
       setHandles: {
         1: 3,
         2: 4,
         4: 3.5,
         5: 4
       },
-      destroyHandles: [],
       commands: [
         {id: 1, args: [1, 2], ret: 3},
         {id: 2, args: [4, 5], ret: 6}
@@ -108,9 +96,7 @@ describe('Module', function() {
     m.get(m.malloc(4).cast(intp));
 
     assert.deepEqual(m.$getMessage(), {
-      getHandles: [],
       setHandles: { 1: 4 },
-      destroyHandles: [],
       commands: [
         {id: 1, args: [1], ret: 2},
         {id: 2, args: [2], ret: 3}
@@ -148,7 +134,6 @@ describe('Module', function() {
           id: 1,
           getHandles: [3],
           setHandles: {1: 3, 2: 4},
-          destroyHandles: [],
           commands: [ {id: 1, args: [1, 2], ret: 3} ]
         });
 
@@ -161,7 +146,7 @@ describe('Module', function() {
         done();
       });
 
-      assert.deepEqual(m.$getMessage(), emptyMessage);
+      assert.deepEqual(m.$getMessage(), {});
     });
 
     it('should unwrap multiple handles', function(done) {
@@ -228,8 +213,6 @@ describe('Module', function() {
         assert.deepEqual(msg, {
           id: 1,
           getHandles: [1],
-          setHandles: {},
-          destroyHandles: [],
           commands: [ {id: 1, args: [], ret: 1} ]
         });
 
@@ -354,9 +337,7 @@ describe('Module', function() {
 
       m.$errorIf(1);
       assert.deepEqual(m.$getMessage(), {
-        getHandles: [],
         setHandles: {1: 1},
-        destroyHandles: [],
         commands: [
           {id: mod.ERROR_IF_ID, args: [1]}
         ]
@@ -531,13 +512,10 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.float);
 
         assert.deepEqual(m.$getMessage(), {
-          getHandles: [],
           setHandles: {
             1: 4,
             2: 4
           },
-          destroyHandles: [],
-          commands: []
         });
       });
 
@@ -551,9 +529,7 @@ describe('Module', function() {
         m.add(h, h);
 
         assert.deepEqual(m.$getMessage(), {
-          getHandles: [],
           setHandles: { 1: 4 },
-          destroyHandles: [],
           commands: [
             {id: 1, args: [1, 1], ret: 2}
           ]
@@ -569,13 +545,10 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.short);
 
         assert.deepEqual(m.$getMessage(), {
-          getHandles: [],
           setHandles: {
             1: 0,
             2: 1000,
           },
-          destroyHandles: [],
-          commands: []
         });
       });
 
@@ -589,13 +562,10 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.float);
 
         assert.deepEqual(m.$getMessage(), {
-          getHandles: [],
           setHandles: {
             1: Infinity,
             2: 1e10,
           },
-          destroyHandles: [],
-          commands: []
         });
       });
 
@@ -606,12 +576,9 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.Pointer(type.char.qualify(type.CONST)));
 
         assert.deepEqual(m.$getMessage(), {
-          getHandles: [],
           setHandles: {
             1: "Hello",
           },
-          destroyHandles: [],
-          commands: []
         });
       });
 
@@ -622,12 +589,9 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.Pointer(type.void));
 
         assert.deepEqual(m.$getMessage(), {
-          getHandles: [],
           setHandles: {
             1: null,
           },
-          destroyHandles: [],
-          commands: []
         });
       });
 
@@ -639,12 +603,9 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.longlong);
 
         assert.deepEqual(m.$getMessage(), {
-          getHandles: [],
           setHandles: {
             1: [0, 256],
           },
-          destroyHandles: [],
-          commands: []
         });
       });
     });
@@ -784,7 +745,6 @@ describe('Module', function() {
         m.$destroyHandles();
 
         assert.deepEqual(m.$getMessage(), {
-          getHandles: [],
           setHandles: { 1: 4 },
           destroyHandles: [1, 2],
           commands: [
