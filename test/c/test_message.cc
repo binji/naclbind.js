@@ -58,6 +58,9 @@ TEST_F(MessageTest, Valid) {
     "{\"id\": 1, \"get\": [1]}",
     "{\"id\": 1, \"set\": {}}",
     "{\"id\": 1, \"set\": {\"1\": 4}}",
+    "{\"id\": 1, \"set\": {\"1\": 3.5}}",
+    "{\"id\": 1, \"set\": {\"1\": \"hi\"}}",
+    "{\"id\": 1, \"set\": {\"1\": null}}",
     "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [2, 3]}]}",
     "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [2, 3], \"ret\": 4}]}",
     "{\"id\": 1, \"get\": [10], \"destroy\": []}",
@@ -82,8 +85,9 @@ TEST_F(MessageTest, Invalid) {
     "{\"id\": 1, \"get\": [4.3]}",  // "get" must be array of ints
     "{\"id\": 1, \"set\": [1, 2]}",  // "set" must be dictionary
     "{\"id\": 1, \"set\": {\"hi\": 3}}",  // "set" keys must be ints
+    // "set" values must be number/string
     // TODO(binji): relax this restriction.
-    "{\"id\": 1, \"set\": {\"1\": \"yo\"}}",  // "set" values must be number
+    "{\"id\": 1, \"set\": {\"1\": [1, 2]}}",
     "{\"id\": 1, \"destroy\": {}}",  // "destroy" must be array
     "{\"id\": 1, \"destroy\": [null]}",  // "destroy" must be array of ints
     "{\"id\": 1, \"commands\": null}",  // "commands" must be array

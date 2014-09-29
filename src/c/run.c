@@ -96,6 +96,15 @@ bool nb_request_set_handles(struct Message* message) {
         }
         break;
 
+      case PP_VARTYPE_STRING: {
+        if (!nb_handle_register_var(handle, value)) {
+          VERROR("nb_handle_register_var(%d, %s) failed, i=%d.",
+                 handle, nb_var_type_to_string(value.type), i);
+          goto cleanup;
+        }
+        break;
+      }
+
       case PP_VARTYPE_NULL:
         if (!nb_handle_register_voidp(handle, NULL)) {
           VERROR("nb_handle_register_voidp(%d, NULL) failed, i=%d.", handle, i);

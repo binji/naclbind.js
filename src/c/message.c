@@ -258,11 +258,12 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
     value = nb_var_dict_get_var(sethandles_var, key);
     nb_var_release(key);
 
-    /* TODO(binji): for now, only support int/double/NULL. */
+    /* TODO(binji): for now, only support int/double/string/NULL. */
     switch (value.type) {
       case PP_VARTYPE_INT32:
       case PP_VARTYPE_DOUBLE:
       case PP_VARTYPE_NULL:
+      case PP_VARTYPE_STRING:
         break;
 
       default:
