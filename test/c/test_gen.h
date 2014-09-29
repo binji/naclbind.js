@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "test_gen.h"
+#include <gtest/gtest.h>
+#include <ppapi/c/pp_var.h>
 
-extern "C" {
-int g_foo_called = 0;
-}
+class GeneratorTest : public ::testing::Test {
+ public:
+  virtual void SetUp();
+  virtual void TearDown();
+  void RunTest(const char* request_json, const char* expected_response_json);
 
-TEST_F(GeneratorTest, Simple) {
-  const char* request_json =
-      "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": []}]}";
-  const char* response_json = "{\"id\":1,\"values\":[]}\n";
-  RunTest(request_json, response_json);
-  EXPECT_EQ(1, g_foo_called);
-}
+ private:
+  struct PP_Var request_;
+  struct PP_Var response_;
+  char* response_json_;
+};

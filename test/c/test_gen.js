@@ -234,6 +234,7 @@ function genAndRun(header, source, testSource, callback) {
       infiles: [
         source,
         testSource,
+        path.resolve(__dirname, 'test_gen.cc'),
         path.resolve(__dirname, 'fake_interfaces.c'),
         path.resolve(__dirname, 'json.cc'),
         path.resolve(__dirname, 'main.cc')
