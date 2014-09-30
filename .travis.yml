@@ -1,12 +1,19 @@
 language: node_js
-install:
-  - sudo apt-get update
-  - sudo apt-get install libc6:i386 libstdc++6:i386
-  - ./build/install_sdk.sh
-  - third_party/clang/download_python_bindings.py
-  - npm install
-env:
-  - NACL_SDK_ROOT=$PWD/out/nacl_sdk/pepper_canary
 node_js:
   - "0.11"
   - "0.10"
+env:
+  - CHROME_BIN=chromium-browser
+  - DISPLAY=:99.0
+  - NACL_SDK_ROOT=$PWD/out/nacl_sdk/pepper_canary
+install:
+  - sudo apt-get update
+  - sudo apt-get install libc6:i386 libstdc++6:i386
+  - build/install_sdk.sh
+  - third_party/clang/download_python_bindings.py
+  - npm install
+before_script:
+  - sh -e /etc/init.d/xvfb start
+script:
+  - npm test
+  - ./integration_tests.sh

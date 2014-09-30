@@ -59,13 +59,18 @@ module.exports = function(config) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['ChromeWithNaCl'],
+    browsers: process.env.TRAVIS ? ['ChromeTravis'] : ['ChromeWithNaCl'],
 
     customLaunchers: {
       ChromeWithNaCl: {
         base: 'Chrome',
         flags: ['--enable-nacl'],
-      }
+      },
+
+      ChromeTravis: {
+        base: 'Chrome',
+        flags: ['--enable-nacl', '--no-sandbox'],
+      },
     },
 
 
