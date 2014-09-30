@@ -2,10 +2,6 @@ language: node_js
 node_js:
   - "0.11"
   - "0.10"
-env:
-  - CHROME_BIN=chromium-browser
-  - DISPLAY=:99.0
-  - NACL_SDK_ROOT=$PWD/out/nacl_sdk/pepper_canary
 install:
   - sudo apt-get update
   - sudo apt-get install libc6:i386 libstdc++6:i386
@@ -13,6 +9,9 @@ install:
   - third_party/clang/download_python_bindings.py
   - npm install
 before_script:
+  - export CHROME_BIN=chromium-browser
+  - export DISPLAY=:99.0
+  - export NACL_SDK_ROOT=$PWD/out/nacl_sdk/pepper_canary
   - sh -e /etc/init.d/xvfb start
 script:
   - npm test
