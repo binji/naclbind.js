@@ -26,9 +26,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 PYTHON_BINDINGS_DIR = os.path.join(ROOT_DIR, 'third_party', 'clang', 'bindings',
                                    'python')
-NACL_SDK_DIR = os.path.join(ROOT_DIR, 'out', 'nacl_sdk')
-BUNDLE_NAME = 'pepper_canary'
-NACL_SDK_ROOT = os.path.join(NACL_SDK_DIR, BUNDLE_NAME)
+NACL_SDK_ROOT = os.getenv('NACL_SDK_ROOT')
 
 FILTER_ARGS = ('-cc1', '-main-file-name', '-v', '-triple', '-mrelocation-model',
     '-mdisable-fp-elim', '-mconstructor-aliases', '-target-linker-version',
@@ -827,7 +825,7 @@ def main(args):
   out_text = easy_template.RunTemplateString(template, template_dict)
 
   if options.output:
-    outdir = os.path.dirname(options.output)
+    outdir = os.path.abspath(os.path.dirname(options.output))
     if not os.path.exists(outdir):
       os.makedirs(outdir)
     with open(options.output, 'w') as outf:

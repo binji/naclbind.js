@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "description": "Easy JavaScript to Native Client bindings",
   "main": "index.js",
-  "dependencies": {},
+  "dependencies": {
+    "mkdirp": "0.3.5"
+  },
   "devDependencies": {
     "bluebird": "^2.3.2",
     "browserify": "^5.9.1",
