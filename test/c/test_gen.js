@@ -13,30 +13,10 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    child_process = require('child_process'),
-    compiler = require('nacl-compile'),
+    nacl = require('nacl-sdk'),
     fs = require('fs'),
     gen = require('../shared/gen'),
-    path = require('path'),
-    execFile = child_process.execFile,
-
-    toolchain = 'newlib',
-    arch = 'x86_64',
-    config = 'Debug';
-
-function run(nexe, args, callback) {
-  var selLdr = path.join(process.env.NACL_SDK_ROOT, 'tools', 'sel_ldr.py');
-  args = [selLdr, nexe, '--'].concat(args || []);
-  execFile('python', args, function(error, stdout, stderr) {
-    if (error) {
-      callback(new Error(error.toString() + '\n' + stdout));
-      return;
-    }
-
-    // console.log('STDOUT\n', stdout, 'STDERR\n', stderr);
-    callback(null);
-  });
-}
+    path = require('path');
 
 function genAndRun(header, source, testSource, callback) {
   var basename = path.basename(testSource),
@@ -77,12 +57,12 @@ function genAndRun(header, source, testSource, callback) {
 
     infiles.push(outfile);
 
-    compiler.build(infiles, basename, opts, function(error, nexe) {
+    nacl.build(infiles, basename, opts, function(error, nexe) {
       if (error) {
         return callback(error);
       }
 
-      run(nexe, null, callback);
+      nacl.run(nexe, null, callback);
     });
   });
 }

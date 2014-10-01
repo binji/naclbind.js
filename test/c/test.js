@@ -13,51 +13,65 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    child_process = require('child_process'),
-    fs = require('fs'),
-    os = require('os'),
+    nacl = require('nacl-sdk'),
     path = require('path'),
-    execFile = child_process.execFile,
-    toolchain = 'newlib',
-
-    outDir = path.resolve(__dirname, '../../out/test', toolchain, 'Debug'),
-    testNexe = path.join(outDir, 'test_x86_64.nexe');
+    testNexe;
 
 function startswith(s, prefix) {
   return s.lastIndexOf(prefix, 0) === 0;
 }
 
-describe('Build C Tests', function() {
+function runTest(args, callback) {
+  nacl.run(testNexe, args, callback);
+}
+
+describe('C Tests', function() {
   this.enableTimeouts(false);
 
   it('should build successfully', function(done) {
-    if (!process.env.NACL_SDK_ROOT) {
-      assert.ok(false, 'NACL_SDK_ROOT not set.');
-    }
+    var outdir = path.resolve(__dirname, '../../out/test/c/test'),
+        srcdir = path.resolve(__dirname, '../../src/c'),
+        infiles = [
+          path.join(srcdir, 'handle.c'),
+          path.join(srcdir, 'interfaces.c'),
+          path.join(srcdir, 'message.c'),
+          path.join(srcdir, 'var.c'),
+          path.join(srcdir, 'type.c'),
+          path.join(__dirname, 'fake_interfaces.c'),
+          path.join(__dirname, 'json.cc'),
+          path.join(__dirname, 'main.cc'),
+          path.join(__dirname, 'test_handle.cc'),
+          path.join(__dirname, 'test_message.cc'),
+          path.join(__dirname, 'test_json.cc'),
+        ],
+        opts = {
+          toolchain: 'newlib',
+          config: 'Debug',
+          arch: 'x86_64',
+          outdir: outdir,
 
-    buildTest(done);
-  });
-});
+          compile: {
+            args: ['-Wall', '-pthread'],
+            includeDirs: [
+              path.resolve(__dirname),
+              path.resolve(__dirname, '../../src/c')
+            ],
+            libs: [
+              'jsoncpp', 'ppapi_simple', 'gtest', 'nacl_io', 'ppapi_cpp', 'ppapi'
+            ]
+          },
+        };
 
-function buildTest(callback) {
-  var numCpus = os.cpus().length,
-      cmd = ['CONFIG=Debug', 'TOOLCHAIN=' + toolchain, '-j', numCpus, 'test'],
-      opts = {cwd: __dirname};
-
-  execFile('make', cmd, opts, function(error, stdout, stderr) {
-    if (error) {
-      assert.ok(false, 'Unable to make C tests.\n' + error);
-    }
-
-    fs.stat(testNexe, function(error, stat) {
+    nacl.build(infiles, 'test', opts, function(error, nexe) {
       if (error) {
-        assert.ok(false, 'Make succeeded, but cannot stat ' + testNexe);
+        return done(error);
       }
 
-      parseTests(callback);
+      testNexe = nexe;
+      parseTests(done);
     });
   });
-}
+});
 
 function parseTests(callback) {
   runTest(['--gtest_list_tests'], function(error, stdout) {
@@ -95,7 +109,7 @@ function parseTests(callback) {
 
     addSuite();
 
-    describe('C', function() {
+    describe('C Tests', function() {
       suites.forEach(function(suite) {
         describe(suite.name, function() {
           suite.cases.forEach(function(testCase) {
@@ -112,16 +126,3 @@ function parseTests(callback) {
   });
 }
 
-function runTest(args, callback) {
-  var selLdr = path.join(process.env.NACL_SDK_ROOT, 'tools', 'sel_ldr.py');
-  args = [selLdr, testNexe, '--'].concat(args || []);
-  execFile('python', args, function(error, stdout, stderr) {
-    if (error) {
-      callback(new Error(error.toString() + '\n' + stdout));
-      return;
-    }
-
-    // console.log('STDOUT\n', stdout, 'STDERR\n', stderr);
-    callback(null, stdout);
-  });
-}
