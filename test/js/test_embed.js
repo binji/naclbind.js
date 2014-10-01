@@ -13,8 +13,9 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    Embed = require('../../src/js/embed'),
+    naclbind = require('../../src/js/naclbind'),
     NaClEmbed = require('./nacl_embed_for_testing');
+    Embed = naclbind.Embed;
 
 describe('Embed', function() {
   it('should not post messages before loaded', function() {

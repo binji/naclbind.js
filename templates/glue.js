@@ -14,8 +14,9 @@
 
 // DO NOT EDIT, this file is auto-generated from //templates/glue.js
 
-var mod = require('mod'),
-    type = require('type'),
+var naclbind = require('naclbind'),
+    mod = naclbind.mod,
+    type = naclbind.type,
 
     tags = {},
     types = {};

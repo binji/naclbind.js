@@ -13,11 +13,12 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    Long = require('../../src/js/long'),
-    mod = require('../../src/js/mod'),
-    type = require('../../src/js/type'),
+    naclbind = require('../../src/js/naclbind'),
     NaClEmbed = require('./nacl_embed_for_testing'),
-    Embed = require('../../src/js/embed');
+    Embed = naclbind.Embed,
+    Long = naclbind.Long,
+    mod = naclbind.mod,
+    type = naclbind.type;
 
 function assertTypesEqual(t1, t2) {
   assert.ok(t1.equals(t2), t1.spelling + ' != ' + t2.spelling);

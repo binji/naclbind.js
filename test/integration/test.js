@@ -13,10 +13,11 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    mod = require('../../src/js/mod'),
-    type = require('../../src/js/type'),
-    Embed = require('../../src/js/embed'),
-    NaClEmbed = require('../../src/js/nacl_embed');
+    naclbind = require('../../src/js/naclbind'),
+    mod = naclbind.mod,
+    type = naclbind.type,
+    Embed = naclbind.Embed,
+    NaClEmbed = naclbind.NaClEmbed;
 
 describe('Test', function() {
   it('should work', function(done) {

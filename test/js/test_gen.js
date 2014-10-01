@@ -15,7 +15,8 @@
 var assert = require('chai').assert,
     gen = require('naclbind-gen'),
     path = require('path'),
-    type = require('../../src/js/type');
+    naclbind = require('../../src/js/naclbind'),
+    type = naclbind.type;
 
 function appendPath(s, path) {
   return s.split(':').concat([path]).join(':');

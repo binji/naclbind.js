@@ -13,7 +13,7 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    Long = require('../../src/js/long');
+    Long = require('../../src/js/naclbind').Long;
 
 describe('Long', function() {
   describe('fromInt', function() {

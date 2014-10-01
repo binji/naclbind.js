@@ -13,7 +13,7 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    utils = require('../../src/js/utils.js');
+    utils = require('../../src/js/naclbind').utils;
 
 describe('Utils', function() {
   describe('getClass', function() {
