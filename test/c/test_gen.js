@@ -15,7 +15,7 @@
 var assert = require('chai').assert,
     nacl = require('nacl-sdk'),
     fs = require('fs'),
-    gen = require('../shared/gen'),
+    gen = require('naclbind-gen'),
     path = require('path');
 
 function genAndRun(header, source, testSource, callback) {
@@ -48,9 +48,12 @@ function genAndRun(header, source, testSource, callback) {
             'jsoncpp', 'ppapi_simple', 'gtest', 'nacl_io', 'ppapi_cpp', 'ppapi'
           ]
         },
-      };
+      },
+      genOpts = {
+        template: 'glue.c'
+      }
 
-  gen.file(header, glueC, 'glue.c', function(error, outfile) {
+  gen.file(header, glueC, genOpts, function(error, outfile) {
     if (error) {
       return callback(error);
     }

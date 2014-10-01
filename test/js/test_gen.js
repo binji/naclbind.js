@@ -13,7 +13,7 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    gen = require('../shared/gen'),
+    gen = require('naclbind-gen'),
     path = require('path'),
     type = require('../../src/js/type');
 
@@ -32,22 +32,21 @@ function assertFieldsEqual(f, name, type, offset) {
 }
 
 function genFile(infile, callback) {
-  gen.tmpDir(function(error, dirname) {
+  var basename = path.basename(infile);
+      outdir = path.resolve(__dirname, '../../out/test/js', basename),
+      outfile = path.join(outdir, 'gen.js'),
+      inpath = path.join(__dirname, infile),
+      opts = {
+        template: 'glue.js'
+      };
+
+  gen.file(inpath, outfile, opts, function(error, outfile) {
     if (error) {
       return callback(error);
     }
 
-    var outfile = path.join(dirname, 'gen.js'),
-        inpath = path.join(__dirname, infile);
-
-    gen.file(inpath, outfile, 'glue.js', function(error, outfile) {
-      if (error) {
-        return callback(error);
-      }
-
-      var mod = require(outfile);
-      callback(null, mod);
-    });
+    var mod = require(outfile);
+    callback(null, mod);
   });
 }
 
