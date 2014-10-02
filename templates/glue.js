@@ -14,11 +14,28 @@
 
 // DO NOT EDIT, this file is auto-generated from //templates/glue.js
 
-var naclbind = require('naclbind'),
-    mod = naclbind.mod,
-    type = naclbind.type,
+// UMD-style loader copied from:
+// https://github.com/umdjs/umd/blob/master/returnExports.js
+(function (root, factory) {
+  /* jshint undef: true */
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define([], factory);
+  } else if (typeof exports === 'object') {
+    // Node. Does not work with strict CommonJS, but
+    // only CommonJS-like environments that support module.exports,
+    // like Node.
+    module.exports = factory();
+  } else {
+    // Browser globals (root is window)
+    root.naclbind = factory();
+  }
+}(this, function () {
 
-    tags = {},
+{{IncludeFile('js/naclbind.js')}}
+
+var tags = {},
     types = {};
 
 [[for type in collector.types_topo:]]
@@ -67,4 +84,6 @@ m.$defineFunction('{{fn.spelling}}', [mod.Function({{i+1}}, funcType_{{fn.type.g
 m.$types = types;
 m.$tags = tags;
 
-module.exports = m;
+return m;
+
+}));

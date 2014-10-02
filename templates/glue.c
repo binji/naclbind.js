@@ -13,30 +13,30 @@
  * limitations under the License.
  */
 
-/* DO NOT EDIT, this file is auto-generated from //templates/glue.gen.c */
+/* DO NOT EDIT, this file is auto-generated from //templates/glue.c */
 
 #define NB_ONE_FILE
 
-{{IncludeCFile('bool.h')}}
-{{IncludeCFile('error.h')}}
-{{IncludeCFile('handle.h')}}
-{{IncludeCFile('interfaces.h')}}
-{{IncludeCFile('message.h')}}
-{{IncludeCFile('queue.h')}}
-{{IncludeCFile('run.h')}}
-{{IncludeCFile('type.h')}}
-{{IncludeCFile('var.h')}}
+{{IncludeFile('c/bool.h')}}
+{{IncludeFile('c/error.h')}}
+{{IncludeFile('c/handle.h')}}
+{{IncludeFile('c/interfaces.h')}}
+{{IncludeFile('c/message.h')}}
+{{IncludeFile('c/queue.h')}}
+{{IncludeFile('c/run.h')}}
+{{IncludeFile('c/type.h')}}
+{{IncludeFile('c/var.h')}}
 
-{{IncludeCFile('handle.c')}}
-{{IncludeCFile('interfaces.c')}}
-{{IncludeCFile('message.c')}}
-{{IncludeCFile('run.c')}}
-{{IncludeCFile('type.c')}}
-{{IncludeCFile('var.c')}}
+{{IncludeFile('c/handle.c')}}
+{{IncludeFile('c/interfaces.c')}}
+{{IncludeFile('c/message.c')}}
+{{IncludeFile('c/run.c')}}
+{{IncludeFile('c/type.c')}}
+{{IncludeFile('c/var.c')}}
 
 #ifndef NB_NO_APP
-{{IncludeCFile('queue.c')}}
-{{IncludeCFile('app.c')}}
+{{IncludeFile('c/queue.c')}}
+{{IncludeFile('c/app.c')}}
 #endif
 
 /* ========================================================================== */

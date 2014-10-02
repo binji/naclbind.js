@@ -1,16 +1,17 @@
-// Copyright 2014 Ben Smith. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* Copyright 2014 Ben Smith. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 // Long code is from by Google Closure Long (see
 // https://code.google.com/p/closure-library/source/browse/closure/goog/math/long.js)
@@ -30,6 +31,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License./
 
+/** STRIP_START ***************************************************************/
+
 // UMD-style loader copied from:
 // https://github.com/umdjs/umd/blob/master/returnExports.js
 (function (root, factory) {
@@ -48,6 +51,8 @@
     root.naclbind = factory();
   }
 }(this, function () {
+
+/** STRIP_END *****************************************************************/
 
 // utils ///////////////////////////////////////////////////////////////////////
 var utils = (function() {
@@ -2296,6 +2301,8 @@ var mod = (function(Long, type, utils) {
 
 })(Long, type, utils);
 
+/** STRIP_START ***************************************************************/
+
   return {
     Embed: Embed,
     Long: Long,
@@ -2305,3 +2312,5 @@ var mod = (function(Long, type, utils) {
     utils: utils,
   };
 }));
+
+/** STRIP_END *****************************************************************/

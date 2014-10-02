@@ -749,9 +749,29 @@ def StripCopyright(text):
   return m.group(1)
 
 
-def IncludeCFile(name):
-  # Search in src/c/.
-  path = os.path.join(ROOT_DIR, 'src', 'c', name)
+def StripRegions(text):
+  start_re = re.compile(r'^/\*+ STRIP_START \*+/$', re.MULTILINE)
+  end_re = re.compile(r'^/\*+ STRIP_END \*+/$', re.MULTILINE)
+  start_pos = 0
+  result = ''
+  while True:
+    sm = start_re.search(text, start_pos)
+    if not sm:
+      break
+    em = end_re.search(text, sm.end())
+    if not em:
+      raise Error('Found start marker but not end.')
+
+    result += text[start_pos:sm.start()]
+    start_pos = em.end()
+
+  result += text[start_pos:]
+  return result
+
+
+def IncludeFile(name):
+  # Search in src
+  path = os.path.join(ROOT_DIR, 'src', name)
   rel_path = os.path.relpath(path, ROOT_DIR)
 
   try:
@@ -762,6 +782,7 @@ def IncludeCFile(name):
   try:
     # Strip the copyright, it's already included at the top of the template.
     text = StripCopyright(f.read())
+    text = StripRegions(text)
     return """\
 /* +++ INCLUDE %(path)s +++ */
 %(text)s
@@ -820,7 +841,7 @@ def main(args):
   template_dict.CursorKind = CursorKind
   template_dict.collector = collector
   template_dict.filename = filename
-  template_dict.IncludeCFile = IncludeCFile
+  template_dict.IncludeFile = IncludeFile
 
   out_text = easy_template.RunTemplateString(template, template_dict)
 
