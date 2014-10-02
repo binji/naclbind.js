@@ -801,6 +801,7 @@ def main(args):
   parser.add_option('-b', '--blacklist-file', action='append', default=[])
   parser.add_option('-B', '--blacklist-symbol', action='append', default=[])
   parser.add_option('-t', '--template')
+  parser.add_option('-m', '--module-name', default='naclbind_gen')
   parser.add_option('-o', '--output')
   options, args = parser.parse_args(args)
   if options.verbose:
@@ -841,6 +842,7 @@ def main(args):
   template_dict.CursorKind = CursorKind
   template_dict.collector = collector
   template_dict.filename = filename
+  template_dict.module_name = options.module_name
   template_dict.IncludeFile = IncludeFile
 
   out_text = easy_template.RunTemplateString(template, template_dict)

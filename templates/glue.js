@@ -29,7 +29,7 @@
     module.exports = factory();
   } else {
     // Browser globals (root is window)
-    root.naclbind = factory();
+    root.{{module_name}} = factory();
   }
 }(this, function () {
 
