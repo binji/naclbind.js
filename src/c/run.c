@@ -145,7 +145,7 @@ bool nb_request_set_handles(struct Message* message) {
 cleanup:
   nb_var_release(value);
 
-  return TRUE;
+  return result;
 }
 
 bool nb_request_run_commands(struct Message* message) {
