@@ -180,10 +180,12 @@ var Embed = (function(utils) {
   Embed.prototype.onLoad_ = function(e) {
     // Wait till the next time through the eventloop to allow other 'load'
     // listeners to be called.
-    var self = this;
-    process.nextTick(function() {
-      self.postQueuedMessages_();
-    });
+    var self = this,
+        nextTick = typeof process !== 'undefined' ?
+            process.nextTick :
+            window.setTimeout;
+
+    nextTick(self.postQueuedMessages_.bind(self));
 
     this.loaded_ = true;
   };
