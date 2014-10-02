@@ -13,9 +13,9 @@
 // limitations under the License.
 
 var assert = require('chai').assert,
-    nacl = require('nacl-sdk'),
     fs = require('fs'),
     gen = require('naclbind-gen'),
+    nacl = require('nacl-sdk'),
     path = require('path');
 
 function genAndRun(header, source, testSource, callback) {

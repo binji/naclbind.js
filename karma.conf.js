@@ -7,16 +7,24 @@ module.exports = function(config) {
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
 
+    plugins: [
+      'karma-chai',
+      'karma-chrome-launcher',
+      'karma-mocha',
+      'naclbind-test',
+    ],
+
 
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-    frameworks: ['mocha', 'chai', 'browserify'],
+    frameworks: ['mocha', 'chai'],
 
 
     // list of files / patterns to load in the browser
     files: [
-      'test/integration/*.js',
-      'test/js/test_*.js'
+      'src/js/naclbind.js',
+      'test/integration/test_*.js',
+      {pattern: 'out/test/integration/**', watched: false, included: false, served: true},
     ],
 
 
@@ -29,8 +37,7 @@ module.exports = function(config) {
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
-      'test/integration/*.js': ['browserify'],
-      'test/js/test_*.js': ['browserify']
+      'test/integration/test_*.js': ['naclbind-test'],
     },
 
 
@@ -60,6 +67,9 @@ module.exports = function(config) {
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
     browsers: process.env.TRAVIS ? ['ChromeTravis'] : ['ChromeWithNaCl'],
+
+    browserNoActivityTimeout: 60000,
+//    browserNoActivityTimeout: 2000,
 
     customLaunchers: {
       ChromeWithNaCl: {

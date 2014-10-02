@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('chai').assert,
-    naclbind = require('../../src/js/naclbind'),
-    mod = naclbind.mod,
+(function() {
+
+var mod = naclbind.mod,
     type = naclbind.type,
     Embed = naclbind.Embed,
     NaClEmbed = naclbind.NaClEmbed;
 
 describe('Test', function() {
+  this.timeout(10000);
+
   it('should work', function(done) {
-    /*
-    var e = Embed(NaClEmbed('foo.nmf', 'application/x-nacl')),
+    var e = Embed(NaClEmbed('/base/out/test/integration/add/add.nmf',
+                            'application/x-nacl')),
         m = mod.Module(e),
         addType = type.Function(type.int, [type.int, type.int]),
         h;
@@ -34,8 +36,7 @@ describe('Test', function() {
       assert.strictEqual(hVal, 7);
       done();
     });
-    */
-    assert.equal(2 + 2, 4);
-    done();
   });
 });
+
+})();
