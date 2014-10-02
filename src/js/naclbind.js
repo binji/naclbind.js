@@ -2088,11 +2088,11 @@ var mod = (function(Long, type, utils) {
       value = [value.getLowBits(), value.getHighBits()];
     }
 
-    if (!this.$message_.setHandles) {
-      this.$message_.setHandles = {};
+    if (!this.$message_.set) {
+      this.$message_.set = {};
     }
 
-    this.$message_.setHandles[handle.id] = value;
+    this.$message_.set[handle.id] = value;
   };
   Module.prototype.$registerHandlesWithValues_ = function(handles) {
     var i;
@@ -2141,11 +2141,11 @@ var mod = (function(Long, type, utils) {
     var self = this,
         context = this.$context;
 
-    if (!this.$message_.getHandles) {
-      this.$message_.getHandles = [];
+    if (!this.$message_.get) {
+      this.$message_.get = [];
     }
 
-    this.$message_.getHandles = handlesToIds(handles);
+    this.$message_.get = handlesToIds(handles);
     this.$embed_.postMessage(this.$message_, function(msg) {
       // Call the callback with the same context as was set when $commit() was
       // called, then reset to the previous value.
@@ -2161,12 +2161,12 @@ var mod = (function(Long, type, utils) {
         handles = c.handles,
         i;
 
-    if (!this.$message_.destroyHandles) {
-      this.$message_.destroyHandles = [];
+    if (!this.$message_.destroy) {
+      this.$message_.destroy = [];
     }
 
     for (i = 0; i < handles.length; ++i) {
-      this.$message_.destroyHandles.push(handles[i].id);
+      this.$message_.destroy.push(handles[i].id);
     }
 
     c.destroyHandles();

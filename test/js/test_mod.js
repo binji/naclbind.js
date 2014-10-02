@@ -47,7 +47,7 @@ describe('Module', function() {
     m.add(3, 4);
 
     assert.deepEqual(m.$getMessage(), {
-      setHandles: {
+      set: {
         1: 3,
         2: 4
       },
@@ -71,7 +71,7 @@ describe('Module', function() {
     m.add(3.5, 4);
 
     assert.deepEqual(m.$getMessage(), {
-      setHandles: {
+      set: {
         1: 3,
         2: 4,
         4: 3.5,
@@ -97,7 +97,7 @@ describe('Module', function() {
     m.get(m.malloc(4).cast(intp));
 
     assert.deepEqual(m.$getMessage(), {
-      setHandles: { 1: 4 },
+      set: { 1: 4 },
       commands: [
         {id: 1, args: [1], ret: 2},
         {id: 2, args: [2], ret: 3}
@@ -133,8 +133,8 @@ describe('Module', function() {
       ne.setPostMessageCallback(function(msg) {
         assert.deepEqual(msg, {
           id: 1,
-          getHandles: [3],
-          setHandles: {1: 3, 2: 4},
+          get: [3],
+          set: {1: 3, 2: 4},
           commands: [ {id: 1, args: [1, 2], ret: 3} ]
         });
 
@@ -162,7 +162,7 @@ describe('Module', function() {
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
-        assert.deepEqual(msg.getHandles, [3, 5]);
+        assert.deepEqual(msg.get, [3, 5]);
         ne.message({id: 1, values: [7, 12]});
       });
 
@@ -213,7 +213,7 @@ describe('Module', function() {
       ne.setPostMessageCallback(function(msg) {
         assert.deepEqual(msg, {
           id: 1,
-          getHandles: [1],
+          get: [1],
           commands: [ {id: 1, args: [], ret: 1} ]
         });
 
@@ -244,7 +244,7 @@ describe('Module', function() {
 
       // Destroy handles in current context.
       m.$destroyHandles();
-      assert.deepEqual(m.$getMessage().destroyHandles, [3, 4]);
+      assert.deepEqual(m.$getMessage().destroy, [3, 4]);
     });
 
     it('should destroy handles from passed-in context', function() {
@@ -259,7 +259,7 @@ describe('Module', function() {
       m.$handle(4);
 
       m.$destroyHandles(oldC);
-      assert.deepEqual(m.$getMessage().destroyHandles, [1, 2]);
+      assert.deepEqual(m.$getMessage().destroy, [1, 2]);
     });
 
     it('should remove handles from the context immediately', function() {
@@ -279,7 +279,7 @@ describe('Module', function() {
       m.$handle(1);
       m.$destroyHandles();
       m.$handle(2);
-      assert.deepEqual(m.$getMessage().destroyHandles, [1]);
+      assert.deepEqual(m.$getMessage().destroy, [1]);
       assert.strictEqual(m.$context.handles.length, 1);
     });
 
@@ -290,7 +290,7 @@ describe('Module', function() {
       m.$destroyHandles();
       m.$handle(2);
       m.$destroyHandles();
-      assert.deepEqual(m.$getMessage().destroyHandles, [1, 2]);
+      assert.deepEqual(m.$getMessage().destroy, [1, 2]);
     });
   });
 
@@ -302,7 +302,7 @@ describe('Module', function() {
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
-        assert.deepEqual(msg.destroyHandles, [1]);
+        assert.deepEqual(msg.destroy, [1]);
         ne.message({id: 1});
       });
 
@@ -320,7 +320,7 @@ describe('Module', function() {
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
-        assert.deepEqual(msg.destroyHandles, [1]);
+        assert.deepEqual(msg.destroy, [1]);
         ne.message({id: 1, values: [1]});
       });
 
@@ -338,7 +338,7 @@ describe('Module', function() {
 
       m.$errorIf(1);
       assert.deepEqual(m.$getMessage(), {
-        setHandles: {1: 1},
+        set: {1: 1},
         commands: [
           {id: mod.ERROR_IF_ID, args: [1]}
         ]
@@ -513,7 +513,7 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.float);
 
         assert.deepEqual(m.$getMessage(), {
-          setHandles: {
+          set: {
             1: 4,
             2: 4
           },
@@ -530,7 +530,7 @@ describe('Module', function() {
         m.add(h, h);
 
         assert.deepEqual(m.$getMessage(), {
-          setHandles: { 1: 4 },
+          set: { 1: 4 },
           commands: [
             {id: 1, args: [1, 1], ret: 2}
           ]
@@ -546,7 +546,7 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.short);
 
         assert.deepEqual(m.$getMessage(), {
-          setHandles: {
+          set: {
             1: 0,
             2: 1000,
           },
@@ -563,7 +563,7 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.float);
 
         assert.deepEqual(m.$getMessage(), {
-          setHandles: {
+          set: {
             1: Infinity,
             2: 1e10,
           },
@@ -577,7 +577,7 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.Pointer(type.char.qualify(type.CONST)));
 
         assert.deepEqual(m.$getMessage(), {
-          setHandles: {
+          set: {
             1: "Hello",
           },
         });
@@ -590,7 +590,7 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.Pointer(type.void));
 
         assert.deepEqual(m.$getMessage(), {
-          setHandles: {
+          set: {
             1: null,
           },
         });
@@ -604,7 +604,7 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.longlong);
 
         assert.deepEqual(m.$getMessage(), {
-          setHandles: {
+          set: {
             1: [0, 256],
           },
         });
@@ -703,7 +703,7 @@ describe('Module', function() {
         h2 = h1.cast(type.int);
         m.$destroyHandles();
         assert.strictEqual(count, 1);
-        assert.deepEqual(m.$getMessage().destroyHandles, [1]);
+        assert.deepEqual(m.$getMessage().destroy, [1]);
       });
 
       it('should throw if setFinalizer is called more than once', function() {
@@ -746,8 +746,8 @@ describe('Module', function() {
         m.$destroyHandles();
 
         assert.deepEqual(m.$getMessage(), {
-          setHandles: { 1: 4 },
-          destroyHandles: [1, 2],
+          set: { 1: 4 },
+          destroy: [1, 2],
           commands: [
             {id: 1, args: [1], ret: 2},
             {id: 2, args: [2]}
