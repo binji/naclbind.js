@@ -75,15 +75,34 @@ var funcType_{{type.js_mangle}} = type.Function(
 );
 [[]]
 
-var m = mod.Module();
+function createModule(nmf, mimeType) {
+  var embed,
+      m;
+
+  if (typeof nmf === 'undefined' ||
+      typeof mimeType === 'undefined') {
+    // Warn if we are running in a browser. Passing no nmf or mimetype is only
+    // supported for testing.
+    if (typeof window !== 'undefined') {
+      console.log('WARNING: created module with empty nmf or mimetype.');
+    }
+  } else {
+    embed = Embed(NaClEmbed(nmf, mimeType));
+    embed.appendToBody();
+  }
+
+  m = mod.Module(embed);
 
 [[for i, fn in enumerate(collector.functions):]]
-m.$defineFunction('{{fn.spelling}}', [mod.Function({{i+1}}, funcType_{{fn.type.get_canonical().js_mangle}})]);
+  m.$defineFunction('{{fn.spelling}}', [mod.Function({{i+1}}, funcType_{{fn.type.get_canonical().js_mangle}})]);
 [[]]
 
-m.$types = types;
-m.$tags = tags;
+  m.$types = types;
+  m.$tags = tags;
 
-return m;
+  return m;
+}
+
+return createModule;
 
 }));

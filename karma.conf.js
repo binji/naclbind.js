@@ -22,7 +22,6 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      'src/js/naclbind.js',
       'test/integration/test_*.js',
       {pattern: 'out/test/integration/**', watched: false, included: false, served: true},
     ],

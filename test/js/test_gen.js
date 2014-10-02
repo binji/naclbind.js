@@ -47,7 +47,7 @@ function genFile(infile, callback) {
     }
 
     var mod = require(outfile);
-    callback(null, mod);
+    callback(null, mod());
   });
 }
 

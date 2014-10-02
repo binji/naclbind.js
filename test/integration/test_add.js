@@ -14,23 +14,15 @@
 
 (function() {
 
-var mod = naclbind.mod,
-    type = naclbind.type,
-    Embed = naclbind.Embed,
-    NaClEmbed = naclbind.NaClEmbed;
-
 describe('Test', function() {
   this.timeout(10000);
 
   it('should work', function(done) {
-    var e = Embed(NaClEmbed('/base/out/test/integration/add/add.nmf',
-                            'application/x-nacl')),
-        m = mod.Module(e),
-        addType = type.Function(type.int, [type.int, type.int]),
+    var nmf = '/base/out/test/integration/add/add.nmf',
+        mimeType = 'application/x-nacl',
+        m = naclbind_gen(nmf, mimeType),
         h;
 
-    e.appendToBody();
-    m.$defineFunction('add', [mod.Function(1, addType)]);
     h = m.add(3, 4);
     m.$commit([h], function(hVal) {
       assert.strictEqual(hVal, 7);
