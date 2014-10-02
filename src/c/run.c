@@ -118,6 +118,7 @@ bool nb_request_set_handles(struct Message* message) {
                  handle, num, i);
           goto cleanup;
         }
+        break;
       }
 
       case PP_VARTYPE_NULL:
