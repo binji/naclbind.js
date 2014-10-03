@@ -45,7 +45,10 @@ function genAndRun(header, source, testSource, callback) {
 
         compile: {
           args: ['-Wall', '-Werror', '-pthread'],
-          defines: ['NB_NO_APP'],
+          defines: [
+            'NB_NO_APP',
+            'restrict='  // Ignore restrict; it doesn't compile with nacl-gcc
+          ],
           includeDirs: [
             path.resolve(__dirname),
             path.resolve(__dirname, '..'),
@@ -102,5 +105,9 @@ describe('C Generator Tests', function() {
 
   it('should succeed for test_struct', function(done) {
     genAndRun('struct.h', 'struct.c', 'test_struct.cc', done);
+  });
+
+  it('should succeed for test_restrict', function(done) {
+    genAndRun('restrict.h', 'restrict.c', 'test_restrict.cc', done);
   });
 });
