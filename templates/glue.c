@@ -45,111 +45,121 @@
 
 [[for fn in collector.functions:]]
 static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_idx) {
-[[  arguments = list(fn.type.argument_types())]]
+[[  if fn.type.kind == TypeKind.FUNCTIONPROTO:]]
+[[    arguments = list(fn.type.argument_types())]]
   int arg_count = nb_message_command_arg_count(message, command_idx);
   if (arg_count != {{len(arguments)}}) {
     VERROR("Expected %d args, got %d.", {{len(arguments)}}, arg_count);
     return FALSE;
   }
-[[  for i, arg in enumerate(arguments):]]
-[[    arg = arg.get_canonical()]]
+[[    for i, arg in enumerate(arguments):]]
+[[      arg = arg.get_canonical()]]
   Handle handle{{i}} = nb_message_command_arg(message, command_idx, {{i}});
-[[    if arg.kind == TypeKind.POINTER:]]
-[[      pointee = arg.get_pointee()]]
-[[      if pointee.kind in (TypeKind.CHAR_S, TypeKind.CHAR_U):]]
+[[      if arg.kind == TypeKind.POINTER:]]
+[[        pointee = arg.get_pointee()]]
+[[        if pointee.kind in (TypeKind.CHAR_S, TypeKind.CHAR_U):]]
   char* arg{{i}};
   if (!nb_handle_get_charp(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as char*.", handle{{i}});
     return FALSE;
   }
-[[      elif pointee.kind == TypeKind.VOID:]]
+[[        elif pointee.kind == TypeKind.VOID:]]
   void* arg{{i}};
   if (!nb_handle_get_voidp(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as void*.", handle{{i}});
     return FALSE;
   }
-[[      elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
+[[        elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
   void* arg{{i}} = NULL;
-[[      else:]]
+[[        else:]]
   void* arg{{i}}x;
   if (!nb_handle_get_voidp(handle{{i}}, &arg{{i}}x)) {
     VERROR("Unable to get handle %d as void*.", handle{{i}});
     return FALSE;
   }
   {{arg.spelling}}* arg{{i}} = ({{arg.spelling}}*) arg{{i}}x;
-[[    elif arg.kind == TypeKind.LONG:]]
+[[      elif arg.kind == TypeKind.LONG:]]
   int32_t arg{{i}}x;
   if (!nb_handle_get_int32(handle{{i}}, &arg{{i}}x)) {
     VERROR("Unable to get handle %d as int32_t.", handle{{i}});
     return FALSE;
   }
   long arg{{i}} = (long) arg{{i}}x;
-[[    elif arg.kind == TypeKind.ULONG:]]
+[[      elif arg.kind == TypeKind.ULONG:]]
   uint32_t arg{{i}}x;
   if (!nb_handle_get_uint32(handle{{i}}, &arg{{i}}x)) {
     VERROR("Unable to get handle %d as uint32_t.", handle{{i}});
     return FALSE;
   }
   unsigned long arg{{i}} = (unsigned long) arg{{i}}x;
-[[    elif arg.kind == TypeKind.LONGLONG:]]
+[[      elif arg.kind == TypeKind.LONGLONG:]]
   int64_t arg{{i}};
   if (!nb_handle_get_int64(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as int64_t.", handle{{i}});
     return FALSE;
   }
-[[    elif arg.kind == TypeKind.ULONGLONG:]]
+[[      elif arg.kind == TypeKind.ULONGLONG:]]
   uint64_t arg{{i}};
   if (!nb_handle_get_uint64(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as uint64_t.", handle{{i}});
     return FALSE;
   }
-[[    elif arg.kind in (TypeKind.INT, TypeKind.SHORT, TypeKind.SCHAR, TypeKind.CHAR_S):]]
+[[      elif arg.kind in (TypeKind.INT, TypeKind.SHORT, TypeKind.SCHAR, TypeKind.CHAR_S):]]
   int32_t arg{{i}};
   if (!nb_handle_get_int32(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as int32_t.", handle{{i}});
     return FALSE;
   }
-[[    elif arg.kind in (TypeKind.UINT, TypeKind.USHORT, TypeKind.UCHAR, TypeKind.CHAR_U):]]
+[[      elif arg.kind in (TypeKind.UINT, TypeKind.USHORT, TypeKind.UCHAR, TypeKind.CHAR_U):]]
   uint32_t arg{{i}};
   if (!nb_handle_get_uint32(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as uint32_t.", handle{{i}});
     return FALSE;
   }
-[[    elif arg.kind == TypeKind.FLOAT:]]
+[[      elif arg.kind == TypeKind.FLOAT:]]
   float arg{{i}};
   if (!nb_handle_get_float(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as float.", handle{{i}});
     return FALSE;
   }
-[[    elif arg.kind == TypeKind.DOUBLE:]]
+[[      elif arg.kind == TypeKind.DOUBLE:]]
   double arg{{i}};
   if (!nb_handle_get_double(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as double.", handle{{i}});
     return FALSE;
   }
-[[    elif arg.kind == TypeKind.ENUM:]]
+[[      elif arg.kind == TypeKind.ENUM:]]
   int32_t arg{{i}}x;
   if (!nb_handle_get_int32(handle{{i}}, &arg{{i}}x)) {
     VERROR("Unable to get handle %d as int32_t.", handle{{i}});
     return FALSE;
   }
   {{arg.spelling}} arg{{i}} = ({{arg.spelling}}) arg{{i}}x;
-[[    elif arg.kind == TypeKind.RECORD and arg.spelling == 'struct PP_Var':]]
+[[      elif arg.kind == TypeKind.RECORD and arg.spelling == 'struct PP_Var':]]
   struct PP_Var arg{{i}};
   if (!nb_handle_get_var(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as struct PP_Var.", handle{{i}});
     return FALSE;
   }
-[[    elif arg.kind == TypeKind.CONSTANTARRAY:]]
+[[      elif arg.kind == TypeKind.CONSTANTARRAY:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
   void* arg{{i}} = NULL;
-[[    else:]]
+[[      else:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
-[[  ]]
-[[  if fn.type.is_function_variadic():]]
+[[    ]]
+[[    if fn.type.is_function_variadic():]]
   // UNSUPPORTED: variadic function.
-[[  ]]
+[[  elif fn.type.kind == TypeKind.FUNCTIONNOPROTO:]]
+  int arg_count = nb_message_command_arg_count(message, command_idx);
+  if (arg_count != 0) {
+    // UNSUPPORTED: no proto with non-zero argument list.
+    VERROR("Function with no prototype passed non-zero args: %d", arg_count);
+    return FALSE;
+  }
+[[    arguments = []]]
+[[  else:]]
+[[    raise Error('Unexpected function type: %s' % fn.type.kind)]]
 [[  result_type = fn.type.get_result().get_canonical()]]
 [[  if result_type.kind != TypeKind.VOID:]]
   if (!nb_message_command_has_ret(message, command_idx)) {
