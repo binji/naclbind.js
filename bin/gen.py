@@ -627,6 +627,8 @@ class Type(object):
       return (
           self.get_array_element_type() == other.get_array_element_type() and
           t1.get_array_size() == t2.get_array_size())
+    elif t1.kind == TypeKind.INCOMPLETEARRAY:
+      return self.get_array_element_type() == other.get_array_element_type()
     elif t1.kind == TypeKind.FUNCTIONPROTO:
       return t1 == t2
     elif t1.kind in (TypeKind.TYPEDEF, TypeKind.UNEXPOSED):

@@ -16,7 +16,11 @@ var assert = require('chai').assert,
     fs = require('fs'),
     gen = require('naclbind-gen'),
     nacl = require('nacl-sdk'),
-    path = require('path');
+    path = require('path'),
+
+    toolchain = 'newlib',
+    config = 'Debug',
+    arch = 'x86_64';
 
 function genAndRun(header, source, testSource, callback) {
   var basename = path.basename(testSource),
@@ -31,9 +35,9 @@ function genAndRun(header, source, testSource, callback) {
         path.resolve(__dirname, 'main.cc')
       ],
       opts = {
-        toolchain: 'newlib',
-        config: 'Debug',
-        arch: 'x86_64',
+        toolchain: toolchain,
+        config: config,
+        arch: arch,
         outdir: outdir,
 
         compile: {
@@ -50,7 +54,8 @@ function genAndRun(header, source, testSource, callback) {
         },
       },
       genOpts = {
-        template: 'glue.c'
+        template: 'glue.c',
+        toolchain: toolchain
       }
 
   gen.file(header, glueC, genOpts, function(error, outfile) {
