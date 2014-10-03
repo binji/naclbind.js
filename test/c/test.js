@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('chai').assert,
+var chai = require('chai'),
+    assert = chai.assert,
     nacl = require('nacl-sdk'),
     path = require('path'),
     testNexe;
+
+chai.config.includeStack = true;
 
 function startswith(s, prefix) {
   return s.lastIndexOf(prefix, 0) === 0;

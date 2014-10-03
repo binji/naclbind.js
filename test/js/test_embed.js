@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('chai').assert,
+var chai = require('chai'),
+    assert = chai.assert,
     naclbind = require('../../src/js/naclbind'),
     NaClEmbed = require('./nacl_embed_for_testing');
     Embed = naclbind.Embed;
+
+chai.config.includeStack = true;
 
 describe('Embed', function() {
   it('should not post messages before loaded', function() {

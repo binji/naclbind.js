@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('chai').assert,
+var chai = require('chai'),
+    assert = chai.assert,
     fs = require('fs'),
     gen = require('naclbind-gen'),
     nacl = require('nacl-sdk'),
@@ -21,6 +22,8 @@ var assert = require('chai').assert,
     toolchain = 'newlib',
     config = 'Debug',
     arch = 'x86_64';
+
+chai.config.includeStack = true;
 
 function genAndRun(header, source, testSource, callback) {
   var basename = path.basename(testSource),

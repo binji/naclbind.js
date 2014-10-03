@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('chai').assert,
+var chai = require('chai'),
+    assert = chai.assert,
     utils = require('../../src/js/naclbind').utils;
+
+chai.config.includeStack = true;
 
 describe('Utils', function() {
   describe('getClass', function() {

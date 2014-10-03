@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('chai').assert,
+var chai = require('chai'),
+    assert = chai.assert,
     gen = require('naclbind-gen'),
     path = require('path'),
     naclbind = require('../../src/js/naclbind'),
     type = naclbind.type;
+
+chai.config.includeStack = true;
 
 function appendPath(s, path) {
   return s.split(':').concat([path]).join(':');

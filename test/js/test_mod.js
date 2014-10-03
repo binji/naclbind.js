@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('chai').assert,
+var chai = require('chai'),
+    assert = chai.assert,
     naclbind = require('../../src/js/naclbind'),
     NaClEmbed = require('./nacl_embed_for_testing'),
     Embed = naclbind.Embed,
     Long = naclbind.Long,
     mod = naclbind.mod,
     type = naclbind.type;
+
+chai.config.includeStack = true;
 
 function assertTypesEqual(t1, t2) {
   assert.ok(t1.equals(t2), t1.spelling + ' != ' + t2.spelling);

@@ -13,7 +13,8 @@
 // limitations under the License.
 
 var type = require('../../src/js/naclbind').type,
-    assert = require('chai').assert,
+    chai = require('chai'),
+    assert = chai.assert,
     spell = type.getSpelling,
     qual = type.describeQualifier,
     canon = type.getCanonical,
@@ -25,6 +26,8 @@ var type = require('../../src/js/naclbind').type,
     V = type.VOLATILE,
     VR = type.VOLATILE | type.RESTRICT,
     R = type.RESTRICT;
+
+chai.config.includeStack = true;
 
 describe('Type', function() {
   describe('is{Less,More}{,OrEqually}Qualified', function() {
