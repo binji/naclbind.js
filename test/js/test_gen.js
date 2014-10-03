@@ -23,7 +23,8 @@ function appendPath(s, path) {
 }
 
 function assertTypesEqual(t1, t2) {
-  assert.ok(t1.equals(t2));
+  assert.ok(t1.equals(t2), 'types aren\'t equal: ' +
+                           t1.spelling + ' != ' + t2.spelling);
 }
 
 function assertFieldsEqual(f, name, type, offset) {
@@ -489,5 +490,24 @@ describe('Generate JS', function() {
 
       done();
     })
+  });
+
+  it('should work with a function with no prototype', function(done) {
+    genFile('data/noproto.h', function(error, m) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(1, m.$functionsCount);
+      assert.strictEqual(0, m.$typesCount);
+      assert.strictEqual(0, m.$tagsCount);
+
+      // Pointers
+      assert.ok(m.foo);
+      assert.strictEqual(m.foo.types.length, 1);
+      assertTypesEqual(type.FunctionNoProto(type.int), m.foo.types[0]);
+
+      done();
+    });
   });
 });

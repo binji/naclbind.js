@@ -167,6 +167,22 @@ describe('Type', function() {
       });
     });
 
+    describe('FunctionNoProto', function() {
+      it('should throw creating functions with bad resultType', function() {
+        [undefined, null, 100, 'int'].forEach(function(badType) {
+          assert.throws(function() {
+            type.FunctionNoProto(badType);
+          }, /resultType/);
+        });
+      });
+
+      it('should throw creating functions that return arrays', function() {
+        assert.throws(function() {
+          type.FunctionNoProto(type.Array(type.int, 2));
+        });
+      });
+    });
+
     describe('Array', function() {
       it('should throw creating an array with bad elementType', function() {
         [undefined, null, 100, 'int'].forEach(function(badType) {
@@ -333,13 +349,17 @@ describe('Type', function() {
           f2 = type.Function(type.int, [PKc], type.VARIADIC),
           f3 = type.Pointer(type.Function(type.void, [type.int])),
           f4 = type.Function(f3, [type.int, f3]),
-          f5 = type.Function(type.void, []);
+          f5 = type.Function(type.void, []),
+          f6 = type.FunctionNoProto(type.void),
+          f7 = type.Pointer(type.FunctionNoProto(type.void));
       assert.strictEqual(spell(f1), 'int (int, int)');
       assert.strictEqual(spell(f2), 'int (const char *, ...)');
       assert.strictEqual(spell(f4), 'void (*(int, void (*)(int)))(int)');
       assert.strictEqual(spell(f4, 'signal'),
                    'void (*signal(int, void (*)(int)))(int)');
       assert.strictEqual(spell(f5), 'void (void)');
+      assert.strictEqual(spell(f6), 'void ()');
+      assert.strictEqual(spell(f7), 'void (*)()');
     });
 
     it('should handle spelling precedence', function() {
@@ -468,6 +488,7 @@ describe('Type', function() {
             s = type.Record('s', 4, [type.Field('f', type.int, 0)]),
             u = type.Record('s', 4, [type.Field('f', type.int, 0)], type.UNION),
             f = type.Function(type.void, [type.int]),
+            fn = type.FunctionNoProto(type.void),
             fp = type.Pointer(f),
             p = type.Pointer(type.void),
             a = type.Array(type.char, 2),
@@ -476,6 +497,7 @@ describe('Type', function() {
         assertCast(type.void, s, type.CAST_ERROR);
         assertCast(type.void, u, type.CAST_ERROR);
         assertCast(type.void, f, type.CAST_ERROR);
+        assertCast(type.void, fn, type.CAST_ERROR);
         assertCast(type.void, fp, type.CAST_ERROR);
         assertCast(type.void, p, type.CAST_ERROR);
         assertCast(type.void, a, type.CAST_ERROR);
@@ -600,8 +622,9 @@ describe('Type', function() {
         var s = type.Record('s', 4, [type.Field('f', type.int, 0)]),
             u = type.Record('s', 4, [type.Field('f', type.int, 0)], type.UNION),
             v = type.void,
-            f = type.Function(type.void, [type.int]);
-        [s, u, v, f].forEach(function(x) {
+            f = type.Function(type.void, [type.int]),
+            fn = type.FunctionNoProto(type.void);
+        [s, u, v, f, fn].forEach(function(x) {
           assertCast(type.char, x, type.CAST_ERROR);
           assertCast(type.short, x, type.CAST_ERROR);
           assertCast(type.int, x, type.CAST_ERROR);
@@ -624,10 +647,11 @@ describe('Type', function() {
           e = type.Enum('e'),
           s = type.Record('s', 4, [type.Field('f', type.int, 0)]),
           u = type.Record('s', 4, [type.Field('f', type.int, 0)], type.UNION),
-          f = type.Function(type.void, [type.int]);
+          f = type.Function(type.void, [type.int]),
+          fn = type.FunctionNoProto(type.void);
 
       it('should allow cast of pointer -> same pointer', function() {
-        [v, c, e, s, u, f].forEach(function(x) {
+        [v, c, e, s, u, f, fn].forEach(function(x) {
           var p = type.Pointer(x),
               a,
               ia;
@@ -645,6 +669,35 @@ describe('Type', function() {
             assertCast(ia, ia, type.CAST_OK_EXACT);
           }
         });
+      });
+
+      it('should warn on cast of fun* <-> fun* w/ no proto', function() {
+        var pf = type.Pointer(f),
+            pfn = type.Pointer(fn);
+            af = type.Array(f, 2),
+            afn = type.Array(fn, 2),
+            iaf = type.IncompleteArray(f),
+            iafn = type.IncompleteArray(fn);
+
+        assertCast(pf, pfn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(pf, afn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(pf, iafn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(af, pfn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(af, afn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(af, iafn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(iaf, pfn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(iaf, afn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(iaf, iafn, type.CAST_FUNCTION_POINTER_NOPROTO);
+
+        assertCast(pfn, pf, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(pfn, af, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(pfn, iaf, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(afn, pf, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(afn, af, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(afn, iaf, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(iafn, pf, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(iafn, af, type.CAST_FUNCTION_POINTER_NOPROTO);
+        assertCast(iafn, iaf, type.CAST_FUNCTION_POINTER_NOPROTO);
       });
 
       it('should allow cast of non-void pointer <-> void pointer', function() {
@@ -682,9 +735,12 @@ describe('Type', function() {
         // This is disallowed by the C spec, but seems to work without warning
         // in clang + gcc.
         var pv = type.Pointer(type.void),
-            pf = type.Pointer(f);
-        assertCast(pv, pf, type.CAST_VOID_POINTER_TO_FUNCTION_POINTER);
-        assertCast(pf, pv, type.CAST_FUNCTION_POINTER_TO_VOID_POINTER);
+            pf = type.Pointer(f),
+            pfn = type.Pointer(fn);
+        assertCast(pv, pf, type.CAST_FUNCTION_POINTER_VOID_POINTER);
+        assertCast(pf, pv, type.CAST_FUNCTION_POINTER_VOID_POINTER);
+        assertCast(pv, pfn, type.CAST_FUNCTION_POINTER_VOID_POINTER);
+        assertCast(pfn, pv, type.CAST_FUNCTION_POINTER_VOID_POINTER);
       });
 
       it('should allow cast of pointer -> more qualified pointer', function() {
@@ -833,6 +889,7 @@ describe('Type', function() {
         assertCast(s, type.Pointer(type.int), type.CAST_ERROR);
         assertCast(s, type.Enum('e'), type.CAST_ERROR);
         assertCast(s, type.Function(type.int, [type.int]), type.CAST_ERROR);
+        assertCast(s, type.FunctionNoProto(type.int), type.CAST_ERROR);
         assertCast(s, type.Array(type.int, 2), type.CAST_ERROR);
         assertCast(s, type.IncompleteArray(type.int), type.CAST_ERROR);
       });
@@ -876,6 +933,7 @@ describe('Type', function() {
         assertCast(e, type.Pointer(type.int), type.CAST_ERROR);
         assertCast(e, type.Record('s', 4, [type.Field('f', type.int, 0)]), type.CAST_ERROR);
         assertCast(e, type.Function(type.int, [type.int]), type.CAST_ERROR);
+        assertCast(e, type.FunctionNoProto(type.int), type.CAST_ERROR);
         assertCast(e, type.Array(type.int, 2), type.CAST_ERROR);
         assertCast(e, type.IncompleteArray(type.int), type.CAST_ERROR);
       });
@@ -886,6 +944,22 @@ describe('Type', function() {
         // Bare functions cannot even be specified in C (only C++). Referencing
         // a function in C is typed as a function pointer.
         var f = type.Function(type.int, [type.int]);
+        assertCast(f, f, type.CAST_ERROR);
+        assertCast(f, type.void, type.CAST_ERROR);
+        assertCast(f, type.int, type.CAST_ERROR);
+        assertCast(f, type.Enum('e'), type.CAST_ERROR);
+        assertCast(f, type.Pointer(type.int), type.CAST_ERROR);
+        assertCast(f, type.Record('s', 4, [type.Field('f', type.int, 0)]), type.CAST_ERROR);
+        assertCast(f, type.Array(type.int, 2), type.CAST_ERROR);
+        assertCast(f, type.IncompleteArray(type.int), type.CAST_ERROR);
+      });
+    });
+
+    describe('FunctionNoProto', function() {
+      it('should fail to cast function -> anything', function() {
+        // Bare functions cannot even be specified in C (only C++). Referencing
+        // a function in C is typed as a function pointer.
+        var f = type.FunctionNoProto(type.int);
         assertCast(f, f, type.CAST_ERROR);
         assertCast(f, type.void, type.CAST_ERROR);
         assertCast(f, type.int, type.CAST_ERROR);
@@ -1067,6 +1141,20 @@ describe('Type', function() {
       assertBestViable(fns, [i, f], 0);
       assertBestViable(fns, [i], 0);
       assertBestViable(fns, [i, i, i], 0);
+    });
+
+    it('should work with functions without a prototype', function() {
+      var i = type.int,
+          f = type.float,
+          vp = type.Pointer(type.void),
+          fn = type.FunctionNoProto(type.void),
+          fns = [fn];
+
+      assertBestViable(fns, [], 0);
+      assertBestViable(fns, [i], 0);
+      assertBestViable(fns, [i, i], 0);
+      assertBestViable(fns, [f], 0);
+      assertBestViable(fns, [vp], 0);
     });
   });
 });

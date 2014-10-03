@@ -61,16 +61,23 @@ var tags = {},
 
 [[for type, fns in collector.SortedFunctionTypes():]]
 // {{type.get_canonical().spelling}} -- {{', '.join(fn.spelling for fn in fns)}}
+[[  if type.type.kind == TypeKind.FUNCTIONPROTO:]]
 var funcType_{{type.js_mangle}} = type.Function(
   {{type.get_result().get_canonical().js_inline}},
   [
-[[  for arg_type in type.argument_types():]]
+[[    for arg_type in type.argument_types():]]
     {{arg_type.get_canonical().js_inline}},
 [[  ]]
-[[  if type.is_function_variadic():]]
+[[    if type.is_function_variadic():]]
   ], type.VARIADIC
-[[  else:]]
+[[    else:]]
   ]
+[[    ]]
+[[  elif type.type.kind == TypeKind.FUNCTIONNOPROTO:]]
+var funcType_{{type.js_mangle}} = type.FunctionNoProto(
+  {{type.get_result().get_canonical().js_inline}}
+[[  else:]]
+[[    raise Error('Unexpected function type: %s' % type.type.kind)]]
 [[  ]]
 );
 [[]]

@@ -415,6 +415,9 @@ def GetJsInline_FunctionProto(t):
       GetJsInline(t.get_result()),
       ', '.join(GetJsInline(a) for a in t.argument_types()))
 
+def GetJsInline_FunctionNoProto(t):
+  return 'type.FunctionNoProto(%s)' % GetJsInline(t.get_result())
+
 def GetJsInline_Typedef(t):
   return 'types.%s' % SpellingBaseName(t)
 
@@ -441,6 +444,7 @@ TYPE_KINDS_JS_INLINE = {
   TypeKind.POINTER.value: GetJsInline_Pointer,
   TypeKind.RECORD.value: GetJsInline_Record,
   TypeKind.FUNCTIONPROTO.value: GetJsInline_FunctionProto,
+  TypeKind.FUNCTIONNOPROTO.value: GetJsInline_FunctionNoProto,
   TypeKind.TYPEDEF.value: GetJsInline_Typedef,
   TypeKind.ENUM.value: GetJsInline_Enum,
   TypeKind.UNEXPOSED.value: GetJsInline_Unexposed,
@@ -509,6 +513,10 @@ def Mangle(t, canonical=True):
       ret += ''.join(Mangle(a) for a in t.argument_types())
     if t.is_function_variadic():
       ret += 'z'
+    ret += 'E'
+  elif t.kind == TypeKind.FUNCTIONNOPROTO:
+    ret += 'F'
+    ret += Mangle(t.get_result())
     ret += 'E'
   elif t.kind == TypeKind.INCOMPLETEARRAY:
     ret += 'P%s' % Mangle(t.get_array_element_type())
@@ -630,6 +638,8 @@ class Type(object):
     elif t1.kind == TypeKind.INCOMPLETEARRAY:
       return self.get_array_element_type() == other.get_array_element_type()
     elif t1.kind == TypeKind.FUNCTIONPROTO:
+      return t1 == t2
+    elif t1.kind == TypeKind.FUNCTIONNOPROTO:
       return t1 == t2
     elif t1.kind in (TypeKind.TYPEDEF, TypeKind.UNEXPOSED):
       return self.get_canonical() == other.get_canonical()
@@ -846,6 +856,7 @@ def main(args):
   template_dict.filename = filename
   template_dict.module_name = options.module_name
   template_dict.IncludeFile = IncludeFile
+  template_dict.Error = Error
 
   out_text = easy_template.RunTemplateString(template, template_dict)
 

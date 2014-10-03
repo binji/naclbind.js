@@ -941,8 +941,9 @@ var type = (function(utils) {
       ENUM = 21,
       TYPEDEF = 22,
       FUNCTIONPROTO = 23,
-      CONSTANTARRAY = 24,
-      INCOMPLETEARRAY = 25,
+      FUNCTIONNOPROTO = 24,
+      CONSTANTARRAY = 25,
+      INCOMPLETEARRAY = 26,
 
       KIND_NAME = {
         0: 'INVALID',
@@ -969,8 +970,9 @@ var type = (function(utils) {
         21: 'ENUM',
         22: 'TYPEDEF',
         23: 'FUNCTIONPROTO',
-        24: 'CONSTANTARRAY',
-        25: 'INCOMPLETEARRAY'
+        24: 'FUNCTIONNOPROTO',
+        25: 'CONSTANTARRAY',
+        26: 'INCOMPLETEARRAY'
       },
 
       PRIMITIVE_SPELLING = {
@@ -1052,8 +1054,8 @@ var type = (function(utils) {
       CAST_INT_TO_ENUM = -6,
       CAST_DIFFERENT_ENUMS = -7,
       CAST_INCOMPATIBLE_POINTERS = -8,
-      CAST_FUNCTION_POINTER_TO_VOID_POINTER = -9,
-      CAST_VOID_POINTER_TO_FUNCTION_POINTER = -10,
+      CAST_FUNCTION_POINTER_VOID_POINTER = -9,
+      CAST_FUNCTION_POINTER_NOPROTO = -10,
       // Failure
       CAST_ERROR = -11,
 
@@ -1067,15 +1069,25 @@ var type = (function(utils) {
   SPELLING_PRECEDENCE[CONSTANTARRAY] = 2;
   SPELLING_PRECEDENCE[INCOMPLETEARRAY] = 2;
   SPELLING_PRECEDENCE[FUNCTIONPROTO] = 3;
+  SPELLING_PRECEDENCE[FUNCTIONNOPROTO] = 3;
 
 
   function checkType(x, varName, optKind) {
     if (!(x instanceof Type)) {
       throw new Error(varName + ' must be instanceof Type.');
     }
-    if (optKind && x.kind !== optKind) {
-      throw new Error(varName + ' must be Type with kind ' +
-                      KIND_NAME[optKind]);
+    if (optKind) {
+      if (Array.isArray(optKind)) {
+        if (optKind.indexOf(x.kind) === -1) {
+          throw new Error(
+              varName + ' must be Type with kind in [' +
+              optKind.map(function(x) { return KIND_NAME[x]; }).join(', ') +
+              ']');
+        }
+      } else if (x.kind !== optKind) {
+        throw new Error(varName + ' must be Type with kind ' +
+                        KIND_NAME[optKind]);
+      }
     }
   }
 
@@ -1098,6 +1110,10 @@ var type = (function(utils) {
 
   function isArray(type) {
     return type.kind === CONSTANTARRAY || type.kind === INCOMPLETEARRAY;
+  }
+
+  function isFunction(type) {
+    return type.kind === FUNCTIONPROTO || type.kind === FUNCTIONNOPROTO;
   }
 
   function isCastOK(result) {
@@ -1125,6 +1141,8 @@ var type = (function(utils) {
       case FUNCTIONPROTO:
         return hasTypedef(type.resultType) ||
                Array.prototype.some.call(type.argTypes, hasTypedef);
+      case FUNCTIONNOPROTO:
+        return hasTypedef(type.resultType);
       default:
         return false;
     }
@@ -1146,6 +1164,8 @@ var type = (function(utils) {
         return FunctionProto(recurse(type.resultType),
                              Array.prototype.map.call(type.argTypes, recurse),
                              type.variadic);
+      case FUNCTIONNOPROTO:
+        return FunctionNoProto(recurse(type.resultType));
       default:
         return type;
     }
@@ -1416,6 +1436,38 @@ var type = (function(utils) {
            (this.argTypes.length < argTypes.length && this.variadic);
   };
 
+  function FunctionNoProto(resultType) {
+    if (!(this instanceof FunctionNoProto)) {
+      return new FunctionNoProto(resultType);
+    }
+
+    checkType(resultType, 'resultType');
+
+    if (isArray(getCanonical(resultType))) {
+      throw new Error('Function return type cannot be an array. Got ' +
+                      resultType.spelling);
+    }
+
+    Type.call(this, FUNCTIONNOPROTO, 0);
+    this.resultType = resultType;
+    this.spelling = getSpelling(this);
+  }
+  FunctionNoProto.prototype = Object.create(Type.prototype);
+  FunctionNoProto.prototype.constructor = FunctionNoProto;
+  FunctionNoProto.prototype.qualify = function(cv) {
+    return this;
+  };
+  FunctionNoProto.prototype.unqualified = function() {
+    return this;
+  };
+  FunctionNoProto.prototype.equals = function(that) {
+    return Type.prototype.equals.call(this, that) &&
+           this.resultType.equals(that.resultType);
+  };
+  FunctionNoProto.prototype.isViableForCall = function(argTypes) {
+    return true;
+  };
+
   function ConstantArray(elementType, arraySize) {
     if (!(this instanceof ConstantArray)) {
       return new ConstantArray(elementType, arraySize);
@@ -1564,6 +1616,9 @@ var type = (function(utils) {
       }
       name += ')';
       spelling = getSpelling(type.resultType, name, FUNCTIONPROTO);
+    } else if (type.kind === FUNCTIONNOPROTO) {
+      name += '()';
+      spelling = getSpelling(type.resultType, name, FUNCTIONNOPROTO);
     } else {
       throw new Error('Unknown kind: ' + type.kind);
     }
@@ -1602,6 +1657,8 @@ var type = (function(utils) {
         }
         break;
       case FUNCTIONPROTO:
+        return CAST_ERROR;
+      case FUNCTIONNOPROTO:
         return CAST_ERROR;
       default:
         throw new Error('canCast: Unknown kind ' + from.kind);
@@ -1652,10 +1709,13 @@ var type = (function(utils) {
       tp = getPointerlikePointee(to);
       if (fp.kind === VOID && tp.kind === VOID) {
         // Fall through to cv-check.
-      } else if (fp.kind === VOID && tp.kind === FUNCTIONPROTO) {
-        return CAST_VOID_POINTER_TO_FUNCTION_POINTER;
-      } else if (fp.kind === FUNCTIONPROTO && tp.kind === VOID) {
-        return CAST_FUNCTION_POINTER_TO_VOID_POINTER;
+      } else if ((fp.kind === VOID && isFunction(tp)) ||
+                 (isFunction(fp) && tp.kind === VOID)) {
+        return CAST_FUNCTION_POINTER_VOID_POINTER;
+      } else if (isFunction(fp) && isFunction(tp) && fp.kind !== tp.kind) {
+        return isCompatibleWith(fp, tp) ?
+            CAST_FUNCTION_POINTER_NOPROTO :
+            CAST_INCOMPATIBLE_POINTERS;
       } else if (fp.kind === VOID || tp.kind === VOID) {
         // Strangely cv-checks are ignored when casting from/to void*.
         return CAST_OK_CONVERSION;
@@ -1707,10 +1767,15 @@ var type = (function(utils) {
                from.tag === to.tag &&
                from.cv === to.cv;
       case FUNCTIONPROTO:
-        return from.kind === to.kind &&
-               from.argTypes.length === to.argTypes.length &&
-               isCompatibleWith(from.resultType, to.resultType) &&
-               utils.everyArrayPair(from, to, isCompatibleWith);
+        return (from.kind === to.kind &&
+                from.argTypes.length === to.argTypes.length &&
+                isCompatibleWith(from.resultType, to.resultType) &&
+                utils.everyArrayPair(from, to, isCompatibleWith)) ||
+               (to.kind === FUNCTIONNOPROTO &&
+                isCompatibleWith(from.resultType, to.resultType));
+      case FUNCTIONNOPROTO:
+        return (from.kind === to.kind || to.kind === FUNCTIONPROTO) &&
+               isCompatibleWith(from.resultType, to.resultType);
       default:
         throw new Error('canCast: Unknown kind ' + from.kind);
     }
@@ -1734,7 +1799,8 @@ var type = (function(utils) {
         i;
 
     for (i = 0; i < argTypes.length; ++i) {
-      if (fnType.variadic && i >= fnType.argTypes.length) {
+      if (fnType.kind === FUNCTIONNOPROTO ||
+          (fnType.variadic && i >= fnType.argTypes.length)) {
         castRank = CAST_OK_DEFAULT_PROMOTION;
       } else {
         castRank = getCastRank(argTypes[i], fnType.argTypes[i]);
@@ -1832,6 +1898,7 @@ var type = (function(utils) {
     Enum: Enum,
     Typedef: Typedef,
     Function: FunctionProto,
+    FunctionNoProto: FunctionNoProto,
     Array: ConstantArray,
     IncompleteArray: IncompleteArray,
 
@@ -1871,6 +1938,7 @@ var type = (function(utils) {
     ENUM: ENUM,
     TYPEDEF: TYPEDEF,
     FUNCTIONPROTO: FUNCTIONPROTO,
+    FUNCTIONNOPROTO: FUNCTIONNOPROTO,
     CONSTANTARRAY: CONSTANTARRAY,
     INCOMPLETEARRAY: INCOMPLETEARRAY,
 
@@ -1889,10 +1957,8 @@ var type = (function(utils) {
     CAST_INT_TO_ENUM: CAST_INT_TO_ENUM,
     CAST_DIFFERENT_ENUMS: CAST_DIFFERENT_ENUMS,
     CAST_INCOMPATIBLE_POINTERS: CAST_INCOMPATIBLE_POINTERS,
-    CAST_FUNCTION_POINTER_TO_VOID_POINTER:
-        CAST_FUNCTION_POINTER_TO_VOID_POINTER,
-    CAST_VOID_POINTER_TO_FUNCTION_POINTER:
-        CAST_VOID_POINTER_TO_FUNCTION_POINTER,
+    CAST_FUNCTION_POINTER_VOID_POINTER: CAST_FUNCTION_POINTER_VOID_POINTER,
+    CAST_FUNCTION_POINTER_NOPROTO: CAST_FUNCTION_POINTER_NOPROTO,
     CAST_ERROR: CAST_ERROR,
 
     CALL_ERROR : CALL_ERROR,
@@ -2197,7 +2263,7 @@ var mod = (function(Long, type, utils) {
   function IdFunction(id, fnType) {
     if (!(this instanceof IdFunction)) { return new IdFunction(id, fnType); }
     utils.checkNonnegativeNumber(id);
-    type.checkType(fnType, 'type', type.FUNCTIONPROTO);
+    type.checkType(fnType, 'type', [type.FUNCTIONPROTO, type.FUNCTIONNOPROTO]);
 
     if (id === ERROR_IF_ID) {
       throw new Error('Illegal id, reserved for $errorIf: ' + ERROR_IF_ID);
