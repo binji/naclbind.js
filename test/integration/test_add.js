@@ -20,7 +20,7 @@ describe('Test', function() {
   it('should work', function(done) {
     var nmf = '/base/out/test/integration/add/add.nmf',
         mimeType = 'application/x-nacl',
-        m = naclbind_gen(nmf, mimeType),
+        m = addModule(nmf, mimeType),
         h;
 
     h = m.add(3, 4);
