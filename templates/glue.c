@@ -78,7 +78,7 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     VERROR("Unable to get handle %d as void*.", handle{{i}});
     return FALSE;
   }
-  {{arg.spelling}}* arg{{i}} = ({{arg.spelling}}*) arg{{i}}x;
+  {{arg.spelling}} arg{{i}} = ({{arg.spelling}}) arg{{i}}x;
 [[      elif arg.kind == TypeKind.LONG:]]
   int32_t arg{{i}}x;
   if (!nb_handle_get_int32(handle{{i}}, &arg{{i}}x)) {
