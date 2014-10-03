@@ -26,12 +26,12 @@ var chai = require('chai'),
 chai.config.includeStack = true;
 
 function genAndRun(header, source, testSource, callback) {
-  var basename = path.basename(testSource),
+  var basename = header.match(/([^.]*)\.h/)[1],
       outdir = path.resolve(__dirname, '../../out/test/c/test_gen', basename),
       glueC = path.join(outdir, 'glue.c'),
       infiles = [
-        source,
-        testSource,
+        path.join(__dirname, 'data', source),
+        path.join(__dirname, 'data', testSource),
         path.resolve(__dirname, 'test_gen.cc'),
         path.resolve(__dirname, 'fake_interfaces.c'),
         path.resolve(__dirname, 'json.cc'),
@@ -61,6 +61,8 @@ function genAndRun(header, source, testSource, callback) {
         toolchain: toolchain
       }
 
+  header = path.join(__dirname, 'data', header);
+
   gen.file(header, glueC, genOpts, function(error, outfile) {
     if (error) {
       return callback(error);
@@ -79,37 +81,26 @@ function genAndRun(header, source, testSource, callback) {
 }
 
 describe('C Generator Tests', function() {
-  it('should collect tests from test/c/test_gen/data', function(done) {
-    var testDataDir = path.resolve(__dirname, 'data');
-    fs.readdir(testDataDir, function(error, files) {
-      if (error) {
-        return done(error);
-      }
+  this.slow(5000);
+  this.timeout(30000);
 
-      var matchesTest = function(f) { return /^test_.*\.cc$/.test(f); },
-          tests = Array.prototype.filter.call(files, matchesTest);
+  it('should succeed for test_multi', function(done) {
+    genAndRun('multi.h', 'multi.c', 'test_multi.cc', done);
+  });
 
-      if (tests.length === 0) {
-        return done();
-      }
+  it('should succeed for test_noproto', function(done) {
+    genAndRun('noproto.h', 'noproto.c', 'test_noproto.cc', done);
+  });
 
-      describe('C Generator Tests', function() {
-        this.slow(5000);
-        this.timeout(30000);
+  it('should succeed for test_primitives', function(done) {
+    genAndRun('primitives.h', 'primitives.c', 'test_primitives.cc', done);
+  });
 
-        tests.forEach(function(testName) {
-          var baseName = testName.match(/^test_(.*)\.cc$/)[1],
-              header = path.join(testDataDir, baseName + '.h'),
-              source = path.join(testDataDir, baseName + '.c'),
-              testSource = path.join(testDataDir, testName);
+  it('should succeed for test_simple', function(done) {
+    genAndRun('simple.h', 'simple.c', 'test_simple.cc', done);
+  });
 
-          it('should succeed for ' + testName, function(done) {
-            genAndRun(header, source, testSource, done);
-          });
-        });
-      });
-
-      done();
-    });
+  it('should succeed for test_struct', function(done) {
+    genAndRun('struct.h', 'struct.c', 'test_struct.cc', done);
   });
 });
