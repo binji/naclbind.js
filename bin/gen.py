@@ -36,6 +36,29 @@ FILTER_ARGS = ('-cc1', '-main-file-name', '-v', '-triple', '-mrelocation-model',
 
 SEVERITY_MAP = {2: 'warning', 3: 'error', 4: 'fatal'}
 
+class OptionParser(optparse.OptionParser):
+  def __init__(self, *args, **kwargs):
+    self.ignore_error = False
+    if 'ignore_error' in kwargs:
+      self.ignore_error = True
+      del kwargs['ignore_error']
+    optparse.OptionParser.__init__(self, *args, **kwargs)
+
+    self.add_option('-v', '--verbose', action='store_true')
+    self.add_option('-w', '--whitelist-file', action='append', default=[])
+    self.add_option('-W', '--whitelist-symbol', action='append', default=[])
+    self.add_option('-b', '--blacklist-file', action='append', default=[])
+    self.add_option('-B', '--blacklist-symbol', action='append', default=[])
+    self.add_option('-t', '--template')
+    self.add_option('-m', '--module-name', default='naclbind_gen')
+    self.add_option('-o', '--output')
+
+  def error(self, msg):
+    if self.ignore_error:
+      logging.info('Ignoring option error: %s' % msg)
+    else:
+      optparse.OptionParser.error(self, msg)
+
 
 def GetHostDir():
   if platform.architecture()[0] == '32bit':
@@ -70,6 +93,7 @@ sys.path.append(PYTHON_BINDINGS_DIR)
 
 import clang.cindex
 from clang.cindex import Index, CursorKind, TypeKind, TranslationUnit, Config
+from clang.cindex import TokenKind
 
 Config.set_library_path(PNACL_LIB)
 
@@ -234,6 +258,30 @@ def UnparseClangArgs(args):
     else:
       result.append(arg[0])
   return result
+
+
+def ExtendOptionsFromTranslationUnit(tu, options):
+  comment_re = re.compile(r'/[/*]*\s*naclbind-gen:\s*(.*)?(?:[*/]*/)?',
+                          re.DOTALL)
+  for t in tu.cursor.get_tokens():
+    if t.kind != TokenKind.COMMENT:
+      continue
+    m = comment_re.match(t.spelling)
+    if not m:
+      continue
+
+    text = m.group(1).replace('\r', '').replace('\n', '')
+    logging.info('Got naclbind-gen args: %r' % text)
+    parser = OptionParser(add_help_option=False, ignore_error=True)
+    new_options, _ = parser.parse_args(text.split(' '))
+
+    for key in dir(new_options):
+      old_value = getattr(options, key)
+      if type(old_value) is not list:
+        continue
+      new_value = getattr(new_options, key)
+      logging.info('Extending %s with %r' % (key, new_value))
+      old_value.extend(new_value)
 
 
 def CollectCursors(root, fn):
@@ -805,16 +853,7 @@ def IncludeFile(name):
 
 def main(args):
   logging.basicConfig(format='%(levelname)s: %(message)s')
-  parser = optparse.OptionParser()
-  parser.add_option('-v', '--verbose', action='store_true',
-                    help='verbose output')
-  parser.add_option('-w', '--whitelist-file', action='append', default=[])
-  parser.add_option('-W', '--whitelist-symbol', action='append', default=[])
-  parser.add_option('-b', '--blacklist-file', action='append', default=[])
-  parser.add_option('-B', '--blacklist-symbol', action='append', default=[])
-  parser.add_option('-t', '--template')
-  parser.add_option('-m', '--module-name', default='naclbind_gen')
-  parser.add_option('-o', '--output')
+  parser = OptionParser()
   options, args = parser.parse_args(args)
   if options.verbose:
     logging.getLogger().setLevel(logging.INFO)
@@ -825,6 +864,8 @@ def main(args):
   tu, filename = CreateTranslationUnit(args)
   if not tu:
     return 1
+
+  ExtendOptionsFromTranslationUnit(tu, options)
 
   # By default, accept everything. If there is an explicit whitelist, default
   # to accepting nothing.

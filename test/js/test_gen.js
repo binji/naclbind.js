@@ -513,4 +513,22 @@ describe('Generate JS', function() {
       done();
     });
   });
+
+  it('should parse directives in comments', function(done) {
+    genFile('data/directive.h', function(error, m) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(1, m.$functionsCount);
+      assert.strictEqual(0, m.$typesCount);
+      assert.strictEqual(0, m.$tagsCount);
+
+      // Pointers
+      assert.ok(!m.dont_include_me);
+      assert.ok(m.include_me);
+
+      done();
+    });
+  });
 });
