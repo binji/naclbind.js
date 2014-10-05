@@ -168,7 +168,6 @@ def GetIndexParseArgs(args):
   parsed_args = ParseClangArgs(new_args)
   parsed_args = RenameParsedArgs(parsed_args, RENAME_ARGS)
   parsed_args = FilterParsedArgs(parsed_args, FILTER_ARGS)
-  parsed_args = ExtendParsedClangArgs(parsed_args)
   new_args = UnparseClangArgs(parsed_args)
 
   # Add the filename back in to pass to Index.parse
@@ -238,32 +237,6 @@ def RenameParsedArgs(args, to_rename):
 
 def FilterParsedArgs(args, to_filter_out):
   return filter(lambda a: a[0] not in to_filter_out, args)
-
-
-def ExtendParsedClangArgs(args):
-  defines = RunClangForDefines()
-  new_args = [('-undef', None)]
-  new_args += [('-D%s=%s' % (n, v), None) for n, v in defines]
-  new_args += args
-  return new_args
-
-
-def RunClangForDefines():
-  cmd = [PNACL_CLANG] + ['-dM', '-E', '-x', 'c', '/dev/null']
-  stdout, _ = Run(cmd)
-  stdout_lines = stdout.splitlines()
-  result = []
-  for line in stdout_lines:
-    # Lines look like:
-    # #define MACRO_NAME SOME MACRO VALUE
-    split_line = line.split(None, 2)
-    if len(split_line) == 2:
-      name, value = split_line[1], None
-    else:
-      name, value = split_line[1:]
-
-    result.append((name, value))
-  return result
 
 
 def UnparseClangArgs(args):
