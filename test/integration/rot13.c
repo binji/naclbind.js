@@ -5,18 +5,6 @@
 void nb_var_release(struct PP_Var);
 struct PP_Var nb_var_string_create(const char*, uint32_t len);
 
-void* my_malloc(size_t size) {
-  return malloc(size);
-}
-
-void my_memcpy(void* dst, void* src, size_t len) {
-  memcpy(dst, src, len);
-}
-
-void my_free(void* p) {
-  free(p);
-}
-
 void rot13(char* s, size_t len) {
   int i;
   for (i = 0; i < len; ++i) {

@@ -296,7 +296,8 @@ def CollectCursors(root, fn):
 
 
 class Acceptor(object):
-  def __init__(self, wl_files, wl_syms, bl_files, bl_syms, default):
+  def __init__(self, tu_file, wl_files, wl_syms, bl_files, bl_syms, default):
+    self.tu_file = tu_file
     self.wl_files = wl_files
     self.wl_syms = wl_syms
     self.bl_files = bl_files
@@ -306,19 +307,25 @@ class Acceptor(object):
   def Accept(self, filename, name):
     # Always accept if filename or symbol are in the whitelist.
     for wl_file in self.wl_files:
-      if re.search(wl_file, filename):
+      if re.match(wl_file, filename):
         return True
     for wl_sym in self.wl_syms:
-      if re.search(wl_sym, name):
+      if re.match(wl_sym, name):
         return True
 
     # Always reject if filename or symbol are in the blacklist
     for bl_file in self.bl_files:
-      if re.search(bl_file, filename):
+      if re.match(bl_file, filename):
         return False
     for bl_sym in self.bl_syms:
-      if re.search(bl_sym, name):
+      if re.match(bl_sym, name):
         return False
+
+    # Unless otherwise blacklisted above, always include symbols that are
+    # specified in the given file. This makes it so you don't have to
+    # explicitly whitelist them in case you whitelist symbols from an #include.
+    if filename == self.tu_file:
+      return True
 
     # Otherwise, perform default action.
     return self.default
@@ -874,7 +881,8 @@ def main(args):
   else:
     accept_default = True
 
-  acceptor = Acceptor(options.whitelist_file, options.whitelist_symbol,
+  acceptor = Acceptor(filename,
+                      options.whitelist_file, options.whitelist_symbol,
                       options.blacklist_file, options.blacklist_symbol,
                       accept_default)
 

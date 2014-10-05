@@ -27,12 +27,12 @@ describe('Test', function() {
   });
 
   function rot13(s, cb) {
-    var p = m.my_malloc(s.length + 1);
-    m.my_memcpy(p, s, s.length + 1);
+    var p = m.malloc(s.length + 1);
+    m.memcpy(p, s, s.length + 1);
     m.rot13(p, s.length);
     var v = m.char_to_var(p);
     m.var_release(v);
-    m.my_free(p);
+    m.free(p);
     m.$commitDestroy([v], cb);
   }
 

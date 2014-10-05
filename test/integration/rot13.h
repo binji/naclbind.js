@@ -1,10 +1,8 @@
 #include <ppapi/c/pp_var.h>
+#include <stdlib.h>
+#include <string.h>
 
-typedef unsigned int size_t;
-
-void* my_malloc(size_t size);
-void my_memcpy(void* dst, void* src, size_t len);
-void my_free(void* p);
+// naclbind-gen: -W malloc -W free -W memcpy
 void rot13(char* s, size_t len);
 
 // TODO(binji): Add support to directly convert char* -> String PP_Var
