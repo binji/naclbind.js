@@ -28,7 +28,9 @@ PYTHON_BINDINGS_DIR = os.path.join(ROOT_DIR, 'third_party', 'clang', 'bindings',
                                    'python')
 NACL_SDK_ROOT = os.getenv('NACL_SDK_ROOT')
 
-FILTER_ARGS = ('-cc1', '-main-file-name', '-v', '-triple', '-mrelocation-model',
+RENAME_ARGS = {'-triple': '-target'}
+
+FILTER_ARGS = ('-cc1', '-main-file-name', '-v', '-mrelocation-model',
     '-mdisable-fp-elim', '-mconstructor-aliases', '-target-linker-version',
     '-coverage-file', '-nostdsysteminc', '-fdebug-compilation-dir',
     '-ferror-limit', '-fmessage-length', '-emit-llvm-bc', '-fdeprecated-macro',
@@ -161,7 +163,10 @@ def GetIndexParseArgs(args):
   # Remove filename arg.
   new_args = new_args[:-1]
 
+  logging.info('Args = %r' % new_args)
+
   parsed_args = ParseClangArgs(new_args)
+  parsed_args = RenameParsedArgs(parsed_args, RENAME_ARGS)
   parsed_args = FilterParsedArgs(parsed_args, FILTER_ARGS)
   parsed_args = ExtendParsedClangArgs(parsed_args)
   new_args = UnparseClangArgs(parsed_args)
@@ -217,6 +222,17 @@ def ParseClangArgs(args):
     else:
       result.append((arg, None))
       i += 1
+  return result
+
+
+def RenameParsedArgs(args, to_rename):
+  result = []
+  for arg in args:
+    new_name = to_rename.get(arg[0])
+    if new_name:
+      result.append((new_name, arg[1]))
+    else:
+      result.append(arg)
   return result
 
 

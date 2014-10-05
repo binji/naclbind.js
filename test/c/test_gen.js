@@ -110,4 +110,8 @@ describe('C Generator Tests', function() {
   it('should succeed for test_restrict', function(done) {
     genAndRun('restrict.h', 'restrict.c', 'test_restrict.cc', done);
   });
+
+  it('should succeed for test_alignment', function(done) {
+    genAndRun('alignment.h', 'alignment.c', 'test_alignment.cc', done);
+  });
 });

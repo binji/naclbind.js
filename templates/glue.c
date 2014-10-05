@@ -21,6 +21,7 @@
 {{IncludeFile('c/error.h')}}
 {{IncludeFile('c/handle.h')}}
 {{IncludeFile('c/interfaces.h')}}
+{{IncludeFile('c/macros.h')}}
 {{IncludeFile('c/message.h')}}
 {{IncludeFile('c/queue.h')}}
 {{IncludeFile('c/run.h')}}
@@ -42,6 +43,17 @@
 /* ========================================================================== */
 
 #include "{{filename}}"
+
+[[for type in collector.types_topo:]]
+[[  if type.kind != TypeKind.RECORD:]]
+[[    continue]]
+[[  ]]
+[[  if type.get_size() > 0:]]
+COMPILE_ASSERT(sizeof({{type.spelling}}) == {{type.get_size()}});
+[[  for name, ftype, offset in type.fields():]]
+COMPILE_ASSERT(offsetof({{type.spelling}}, {{name}}) == {{offset}});
+[[  ]]
+[[]]
 
 [[for fn in collector.functions:]]
 static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_idx) {
