@@ -42,7 +42,7 @@ var tags = {},
 [[  if type.kind == TypeKind.UNEXPOSED:]]
 [[    type = type.get_canonical()]]
 [[  elif type.kind == TypeKind.TYPEDEF:]]
-{{type.js_inline}} = type.Typedef('{{type.GetName()}}', {{type.get_canonical().js_inline}});
+{{type.js_inline}} = type.Typedef('{{type.GetName()}}', {{type.GetUnderlyingTypedefType().js_inline}});
 [[  elif type.kind == TypeKind.RECORD:]]
 [[    if type.get_declaration().kind == CursorKind.UNION_DECL:]]
 [[      record_type = 'type.UNION']]

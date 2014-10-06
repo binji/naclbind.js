@@ -542,7 +542,7 @@ def Mangle(t, canonical=True):
     ret += 'P' + Mangle(t.get_pointee())
   elif t.kind == TypeKind.TYPEDEF:
     if canonical:
-      ret += Mangle(t.get_canonical())
+      ret += Mangle(t.get_declaration().underlying_typedef_type)
     else:
       ret += MangleName(SpellingBaseName(t))
   elif t.kind in (TypeKind.RECORD, TypeKind.ENUM):
@@ -595,6 +595,9 @@ class Type(object):
                                 TypeKind.ENUM.value):
       return SpellingBaseName(self.type)
     raise Error('Don\'t know how to get name of type %s' % self.type.spelling)
+
+  def GetUnderlyingTypedefType(self):
+    return Type(self.type.get_declaration().underlying_typedef_type)
 
   def argument_types(self):
     for t in self.type.argument_types():
@@ -685,7 +688,9 @@ class Type(object):
       return t1 == t2
     elif t1.kind == TypeKind.FUNCTIONNOPROTO:
       return t1 == t2
-    elif t1.kind in (TypeKind.TYPEDEF, TypeKind.UNEXPOSED):
+    elif t1.kind == TypeKind.TYPEDEF:
+      return self.GetUnderlyingTypedefType() == other.GetUnderlyingTypedefType()
+    elif t1.kind == TypeKind.UNEXPOSED:
       return self.get_canonical() == other.get_canonical()
     else:
       print t1.kind, t1.spelling, t2.spelling
@@ -705,7 +710,9 @@ class Type(object):
       return hash(self.get_pointee())
     elif self.type.kind == TypeKind.CONSTANTARRAY:
       return hash(self.get_array_element_type()) ^ hash(self.get_array_size())
-    elif self.type.kind in (TypeKind.TYPEDEF, TypeKind.UNEXPOSED):
+    elif self.type.kind == TypeKind.TYPEDEF:
+      return hash(self.GetUnderlyingTypedefType())
+    elif self.type.kind == TypeKind.UNEXPOSED:
       return hash(self.get_canonical())
     else:
       return hash(self.type.spelling)
@@ -761,7 +768,7 @@ class Collector(object):
 
     deps = []
     if t.kind == TypeKind.TYPEDEF:
-      deps.append(t.get_canonical())
+      deps.append(t.GetUnderlyingTypedefType())
     elif t.kind == TypeKind.UNEXPOSED:
       self._VisitType(t.get_canonical())
       return

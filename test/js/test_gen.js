@@ -332,9 +332,17 @@ describe('Generate JS', function() {
       var voidp = type.Pointer(type.void),
           charp = type.Pointer(type.char);
 
-      assert.strictEqual(3, m.$functionsCount);
-      assert.strictEqual(3, m.$typesCount);
-      assert.strictEqual(0, m.$tagsCount);
+      assert.strictEqual(4, m.$functionsCount);
+      assert.strictEqual(5, m.$typesCount);
+      assert.strictEqual(1, m.$tagsCount);
+
+      assert.ok(m.$tags.s1);
+      assert.strictEqual('s1', m.$tags.s1.tag);
+      assert.strictEqual(4, m.$tags.s1.size);
+      assert.strictEqual(1, m.$tags.s1.fields.length);
+      assert.strictEqual(false, m.$tags.s1.isUnion);
+      assertFieldsEqual(m.$tags.s1.fields[0],
+                        'f', type.Pointer(m.$types.t4), 0);
 
       assert.ok(m.$types.t1);
       assert.strictEqual('t1', m.$types.t1.tag);
@@ -346,7 +354,15 @@ describe('Generate JS', function() {
 
       assert.ok(m.$types.t3);
       assert.strictEqual('t3', m.$types.t3.tag);
-      assertTypesEqual(charp, m.$types.t3.alias);
+      assertTypesEqual(type.Pointer(m.$types.t1), m.$types.t3.alias);
+
+      assert.ok(m.$types.t4);
+      assert.strictEqual('t4', m.$types.t4.tag);
+      assertTypesEqual(m.$tags.s1, m.$types.t4.alias);
+
+      assert.ok(m.$types.t5);
+      assert.strictEqual('t5', m.$types.t5.tag);
+      assertTypesEqual(m.$types.t4, m.$types.t5.alias);
 
       assert.ok(m.f1);
       assert.strictEqual(m.f1.types.length, 1);
@@ -359,6 +375,12 @@ describe('Generate JS', function() {
       assert.ok(m.f3);
       assert.strictEqual(m.f3.types.length, 1);
       assertTypesEqual(type.Function(type.void, [charp]), m.f3.types[0]);
+
+      assert.ok(m.f4);
+      assert.strictEqual(m.f4.types.length, 1);
+      // Not t5 because functions are defined with the canonical type.
+      assertTypesEqual(type.Function(type.void, [type.Pointer(m.$tags.s1)]),
+                       m.f4.types[0]);
 
       done();
     })
