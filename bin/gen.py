@@ -46,7 +46,7 @@ class OptionParser(optparse.OptionParser):
       del kwargs['ignore_error']
     optparse.OptionParser.__init__(self, *args, **kwargs)
 
-    self.add_option('-v', '--verbose', action='store_true')
+    self.add_option('-v', '--verbose', action='count')
     self.add_option('-w', '--whitelist-file', action='append', default=[])
     self.add_option('-W', '--whitelist-symbol', action='append', default=[])
     self.add_option('-b', '--blacklist-file', action='append', default=[])
@@ -754,8 +754,9 @@ class Collector(object):
     self.function_types = {}
 
   def _VisitFunctionDecl(self, f):
-    self._VisitType(f.result_type)
+    logging.debug('+Visiting Function %s' % f.spelling)
 
+    self._VisitType(f.result_type)
     for child in f.get_children():
       if child.kind == CursorKind.PARM_DECL:
         self._VisitType(child.type)
@@ -767,13 +768,15 @@ class Collector(object):
       self.function_types[t] = []
     self.function_types[t].append(f)
 
-  def _VisitType(self, t, level=0):
+    logging.debug('-Visiting Function %s' % f.spelling)
+
+  def _VisitType(self, t, level=1):
     t = Type(t)
 
-    logging.debug(' '*level,'+Visiting %s' % t.spelling)
+    logging.debug('%s+Visiting Type %s' % (' '*level, t.spelling))
 
     if t in self.types:
-      logging.debug(' '*level,'  Skipping %s' % t.spelling)
+      logging.debug('%s  Skipping %s' % (' '*level, t.spelling))
       return
 
     deps = []
@@ -804,7 +807,7 @@ class Collector(object):
     for dep in deps:
       self._VisitType(dep, level+1)
 
-    logging.debug(' '*level,'-Done with %s' % t.spelling)
+    logging.debug('%s-Done with %s' % (' '*level, t.spelling))
 
     self.types_topo.append(t)
 
@@ -874,7 +877,9 @@ def main(args):
   logging.basicConfig(format='%(levelname)s: %(message)s')
   parser = OptionParser()
   options, args = parser.parse_args(args)
-  if options.verbose:
+  if options.verbose >= 2:
+    logging.getLogger().setLevel(logging.DEBUG)
+  elif options.verbose >= 1:
     logging.getLogger().setLevel(logging.INFO)
 
   if not options.template:
