@@ -551,4 +551,33 @@ describe('Generate JS', function() {
       done();
     });
   });
+
+  it('should handle type dependencies', function(done) {
+    genFile('data/deps.h', function(error, m, type) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(2, m.$functionsCount);
+      assert.strictEqual(1, m.$typesCount);
+      assert.strictEqual(1, m.$tagsCount);
+
+      assert.ok(m.$types.foo);
+      assert.strictEqual('foo', m.$types.foo.tag);
+      assertTypesEqual(type.int, m.$types.foo.alias);
+      assert.strictEqual('foo', m.$types.foo.spelling);
+
+      assert.ok(m.$tags.bar);
+      assert.strictEqual('bar', m.$tags.bar.tag);
+      assert.strictEqual(8, m.$tags.bar.size);
+      assert.strictEqual(1, m.$tags.bar.fields.length);
+      assert.strictEqual(false, m.$tags.bar.isUnion);
+
+      assertFieldsEqual(m.$tags.bar.fields[0],
+                        'stuff', type.Array(m.$types.foo, 2), 0);
+
+      done();
+    });
+
+  });
 });

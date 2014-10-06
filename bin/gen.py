@@ -767,6 +767,10 @@ class Collector(object):
       return
     elif t.kind == TypeKind.POINTER:
       deps.append(t.get_pointee())
+    elif t.kind == TypeKind.CONSTANTARRAY:
+      deps.append(t.get_array_element_type())
+    elif t.kind == TypeKind.INCOMPLETEARRAY:
+      deps.append(t.get_array_element_type())
     elif t.kind == TypeKind.FUNCTIONPROTO:
       deps.append(t.get_result())
       deps.extend(list(t.argument_types()))
