@@ -751,6 +751,8 @@ class Collector(object):
     self.function_types = {}
 
   def _VisitFunctionDecl(self, f):
+    self._VisitType(f.result_type)
+
     for child in f.get_children():
       if child.kind == CursorKind.PARM_DECL:
         self._VisitType(child.type)

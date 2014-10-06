@@ -449,8 +449,8 @@ describe('Generate JS', function() {
 
       s2.addField('f', type.int, 0);
 
-      assert.strictEqual(13, m.$functionsCount);
-      assert.strictEqual(0, m.$typesCount);
+      assert.strictEqual(14, m.$functionsCount);
+      assert.strictEqual(1, m.$typesCount);
       assert.strictEqual(3, m.$tagsCount);
 
       // Pointers
@@ -489,6 +489,10 @@ describe('Generate JS', function() {
       assert.ok(m.f8);
       assert.strictEqual(m.f8.types.length, 1);
       assertTypesEqual(type.Function(s1, []), m.f8.types[0]);
+
+      assert.ok(m.f14);
+      assert.strictEqual(m.f14.types.length, 1);
+      assertTypesEqual(type.Function(type.char, []), m.f14.types[0]);
 
       // Function pointers
       assert.ok(m.f9);

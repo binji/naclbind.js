@@ -1,6 +1,7 @@
 struct s1 {};
 struct s2 { int f; };
 union u1 {};
+typedef char t1;
 
 // Pointers.
 void f1(void*);
@@ -15,6 +16,7 @@ void f5(int, struct s2);
 int f6(int);
 void* f7(unsigned int);
 struct s1 f8(void);
+t1 f14(void);
 
 // Function pointers
 int f9(void (*)(int));
