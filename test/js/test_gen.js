@@ -532,17 +532,23 @@ describe('Generate JS', function() {
 
       assert.strictEqual(1, m.$functionsCount);
       assert.strictEqual(0, m.$typesCount);
-      assert.strictEqual(1, m.$tagsCount);
+      assert.strictEqual(2, m.$tagsCount);
 
-      assert.ok(m.$tags.List);
-      assert.strictEqual('List', m.$tags.List.tag);
-      assert.strictEqual(8, m.$tags.List.size);
-      assert.strictEqual(2, m.$tags.List.fields.length);
-      assert.strictEqual(false, m.$tags.List.isUnion);
+      assert.ok(m.$tags.A);
+      assert.strictEqual('A', m.$tags.A.tag);
+      assert.strictEqual(4, m.$tags.A.size);
+      assert.strictEqual(1, m.$tags.A.fields.length);
+      assert.strictEqual(false, m.$tags.A.isUnion);
 
-      assertFieldsEqual(m.$tags.List.fields[0], 'item', type.int, 0);
-      assertFieldsEqual(m.$tags.List.fields[1],
-                        'next', type.Pointer(m.$tags.List), 4);
+      assertFieldsEqual(m.$tags.A.fields[0], 'b', type.Pointer(m.$tags.B), 0);
+
+      assert.ok(m.$tags.B);
+      assert.strictEqual('B', m.$tags.B.tag);
+      assert.strictEqual(4, m.$tags.B.size);
+      assert.strictEqual(1, m.$tags.B.fields.length);
+      assert.strictEqual(false, m.$tags.B.isUnion);
+
+      assertFieldsEqual(m.$tags.B.fields[0], 'a', type.Pointer(m.$tags.A), 0);
 
       done();
     });

@@ -41,7 +41,7 @@ var tags = {},
 [[for type in collector.types_topo:]]
 [[  if type.kind == TypeKind.UNEXPOSED:]]
 [[    type = type.get_canonical()]]
-[[  if type.kind == TypeKind.TYPEDEF:]]
+[[  elif type.kind == TypeKind.TYPEDEF:]]
 {{type.js_inline}} = type.Typedef('{{type.GetName()}}', {{type.get_canonical().js_inline}});
 [[  elif type.kind == TypeKind.RECORD:]]
 [[    if type.get_declaration().kind == CursorKind.UNION_DECL:]]
@@ -50,14 +50,18 @@ var tags = {},
 [[      record_type = 'type.STRUCT']]
 [[    ]]
 {{type.js_inline}} = type.Record('{{type.GetName()}}', {{type.get_size()}}, {{record_type}});
-[[    for name, ftype, offset in type.fields():]]
-{{type.js_inline}}.addField('{{name}}', {{ftype.js_inline}}, {{offset}});
-[[    ]]
 [[  elif type.kind == TypeKind.ENUM:]]
 {{type.js_inline}} = type.Enum('{{type.GetName()}}');
 [[  else:]]
 // {{type.kind}} {{type.spelling}}
 [[  ]]
+[[]]
+
+[[for type in collector.types_topo:]]
+[[  if type.kind == TypeKind.RECORD:]]
+[[    for name, ftype, offset in type.fields():]]
+{{type.js_inline}}.addField('{{name}}', {{ftype.js_inline}}, {{offset}});
+[[    ]]
 [[]]
 
 [[for type, fns in collector.SortedFunctionTypes():]]

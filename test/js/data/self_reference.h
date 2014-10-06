@@ -1,6 +1,9 @@
-struct List {
-  int item;
-  struct List* next;
+struct A {
+  struct B* b;
 };
 
-void f(struct List*);
+struct B {
+  struct A* a;
+};
+
+void f(struct A*);
