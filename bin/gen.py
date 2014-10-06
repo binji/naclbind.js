@@ -689,7 +689,9 @@ class Type(object):
     elif t1.kind == TypeKind.FUNCTIONNOPROTO:
       return t1 == t2
     elif t1.kind == TypeKind.TYPEDEF:
-      return self.GetUnderlyingTypedefType() == other.GetUnderlyingTypedefType()
+      return (
+          t1.spelling == t2.spelling and
+          self.GetUnderlyingTypedefType() == other.GetUnderlyingTypedefType())
     elif t1.kind == TypeKind.UNEXPOSED:
       return self.get_canonical() == other.get_canonical()
     else:
@@ -711,7 +713,7 @@ class Type(object):
     elif self.type.kind == TypeKind.CONSTANTARRAY:
       return hash(self.get_array_element_type()) ^ hash(self.get_array_size())
     elif self.type.kind == TypeKind.TYPEDEF:
-      return hash(self.GetUnderlyingTypedefType())
+      return hash(self.type.spelling) ^ hash(self.GetUnderlyingTypedefType())
     elif self.type.kind == TypeKind.UNEXPOSED:
       return hash(self.get_canonical())
     else:
@@ -760,17 +762,20 @@ class Collector(object):
       self.function_types[t] = []
     self.function_types[t].append(f)
 
-  def _VisitType(self, t):
+  def _VisitType(self, t, level=0):
     t = Type(t)
 
+    logging.debug(' '*level,'+Visiting %s' % t.spelling)
+
     if t in self.types:
+      logging.debug(' '*level,'  Skipping %s' % t.spelling)
       return
 
     deps = []
     if t.kind == TypeKind.TYPEDEF:
       deps.append(t.GetUnderlyingTypedefType())
     elif t.kind == TypeKind.UNEXPOSED:
-      self._VisitType(t.get_canonical())
+      self._VisitType(t.get_canonical(), level+1)
       return
     elif t.kind == TypeKind.POINTER:
       deps.append(t.get_pointee())
@@ -792,7 +797,9 @@ class Collector(object):
     self.types.add(t)
 
     for dep in deps:
-      self._VisitType(dep)
+      self._VisitType(dep, level+1)
+
+    logging.debug(' '*level,'-Done with %s' % t.spelling)
 
     self.types_topo.append(t)
 

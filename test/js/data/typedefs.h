@@ -6,7 +6,10 @@ typedef struct s1 t4;
 struct s1 { t4* f; };
 typedef t4 t5;
 
+typedef char t6;
+
 void f1(t1);
 void f2(t2);
 void f3(t3);
 void f4(t5*);
+void f5(t6);
