@@ -30,6 +30,15 @@ extern "C" {
 
 typedef int32_t Handle;
 
+/* Size to use for default promotion (i.e. when passing to variadic functions */
+#ifdef __x86_64__
+typedef uint64_t nb_vararg_int_t;
+typedef double nb_vararg_dbl_t;
+#else
+typedef uint32_t nb_vararg_int_t;
+typedef double nb_vararg_dbl_t;
+#endif
+
 int32_t nb_handle_count(void);
 bool nb_handle_register_int8(Handle, int8_t);
 bool nb_handle_register_uint8(Handle, uint8_t);
@@ -56,6 +65,9 @@ bool nb_handle_get_double(Handle, double*);
 bool nb_handle_get_voidp(Handle, void**);
 bool nb_handle_get_charp(Handle, char**);
 bool nb_handle_get_var(Handle, struct PP_Var*);
+bool nb_handle_get_default(Handle,
+                           nb_vararg_int_t** iargs, nb_vararg_int_t* max_iargs,
+                           nb_vararg_dbl_t** dargs, nb_vararg_dbl_t* max_dargs);
 void nb_handle_destroy(Handle);
 void nb_handle_destroy_many(Handle*, uint32_t handles_count);
 bool nb_handle_convert_to_var(Handle, struct PP_Var*);

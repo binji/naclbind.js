@@ -58,6 +58,7 @@ function genAndRun(header, source, testSource, callback) {
             'jsoncpp', 'ppapi_simple', 'gtest', 'nacl_io', 'ppapi_cpp', 'ppapi'
           ]
         },
+        translate: {}
       },
       genOpts = {
         template: 'glue.c',
@@ -113,5 +114,9 @@ describe('C Generator Tests', function() {
 
   it('should succeed for test_alignment', function(done) {
     genAndRun('alignment.h', 'alignment.c', 'test_alignment.cc', done);
+  });
+
+  it('should succeed for test_variadic', function(done) {
+    genAndRun('variadic.h', 'variadic.c', 'test_variadic.cc', done);
   });
 });

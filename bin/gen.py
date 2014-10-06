@@ -54,6 +54,8 @@ class OptionParser(optparse.OptionParser):
     self.add_option('-t', '--template')
     self.add_option('-m', '--module-name', default='naclbind_gen')
     self.add_option('-o', '--output')
+    self.add_option('--max-int-varargs', default=6)
+    self.add_option('--max-double-varargs', default=2)
 
   def error(self, msg):
     if self.ignore_error:
@@ -923,6 +925,8 @@ def main(args):
   template_dict.module_name = options.module_name
   template_dict.IncludeFile = IncludeFile
   template_dict.Error = Error
+  template_dict.MAX_INT_VARARGS = options.max_int_varargs
+  template_dict.MAX_DBL_VARARGS = options.max_double_varargs
 
   out_text = easy_template.RunTemplateString(template, template_dict)
 

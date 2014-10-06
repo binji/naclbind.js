@@ -45,6 +45,21 @@
 #include "{{filename}}"
 #include <stdarg.h>
 
+#define MAX_INT_VARARGS {{MAX_INT_VARARGS}}
+#define MAX_DBL_VARARGS {{MAX_DBL_VARARGS}}
+
+[[[
+def FuncCall(fname, nargs, iargs, dargs):
+  args = []
+  for i in xrange(nargs):
+    args.append('arg%d' % i)
+  for i in xrange(iargs):
+    args.append('iargs[%d]' % i)
+  for i in xrange(dargs):
+    args.append('dargs[%d]' % i)
+  return '%s(%s)' % (fname, ', '.join(args))
+]]]
+
 [[for type in collector.types_topo:]]
 [[  if type.kind != TypeKind.RECORD or type.IsAnonymous():]]
 [[    continue]]
@@ -62,8 +77,13 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
 [[  if fn.type.kind == TypeKind.FUNCTIONPROTO:]]
 [[    arguments = list(fn.type.argument_types())]]
   int arg_count = nb_message_command_arg_count(message, command_idx);
+[[    if fn.type.is_function_variadic():]]
+  if (arg_count < {{len(arguments)}}) {
+    VERROR("Expected at least %d args, got %d.", {{len(arguments)}}, arg_count);
+[[    else:]]
   if (arg_count != {{len(arguments)}}) {
     VERROR("Expected %d args, got %d.", {{len(arguments)}}, arg_count);
+[[    ]]
     return FALSE;
   }
 [[    for i, arg in enumerate(arguments):]]
@@ -177,8 +197,23 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
   ERROR("Type {{arg.spelling}} is not currently supported.");
 [[    ]]
 [[    if fn.type.is_function_variadic():]]
-  // UNSUPPORTED: variadic function.
-  ERROR("Variadic functions are not currently supported.");
+  nb_vararg_int_t iargs[MAX_INT_VARARGS];
+  nb_vararg_int_t* iargsp = iargs;
+  nb_vararg_int_t* iargs_end = &iargs[MAX_INT_VARARGS];
+  nb_vararg_dbl_t dargs[MAX_DBL_VARARGS];
+  nb_vararg_dbl_t* dargsp = dargs;
+  nb_vararg_dbl_t* dargs_end = &dargs[MAX_DBL_VARARGS];
+  int i;
+  for (i = 0; i < arg_count - {{len(arguments)}}; ++i) {
+    Handle handle = nb_message_command_arg(message, command_idx, i + {{len(arguments)}});
+    if (!nb_handle_get_default(handle, &iargsp, iargs_end,
+                                       &dargsp, dargs_end)) {
+      ERROR("Failed to add variadic argument.");
+      return FALSE;
+    }
+  }
+  size_t iarg_count = iargsp - iargs;
+  size_t darg_count = dargsp - dargs;
 [[  elif fn.type.kind == TypeKind.FUNCTIONNOPROTO:]]
   int arg_count = nb_message_command_arg_count(message, command_idx);
   if (arg_count != 0) {
@@ -196,7 +231,39 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     return FALSE;
   }
   Handle ret = nb_message_command_ret(message, command_idx);
-  {{result_type.spelling}} result = {{fn.spelling}}({{', '.join('arg%d' % i for i in range(len(arguments)))}});
+[[    if fn.type.kind == TypeKind.FUNCTIONPROTO and fn.type.is_function_variadic():]]
+  {{result_type.spelling}} result;
+#ifdef __x86_64__
+  /* This relies on the fact that the x86_64 calling convention for variadic
+   * functions does not preserve ordering w.r.t. floating-point values. We can
+   * push them all to the end of the call and they still will be retrieved in
+   * the correct order by the callee.
+   */
+  switch (iarg_count) {
+[[      for j in range(MAX_INT_VARARGS + 1):]]
+    case {{j}}:
+      switch (darg_count) {
+[[        for k in range(MAX_DBL_VARARGS + 1):]]
+        case {{k}}: result = {{FuncCall(fn.spelling, len(arguments), j, k)}}; break;
+[[        ]]
+        default: assert(!"darg_count >= {{MAX_DBL_VARARGS + 1}}"); return FALSE;
+      }
+      break;
+[[      ]]
+    default: assert(!"iarg_count >= {{MAX_INT_VARARGS + 1}}"); return FALSE;
+  }
+#else
+  (void)darg_count;
+  switch (iarg_count) {
+[[      for j in range(MAX_INT_VARARGS + 1):]]
+    case {{j}}: result = {{FuncCall(fn.spelling, len(arguments), j, 0)}}; break;
+[[      ]]
+    default: assert(!"iarg_count >= {{MAX_INT_VARARGS + 1}}"); return FALSE;
+  }
+#endif
+[[    else:]]
+  {{result_type.spelling}} result = {{FuncCall(fn.spelling, len(arguments), 0, 0)}};
+[[    ]]
 [[    if result_type.kind in (TypeKind.SCHAR, TypeKind.CHAR_S):]]
   bool register_ok = nb_handle_register_int8(ret, result);
 [[    elif result_type.kind in (TypeKind.UCHAR, TypeKind.CHAR_U):]]

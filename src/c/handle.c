@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ppapi/c/pp_var.h>
@@ -606,6 +607,164 @@ bool nb_handle_get_double(Handle handle, double* out_value) {
   TYPE_SWITCH(TYPE_DOUBLE);
 }
 
+#undef TYPE_INT8_MIN
+#undef TYPE_INT8_MAX
+#undef TYPE_INT16_MIN
+#undef TYPE_INT16_MAX
+#undef TYPE_INT32_MIN
+#undef TYPE_INT32_MAX
+#undef TYPE_INT64_MIN
+#undef TYPE_INT64_MAX
+#undef TYPE_UINT8_MIN
+#undef TYPE_UINT8_MAX
+#undef TYPE_UINT16_MIN
+#undef TYPE_UINT16_MAX
+#undef TYPE_UINT32_MIN
+#undef TYPE_UINT32_MAX
+#undef TYPE_UINT64_MIN
+#undef TYPE_UINT64_MAX
+#undef TYPE_FLOAT_MIN_24
+#undef TYPE_FLOAT_MAX_24
+#undef TYPE_DOUBLE_MIN_53
+#undef TYPE_DOUBLE_MAX_53
+#undef TYPE_INT8_FMT
+#undef TYPE_INT16_FMT
+#undef TYPE_INT32_FMT
+#undef TYPE_INT64_FMT
+#undef TYPE_UINT8_FMT
+#undef TYPE_UINT16_FMT
+#undef TYPE_UINT32_FMT
+#undef TYPE_UINT64_FMT
+#undef TYPE_FLOAT_FMT
+#undef TYPE_DOUBLE_FMT
+#undef TYPE_INT8_FIELD
+#undef TYPE_INT16_FIELD
+#undef TYPE_INT32_FIELD
+#undef TYPE_INT64_FIELD
+#undef TYPE_UINT8_FIELD
+#undef TYPE_UINT16_FIELD
+#undef TYPE_UINT32_FIELD
+#undef TYPE_UINT64_FIELD
+#undef TYPE_FLOAT_FIELD
+#undef TYPE_DOUBLE_FIELD
+#undef HOBJ_FIELD
+#undef TYPE_SWITCH
+#undef TYPE_CASE
+#undef CHECK_TYPE_INT8_TYPE_INT8
+#undef CHECK_TYPE_INT8_TYPE_INT16
+#undef CHECK_TYPE_INT8_TYPE_INT32
+#undef CHECK_TYPE_INT8_TYPE_INT64
+#undef CHECK_TYPE_INT8_TYPE_UINT8
+#undef CHECK_TYPE_INT8_TYPE_UINT16
+#undef CHECK_TYPE_INT8_TYPE_UINT32
+#undef CHECK_TYPE_INT8_TYPE_UINT64
+#undef CHECK_TYPE_INT8_TYPE_FLOAT
+#undef CHECK_TYPE_INT8_TYPE_DOUBLE
+#undef CHECK_TYPE_UINT8_TYPE_INT8
+#undef CHECK_TYPE_UINT8_TYPE_INT16
+#undef CHECK_TYPE_UINT8_TYPE_INT32
+#undef CHECK_TYPE_UINT8_TYPE_INT64
+#undef CHECK_TYPE_UINT8_TYPE_UINT8
+#undef CHECK_TYPE_UINT8_TYPE_UINT16
+#undef CHECK_TYPE_UINT8_TYPE_UINT32
+#undef CHECK_TYPE_UINT8_TYPE_UINT64
+#undef CHECK_TYPE_UINT8_TYPE_FLOAT
+#undef CHECK_TYPE_UINT8_TYPE_DOUBLE
+#undef CHECK_TYPE_INT16_TYPE_INT8
+#undef CHECK_TYPE_INT16_TYPE_INT16
+#undef CHECK_TYPE_INT16_TYPE_INT32
+#undef CHECK_TYPE_INT16_TYPE_INT64
+#undef CHECK_TYPE_INT16_TYPE_UINT8
+#undef CHECK_TYPE_INT16_TYPE_UINT16
+#undef CHECK_TYPE_INT16_TYPE_UINT32
+#undef CHECK_TYPE_INT16_TYPE_UINT64
+#undef CHECK_TYPE_INT16_TYPE_FLOAT
+#undef CHECK_TYPE_INT16_TYPE_DOUBLE
+#undef CHECK_TYPE_UINT16_TYPE_INT8
+#undef CHECK_TYPE_UINT16_TYPE_INT16
+#undef CHECK_TYPE_UINT16_TYPE_INT32
+#undef CHECK_TYPE_UINT16_TYPE_INT64
+#undef CHECK_TYPE_UINT16_TYPE_UINT8
+#undef CHECK_TYPE_UINT16_TYPE_UINT16
+#undef CHECK_TYPE_UINT16_TYPE_UINT32
+#undef CHECK_TYPE_UINT16_TYPE_UINT64
+#undef CHECK_TYPE_UINT16_TYPE_FLOAT
+#undef CHECK_TYPE_UINT16_TYPE_DOUBLE
+#undef CHECK_TYPE_INT32_TYPE_INT8
+#undef CHECK_TYPE_INT32_TYPE_INT16
+#undef CHECK_TYPE_INT32_TYPE_INT32
+#undef CHECK_TYPE_INT32_TYPE_INT64
+#undef CHECK_TYPE_INT32_TYPE_UINT8
+#undef CHECK_TYPE_INT32_TYPE_UINT16
+#undef CHECK_TYPE_INT32_TYPE_UINT32
+#undef CHECK_TYPE_INT32_TYPE_UINT64
+#undef CHECK_TYPE_INT32_TYPE_FLOAT
+#undef CHECK_TYPE_INT32_TYPE_DOUBLE
+#undef CHECK_TYPE_UINT32_TYPE_INT8
+#undef CHECK_TYPE_UINT32_TYPE_INT16
+#undef CHECK_TYPE_UINT32_TYPE_INT32
+#undef CHECK_TYPE_UINT32_TYPE_INT64
+#undef CHECK_TYPE_UINT32_TYPE_UINT8
+#undef CHECK_TYPE_UINT32_TYPE_UINT16
+#undef CHECK_TYPE_UINT32_TYPE_UINT32
+#undef CHECK_TYPE_UINT32_TYPE_UINT64
+#undef CHECK_TYPE_UINT32_TYPE_FLOAT
+#undef CHECK_TYPE_UINT32_TYPE_DOUBLE
+#undef CHECK_TYPE_INT64_TYPE_INT8
+#undef CHECK_TYPE_INT64_TYPE_INT16
+#undef CHECK_TYPE_INT64_TYPE_INT32
+#undef CHECK_TYPE_INT64_TYPE_INT64
+#undef CHECK_TYPE_INT64_TYPE_UINT8
+#undef CHECK_TYPE_INT64_TYPE_UINT16
+#undef CHECK_TYPE_INT64_TYPE_UINT32
+#undef CHECK_TYPE_INT64_TYPE_UINT64
+#undef CHECK_TYPE_INT64_TYPE_FLOAT
+#undef CHECK_TYPE_INT64_TYPE_DOUBLE
+#undef CHECK_TYPE_UINT64_TYPE_INT8
+#undef CHECK_TYPE_UINT64_TYPE_INT16
+#undef CHECK_TYPE_UINT64_TYPE_INT32
+#undef CHECK_TYPE_UINT64_TYPE_INT64
+#undef CHECK_TYPE_UINT64_TYPE_UINT8
+#undef CHECK_TYPE_UINT64_TYPE_UINT16
+#undef CHECK_TYPE_UINT64_TYPE_UINT32
+#undef CHECK_TYPE_UINT64_TYPE_UINT64
+#undef CHECK_TYPE_UINT64_TYPE_FLOAT
+#undef CHECK_TYPE_UINT64_TYPE_DOUBLE
+#undef CHECK_TYPE_FLOAT_TYPE_INT8
+#undef CHECK_TYPE_FLOAT_TYPE_INT16
+#undef CHECK_TYPE_FLOAT_TYPE_INT32
+#undef CHECK_TYPE_FLOAT_TYPE_INT64
+#undef CHECK_TYPE_FLOAT_TYPE_UINT8
+#undef CHECK_TYPE_FLOAT_TYPE_UINT16
+#undef CHECK_TYPE_FLOAT_TYPE_UINT32
+#undef CHECK_TYPE_FLOAT_TYPE_UINT64
+#undef CHECK_TYPE_FLOAT_TYPE_FLOAT
+#undef CHECK_TYPE_FLOAT_TYPE_DOUBLE
+#undef CHECK_TYPE_DOUBLE_TYPE_INT8
+#undef CHECK_TYPE_DOUBLE_TYPE_INT16
+#undef CHECK_TYPE_DOUBLE_TYPE_INT32
+#undef CHECK_TYPE_DOUBLE_TYPE_INT64
+#undef CHECK_TYPE_DOUBLE_TYPE_UINT8
+#undef CHECK_TYPE_DOUBLE_TYPE_UINT16
+#undef CHECK_TYPE_DOUBLE_TYPE_UINT32
+#undef CHECK_TYPE_DOUBLE_TYPE_UINT64
+#undef CHECK_TYPE_DOUBLE_TYPE_FLOAT
+#undef CHECK_TYPE_DOUBLE_TYPE_DOUBLE
+#undef DEFAULT_TYPE_CASE
+#undef CHECK
+#undef CHECK_MAX
+#undef CHECK_GT_ZERO
+#undef CHECK_MAX_GT_ZERO
+#undef CHECK_SIGN
+#undef CHECK_FLOAT_TO_INT
+#undef CHECK_FLOAT_TO_INT64
+#undef CHECK_DOUBLE_TO_INT
+#undef CHECK_INT_TO_FLOAT
+#undef CHECK_MAX_INT_TO_FLOAT
+#undef CHECK_INT_TO_DOUBLE
+#undef CHECK_MAX_INT_TO_DOUBLE
+#undef CHECK_ERROR
+
 static bool nb_hobj_string_value(struct HandleObject* hobj, char** out_value) {
   if (hobj->string_value == NULL) {
     uint32_t len;
@@ -684,6 +843,116 @@ bool nb_handle_get_var(Handle handle, struct PP_Var* out_value) {
   *out_value = hobj.value.var;
   return TRUE;
 }
+
+bool nb_handle_get_default(
+    Handle handle,
+    nb_vararg_int_t** iargs, nb_vararg_int_t* max_iargs,
+    nb_vararg_dbl_t** dargs, nb_vararg_dbl_t* max_dargs) {
+  struct HandleObject hobj;
+  if (!get_handle(handle, &hobj)) {
+    return FALSE;
+  }
+
+#define CHECK(args, max_args, needed, type) \
+  if (args + needed - 1 >= max_args) { \
+    ERROR("Too many "type"args passed."); \
+    return FALSE; \
+  }
+
+#ifdef __x86_64__
+#define PUSH_INT(field) \
+  CHECK(*iargs, max_iargs, 1, "non-float ") \
+  *(*iargs)++ = (uint64_t)(int64_t) hobj.value.field
+
+#define PUSH_UINT(field) \
+  CHECK(*iargs, max_iargs, 1, "non-float ") \
+  *(*iargs)++ = (uint64_t) hobj.value.field
+
+#define PUSH_INT64(field) PUSH_INT(field)
+#define PUSH_UINT64(field) PUSH_UINT(field)
+
+#define PUSH_DOUBLE(field) \
+  CHECK(*dargs, max_dargs, 1, "float ") \
+  *(*dargs)++ = (double) hobj.value.field
+
+#define PUSH_VOIDP(field) \
+  CHECK(*iargs, max_iargs, 1, "non-float ") \
+  *(*iargs)++ = (uint64_t)(uint32_t) hobj.value.field
+
+#else
+
+  union {
+    struct {
+      uint32_t lo;
+      uint32_t hi;
+    };
+    int32_t int32;
+    uint32_t uint32;
+    int64_t int64;
+    uint64_t uint64;
+    double float64;
+  } x;
+
+#define PUSH_INT(field) \
+  CHECK(*iargs, max_iargs, 1, "") \
+  x.int32 = hobj.value.field; \
+  *(*iargs)++ = x.lo
+
+#define PUSH_UINT(field) \
+  CHECK(*iargs, max_iargs, 1, "") \
+  x.uint32 = hobj.value.field; \
+  *(*iargs)++ = x.lo
+
+#define PUSH_INT64(field) \
+  CHECK(*iargs, max_iargs, 2, "") \
+  x.int64 = hobj.value.field; \
+  *(*iargs)++ = x.lo; \
+  *(*iargs)++ = x.hi
+
+#define PUSH_UINT64(field) \
+  CHECK(*iargs, max_iargs, 2, "") \
+  x.uint64 = hobj.value.field; \
+  *(*iargs)++ = x.lo; \
+  *(*iargs)++ = x.hi
+
+#define PUSH_DOUBLE(field) \
+  CHECK(*iargs, max_iargs, 2, "") \
+  x.float64 = hobj.value.field; \
+  *(*iargs)++ = x.lo; \
+  *(*iargs)++ = x.hi
+
+#define PUSH_VOIDP(field) \
+  CHECK(*iargs, max_iargs, 1, "") \
+  *(*iargs)++ = (uint32_t) hobj.value.field
+#endif
+
+  switch (hobj.type) {
+    case TYPE_INT8: PUSH_INT(int8); return TRUE;
+    case TYPE_UINT8: PUSH_UINT(uint8); return TRUE;
+    case TYPE_INT16: PUSH_INT(int16); return TRUE;
+    case TYPE_UINT16: PUSH_INT(uint16); return TRUE;
+    case TYPE_INT32: PUSH_INT(int32); return TRUE;
+    case TYPE_UINT32: PUSH_UINT(uint32); return TRUE;
+    case TYPE_INT64: PUSH_INT64(int64); return TRUE;
+    case TYPE_UINT64: PUSH_UINT64(uint64); return TRUE;
+    case TYPE_FLOAT: PUSH_DOUBLE(float32); return TRUE;
+    case TYPE_DOUBLE: PUSH_DOUBLE(float64); return TRUE;
+    case TYPE_VOID_P: PUSH_VOIDP(voidp); return TRUE;
+
+    default:
+      VERROR("Invalid type %s, can\'t make default promotion.",
+             nb_type_to_string(hobj.type));
+      return FALSE;
+  }
+}
+
+#undef CHECK
+#undef PUSH_INT
+#undef PUSH_UINT
+#undef PUSH_INT64
+#undef PUSH_UINT64
+#undef PUSH_DOUBLE
+#undef PUSH_VOIDP
 
 void nb_handle_destroy(Handle handle) {
   struct HandleMapPair* pair = NULL;
