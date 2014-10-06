@@ -14,6 +14,7 @@
 
 var chai = require('chai'),
     assert = chai.assert,
+    assertTypesEqual = require('./equals').assertTypesEqual,
     naclbind = require('../../src/js/naclbind'),
     NaClEmbed = require('./nacl_embed_for_testing'),
     Embed = naclbind.Embed,
@@ -22,10 +23,6 @@ var chai = require('chai'),
     type = naclbind.type;
 
 chai.config.includeStack = true;
-
-function assertTypesEqual(t1, t2) {
-  assert.ok(t1.equals(t2), t1.spelling + ' != ' + t2.spelling);
-}
 
 describe('Module', function() {
   it('should start with an empty message', function() {

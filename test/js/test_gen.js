@@ -15,17 +15,13 @@
 var chai = require('chai'),
     assert = chai.assert,
     gen = require('naclbind-gen'),
-    path = require('path');
+    path = require('path'),
+    assertTypesEqual = require('./equals').assertTypesEqual;
 
 chai.config.includeStack = true;
 
 function appendPath(s, path) {
   return s.split(':').concat([path]).join(':');
-}
-
-function assertTypesEqual(t1, t2) {
-  assert.ok(t1.equals(t2), 'types aren\'t equal: ' +
-                           t1.spelling + ' != ' + t2.spelling);
 }
 
 function assertFieldsEqual(f, name, type, offset) {
@@ -75,7 +71,7 @@ describe('Generate JS', function() {
       assert.strictEqual(1, m.$functionsCount);
       assert.ok(m.foo);
       assert.strictEqual(1, m.foo.types.length);
-      assert.ok(expected.equals(m.foo.types[0]));
+      assertTypesEqual(expected, m.foo.types[0]);
       assert.strictEqual(0, m.$typesCount);
       assert.strictEqual(0, m.$tagsCount);
       done();

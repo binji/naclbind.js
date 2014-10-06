@@ -1231,9 +1231,6 @@ var type = (function(utils) {
   Type.prototype.canCastTo = function(that) {
     return canCast(this, that);
   };
-  Type.prototype.equals = function(that) {
-    return this.kind === that.kind && this.cv === that.cv;
-  };
 
   function Void(cv) {
     if (!(this instanceof Void)) { return new Void(cv); }
@@ -1248,9 +1245,6 @@ var type = (function(utils) {
   Void.prototype.unqualified = function() {
     return Void();
   };
-  Void.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that);
-  };
 
   function Numeric(kind, cv) {
     if (!(this instanceof Numeric)) { return new Numeric(kind, cv); }
@@ -1264,9 +1258,6 @@ var type = (function(utils) {
   };
   Numeric.prototype.unqualified = function() {
     return Numeric(this.kind);
-  };
-  Numeric.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that);
   };
 
   function Pointer(pointee, cv) {
@@ -1285,10 +1276,6 @@ var type = (function(utils) {
   };
   Pointer.prototype.unqualified = function() {
     return Pointer(this.pointee);
-  };
-  Pointer.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that) &&
-           this.pointee.equals(that.pointee);
   };
 
   function Record(tag, size, isUnion, cv) {
@@ -1325,14 +1312,6 @@ var type = (function(utils) {
   Record.prototype.addField = function(name, type, offset) {
     this.fields.push(Field(name, type, offset));
   };
-  Record.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that) &&
-           this.tag === that.tag &&
-           this.size === that.size &&
-           utils.everyArrayPair(this.fields, that.fields,
-               function(f1, f2) { return f1.equals(f2); }) &&
-           this.isUnion === that.isUnion;
-  };
 
   function Field(name, type, offset) {
     if (!(this instanceof Field)) { return new Field(name, type, offset); }
@@ -1345,11 +1324,6 @@ var type = (function(utils) {
     this.type = type;
     this.offset = offset;
   }
-  Field.prototype.equals = function(that) {
-    return this.name === that.name &&
-           this.type.equals(that.type) &&
-           this.offset === that.offset;
-  };
 
 
   function Enum(tag, cv) {
@@ -1369,10 +1343,6 @@ var type = (function(utils) {
   Enum.prototype.unqualified = function() {
     return Enum(this.tag);
   };
-  Enum.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that) &&
-           this.tag === that.tag;
-  };
 
   function Typedef(tag, alias, cv) {
     if (!(this instanceof Typedef)) { return new Typedef(tag, alias, cv); }
@@ -1388,11 +1358,6 @@ var type = (function(utils) {
   };
   Typedef.prototype.unqualified = function() {
     return Typedef(this.tag, this.alias);
-  };
-  Typedef.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that) &&
-           this.tag === that.tag &&
-           this.alias.equals(that.alias);
   };
 
   function FunctionProto(resultType, argTypes, variadic) {
@@ -1431,12 +1396,6 @@ var type = (function(utils) {
   FunctionProto.prototype.unqualified = function() {
     return this;
   };
-  FunctionProto.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that) &&
-           this.resultType.equals(that.resultType) &&
-           utils.everyArrayPair(this.argTypes, that.argTypes, equals) &&
-           this.variadic === that.variadic;
-  };
   FunctionProto.prototype.isViableForCall = function(argTypes) {
     return this.argTypes.length === argTypes.length ||
            (this.argTypes.length < argTypes.length && this.variadic);
@@ -1465,10 +1424,6 @@ var type = (function(utils) {
   };
   FunctionNoProto.prototype.unqualified = function() {
     return this;
-  };
-  FunctionNoProto.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that) &&
-           this.resultType.equals(that.resultType);
   };
   FunctionNoProto.prototype.isViableForCall = function(argTypes) {
     return true;
@@ -1499,11 +1454,6 @@ var type = (function(utils) {
   ConstantArray.prototype.unqualified = function() {
     return this;
   };
-  ConstantArray.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that) &&
-           this.elementType.equals(that.elementType) &&
-           this.arraySize === that.arraySize;
-  };
 
   function IncompleteArray(elementType) {
     if (!(this instanceof IncompleteArray)) {
@@ -1527,10 +1477,6 @@ var type = (function(utils) {
   };
   IncompleteArray.prototype.unqualified = function() {
     return this;
-  };
-  IncompleteArray.prototype.equals = function(that) {
-    return Type.prototype.equals.call(this, that) &&
-           this.elementType.equals(that.elementType);
   };
 
   function getQualifier(cv) {
@@ -1793,10 +1739,6 @@ var type = (function(utils) {
       return -1;
     }
     return result;
-  }
-
-  function equals(type1, type2) {
-    return type1.equals(type2);
   }
 
   function getFunctionCallRank(fnType, argTypes) {

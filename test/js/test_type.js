@@ -13,6 +13,7 @@
 // limitations under the License.
 
 var type = require('../../src/js/naclbind').type,
+    assertTypesEqual = require('./equals').assertTypesEqual,
     chai = require('chai'),
     assert = chai.assert,
     spell = type.getSpelling,
@@ -224,11 +225,11 @@ describe('Type', function() {
         r.addField('g', type.float, 4);
 
         assert.strictEqual(r.fields[0].name, 'f');
-        assert.ok(r.fields[0].type.equals(type.int));
+        assertTypesEqual(r.fields[0].type, type.int);
         assert.strictEqual(r.fields[0].offset, 0);
 
         assert.strictEqual(r.fields[1].name, 'g');
-        assert.ok(r.fields[1].type.equals(type.float));
+        assertTypesEqual(r.fields[1].type, type.float);
         assert.strictEqual(r.fields[1].offset, 4);
       });
 
@@ -416,7 +417,7 @@ describe('Type', function() {
 
       types.forEach(function(t) {
         var typedef = type.Typedef('t', t);
-        assert(canon(typedef).equals(t));
+        assertTypesEqual(canon(typedef), t);
       });
     });
 
@@ -431,12 +432,12 @@ describe('Type', function() {
             FvxE = type.Function(type.void, [x]),
             FxvE = type.Function(x, []);
 
-        assert(canon(x).equals(type.char));
-        assert(canon(Px).equals(type.Pointer(type.char)));
-        assert(canon(A2_x).equals(type.Array(type.char, 2)));
-        assert(canon(A_x).equals(type.IncompleteArray(type.char)));
-        assert(canon(FvxE).equals(type.Function(type.void, [type.char])));
-        assert(canon(FxvE).equals(type.Function(type.char, [])));
+        assertTypesEqual(canon(x), type.char);
+        assertTypesEqual(canon(Px), type.Pointer(type.char));
+        assertTypesEqual(canon(A2_x), type.Array(type.char, 2));
+        assertTypesEqual(canon(A_x), type.IncompleteArray(type.char));
+        assertTypesEqual(canon(FvxE), type.Function(type.void, [type.char]));
+        assertTypesEqual(canon(FxvE), type.Function(type.char, []));
       });
     });
 
@@ -445,8 +446,9 @@ describe('Type', function() {
           Kt = type.Typedef('Kt', Kc, type.CONST),
           Vt = type.Typedef('Vt', Kc, type.VOLATILE);
 
-      assert(canon(Kt).equals(Kc));  // Extra const is ignored.
-      assert(canon(Vt).equals(type.char.qualify(type.CONST | type.VOLATILE)));
+      assertTypesEqual(canon(Kt), Kc);  // Extra const is ignored.
+      assertTypesEqual(canon(Vt),
+                       type.char.qualify(type.CONST | type.VOLATILE));
     });
   });
 
