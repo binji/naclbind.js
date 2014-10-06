@@ -44,14 +44,15 @@ var tags = {},
 [[  if type.kind == TypeKind.TYPEDEF:]]
 {{type.js_inline}} = type.Typedef('{{type.GetName()}}', {{type.get_canonical().js_inline}});
 [[  elif type.kind == TypeKind.RECORD:]]
-{{type.js_inline}} = type.Record('{{type.GetName()}}', {{type.get_size()}}, [
-[[    for name, ftype, offset in type.fields():]]
-  type.Field('{{name}}', {{ftype.js_inline}}, {{offset}}),
-[[    ]]
 [[    if type.get_declaration().kind == CursorKind.UNION_DECL:]]
-], type.UNION);
+[[      record_type = 'type.UNION']]
 [[    else:]]
-], type.STRUCT);
+[[      record_type = 'type.STRUCT']]
+[[    ]]
+{{type.js_inline}} = type.Record('{{type.GetName()}}', {{type.get_size()}}, {{record_type}});
+[[    for name, ftype, offset in type.fields():]]
+{{type.js_inline}}.addField('{{name}}', {{ftype.js_inline}}, {{offset}});
+[[    ]]
 [[  elif type.kind == TypeKind.ENUM:]]
 {{type.js_inline}} = type.Enum('{{type.GetName()}}');
 [[  else:]]
@@ -110,6 +111,9 @@ function createModule(nmf, mimeType) {
   return m;
 }
 
-return createModule;
+return {
+  create: createModule,
+  type: type
+};
 
 }));

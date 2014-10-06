@@ -1291,14 +1291,13 @@ var type = (function(utils) {
            this.pointee.equals(that.pointee);
   };
 
-  function Record(tag, size, fields, isUnion, cv) {
+  function Record(tag, size, isUnion, cv) {
     if (!(this instanceof Record)) {
-      return new Record(tag, size, fields, isUnion, cv);
+      return new Record(tag, size, isUnion, cv);
     }
 
     utils.checkNullOrString(tag, 'tag');
     utils.checkNumber(size, 'size');
-    utils.checkArray(fields, Field, 'fields');
 
     if (isUnion !== undefined && utils.getClass(isUnion) !== 'Boolean') {
       throw new Error('isUnion must be a Boolean.');
@@ -1307,17 +1306,24 @@ var type = (function(utils) {
     Type.call(this, RECORD, cv);
     this.tag = tag;
     this.size = size;
-    this.fields = fields;
+    this.fields = [];
     this.isUnion = isUnion || false;
     this.spelling = getSpelling(this);
   }
   Record.prototype = Object.create(Type.prototype);
   Record.prototype.constructor = Record;
   Record.prototype.qualify = function(cv) {
-    return Record(this.tag, this.size, this.fields, this.isUnion, this.cv | cv);
+    var record = Record(this.tag, this.size, this.isUnion, this.cv | cv);
+    record.fields = this.fields;
+    return record;
   };
   Record.prototype.unqualified = function() {
-    return Record(this.tag, this.size, this.fields, this.isUnion);
+    var record = Record(this.tag, this.size, this.isUnion);
+    record.fields = this.fields;
+    return record;
+  };
+  Record.prototype.addField = function(name, type, offset) {
+    this.fields.push(Field(name, type, offset));
   };
   Record.prototype.equals = function(that) {
     return Type.prototype.equals.call(this, that) &&
@@ -1894,7 +1900,6 @@ var type = (function(utils) {
     Numeric: Numeric,
     Pointer: Pointer,
     Record: Record,
-    Field: Field,
     Enum: Enum,
     Typedef: Typedef,
     Function: FunctionProto,

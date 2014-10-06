@@ -350,7 +350,7 @@ describe('Module', function() {
 
     it('should throw if called with non-convertible to int value', function() {
       var m = mod.Module(),
-          rec = type.Record('rec', 4, [type.Field('f', type.int, 0)], type.STRUCT),
+          rec = type.Record('rec', 4, type.STRUCT),
           h;
 
       // TODO(binji): this should be illegal. Come up with a better way to get

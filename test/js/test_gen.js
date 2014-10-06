@@ -15,9 +15,7 @@
 var chai = require('chai'),
     assert = chai.assert,
     gen = require('naclbind-gen'),
-    path = require('path'),
-    naclbind = require('../../src/js/naclbind'),
-    type = naclbind.type;
+    path = require('path');
 
 chai.config.includeStack = true;
 
@@ -50,8 +48,10 @@ function genFile(infile, callback) {
       return callback(error);
     }
 
-    var mod = require(outfile);
-    callback(null, mod());
+    var glue = require(outfile),
+        mod = glue.create();
+
+    callback(null, mod, glue.type);
   });
 }
 
@@ -59,19 +59,13 @@ describe('Generate JS', function() {
   this.slow(800);
 
   before(function() {
-    // Hack NODE_PATH to include the source directory automatically.
-    var srcDir = path.resolve(__dirname, '../../src/js'),
-        nodePath = appendPath(process.env.NODE_PATH || '', srcDir);
-    process.env.NODE_PATH = nodePath;
-    require('module')._initPaths();
-
     if (!process.env.NACL_SDK_ROOT) {
       assert.ok(false, 'NACL_SDK_ROOT not set.');
     }
   });
 
   it('should do work for a simple function', function(done) {
-    genFile('data/simple.h', function(error, m) {
+    genFile('data/simple.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -89,7 +83,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate struct types', function(done) {
-    genFile('data/structs.h', function(error, m) {
+    genFile('data/structs.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -184,7 +178,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate union types', function(done) {
-    genFile('data/unions.h', function(error, m) {
+    genFile('data/unions.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -279,7 +273,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate primitive types', function(done) {
-    genFile('data/primitive.h', function(error, m) {
+    genFile('data/primitive.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -334,7 +328,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate typedefs', function(done) {
-    genFile('data/typedefs.h', function(error, m) {
+    genFile('data/typedefs.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -375,7 +369,7 @@ describe('Generate JS', function() {
   });
 
   it('should generate enums', function(done) {
-    genFile('data/enums.h', function(error, m) {
+    genFile('data/enums.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -410,14 +404,14 @@ describe('Generate JS', function() {
   });
 
   it('should generate functions with various attributes', function(done) {
-    genFile('data/functions.h', function(error, m) {
+    genFile('data/functions.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
 
-      var s1 = type.Record('s1', 0, [], type.STRUCT),
-          s2 = type.Record('s2', 4, [type.Field('f', type.int, 0)], type.STRUCT);
-          u1 = type.Record('u1', 0, [], type.UNION),
+      var s1 = type.Record('s1', 0, type.STRUCT),
+          s2 = type.Record('s2', 4, type.STRUCT);
+          u1 = type.Record('u1', 0, type.UNION),
           voidp = type.Pointer(type.void),
           s1p = type.Pointer(s1),
           u1p = type.Pointer(u1),
@@ -426,6 +420,8 @@ describe('Generate JS', function() {
           intArr = type.Pointer(type.int),
           intArr10 = type.Pointer(type.int),
           argv = type.Pointer(type.Pointer(type.char));
+
+      s2.addField('f', type.int, 0);
 
       assert.strictEqual(13, m.$functionsCount);
       assert.strictEqual(0, m.$typesCount);
@@ -496,7 +492,7 @@ describe('Generate JS', function() {
   });
 
   it('should work with a function with no prototype', function(done) {
-    genFile('data/noproto.h', function(error, m) {
+    genFile('data/noproto.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -515,7 +511,7 @@ describe('Generate JS', function() {
   });
 
   it('should parse directives in comments', function(done) {
-    genFile('data/directive.h', function(error, m) {
+    genFile('data/directive.h', function(error, m, type) {
       if (error) {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
@@ -527,6 +523,30 @@ describe('Generate JS', function() {
       // Pointers
       assert.ok(!m.dont_include_me);
       assert.ok(m.include_me);
+
+      done();
+    });
+  });
+
+  it('should handle self-referential record types', function(done) {
+    genFile('data/self_reference.h', function(error, m, type) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(1, m.$functionsCount);
+      assert.strictEqual(0, m.$typesCount);
+      assert.strictEqual(1, m.$tagsCount);
+
+      assert.ok(m.$tags.List);
+      assert.strictEqual('List', m.$tags.List.tag);
+      assert.strictEqual(8, m.$tags.List.size);
+      assert.strictEqual(2, m.$tags.List.fields.length);
+      assert.strictEqual(false, m.$tags.List.isUnion);
+
+      assertFieldsEqual(m.$tags.List.fields[0], 'item', type.int, 0);
+      assertFieldsEqual(m.$tags.List.fields[1],
+                        'next', type.Pointer(m.$tags.List), 4);
 
       done();
     });

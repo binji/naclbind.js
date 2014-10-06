@@ -23,7 +23,7 @@ describe('Test', function() {
     var nmf = '/base/out/test/integration/rot13/rot13.nmf',
         mimeType = 'application/x-nacl';
 
-    m = rot13Module(nmf, mimeType);
+    m = rot13Module.create(nmf, mimeType);
   });
 
   function rot13(s, cb) {
