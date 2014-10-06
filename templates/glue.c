@@ -43,9 +43,10 @@
 /* ========================================================================== */
 
 #include "{{filename}}"
+#include <stdarg.h>
 
 [[for type in collector.types_topo:]]
-[[  if type.kind != TypeKind.RECORD:]]
+[[  if type.kind != TypeKind.RECORD or type.IsAnonymous():]]
 [[    continue]]
 [[  ]]
 [[  if type.get_size() > 0:]]
@@ -56,6 +57,7 @@ COMPILE_ASSERT(offsetof({{type.spelling}}, {{name}}) == {{offset}});
 [[]]
 
 [[for fn in collector.functions:]]
+// {{fn.displayname}}
 static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_idx) {
 [[  if fn.type.kind == TypeKind.FUNCTIONPROTO:]]
 [[    arguments = list(fn.type.argument_types())]]
@@ -65,7 +67,7 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     return FALSE;
   }
 [[    for i, arg in enumerate(arguments):]]
-[[      arg = arg.get_canonical()]]
+[[      orig_arg, arg = arg, arg.get_canonical()]]
   Handle handle{{i}} = nb_message_command_arg(message, command_idx, {{i}});
 [[      if arg.kind == TypeKind.POINTER:]]
 [[        pointee = arg.get_pointee()]]
@@ -83,7 +85,9 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
   }
 [[        elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
+  (void)handle{{i}};
   void* arg{{i}} = NULL;
+  ERROR("Function pointers are not currently supported.");
 [[        else:]]
   void* arg{{i}}x;
   if (!nb_handle_get_voidp(handle{{i}}, &arg{{i}}x)) {
@@ -155,13 +159,26 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     return FALSE;
   }
 [[      elif arg.kind == TypeKind.CONSTANTARRAY:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
-  void* arg{{i}} = NULL;
+  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}} {{orig_arg.spelling}}
+[[        if orig_arg.spelling == '__gnuc_va_list':]]
+  (void)handle{{i}};
+  va_list arg{{i}};
+  ERROR("va_lists are not currently supported.");
+[[        else:]]
+  (void)handle{{i}};
+  {{arg.get_array_element_type().spelling}}* arg{{i}} = NULL;
+  ERROR("Constant arrays are not currently supported.");
+[[      elif arg.kind == TypeKind.RECORD:]]
+  (void)handle{{i}};
+  {{arg.spelling}} arg{{i}};
+  ERROR("Passing structs and unions by value is not currently supported.");
 [[      else:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
+  ERROR("Type {{arg.spelling}} is not currently supported.");
 [[    ]]
 [[    if fn.type.is_function_variadic():]]
   // UNSUPPORTED: variadic function.
+  ERROR("Variadic functions are not currently supported.");
 [[  elif fn.type.kind == TypeKind.FUNCTIONNOPROTO:]]
   int arg_count = nb_message_command_arg_count(message, command_idx);
   if (arg_count != 0) {
@@ -210,6 +227,8 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
   bool register_ok = nb_handle_register_var(ret, result);
 [[    else:]]
   // UNSUPPORTED: {{result_type.kind}} {{result_type.spelling}}
+  (void)result;
+  bool register_ok = FALSE;
 [[    ]]
   if (!register_ok) {
     VERROR("Failed to register handle %d of type {{result_type.spelling}}.", ret);
@@ -231,8 +250,8 @@ enum {
 typedef bool (*nb_command_func_t)(struct Message*, int);
 static nb_command_func_t s_functions[] = {
   NULL,  /* TODO(binji): This should be errorif */
-[[for fn in collector.functions:]]
-  nb_command_run_{{fn.spelling}},
+[[for i, fn in enumerate(collector.functions):]]
+  nb_command_run_{{fn.spelling}},  /* {{i+1}} */
 [[]]
 };
 

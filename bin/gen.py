@@ -590,6 +590,9 @@ class Type(object):
   def IsTagType(self):
     return self.type.kind.value in (TypeKind.RECORD.value, TypeKind.ENUM.value)
 
+  def IsAnonymous(self):
+    return self.type.get_declaration().spelling == ''
+
   def GetName(self):
     if self.type.kind.value in (TypeKind.TYPEDEF.value, TypeKind.RECORD.value,
                                 TypeKind.ENUM.value):
