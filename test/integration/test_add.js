@@ -12,23 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-(function() {
+// UMD-style loader copied from:
+// https://github.com/umdjs/umd/blob/master/returnExports.js
+(function (root, factory) {
+  if (typeof exports === 'object') {
+    module.exports = factory();
+  } else {
+    factory().runTest();
+  }
+}(this, function () {
 
-describe('Test', function() {
-  this.timeout(10000);
+  function runTest() {
+    describe('Test', function() {
+      this.timeout(10000);
 
-  it('should work', function(done) {
-    var nmf = '/base/out/test/integration/add/add.nmf',
-        mimeType = 'application/x-nacl',
-        m = addModule.create(nmf, mimeType),
-        h;
+      it('should work', function(done) {
+        var nmf = '/base/out/test/integration/add/add.nmf',
+            mimeType = 'application/x-nacl',
+            m = addModule.create(nmf, mimeType),
+            h;
 
-    h = m.add(3, 4);
-    m.$commit([h], function(hVal) {
-      assert.strictEqual(hVal, 7);
-      done();
+        h = m.add(3, 4);
+        m.$commit([h], function(hVal) {
+          assert.strictEqual(hVal, 7);
+          done();
+        });
+      });
     });
-  });
-});
+  }
 
-})();
+  return {
+    runTest: runTest
+  };
+
+}));

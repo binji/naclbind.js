@@ -12,37 +12,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-(function() {
+// UMD-style loader copied from:
+// https://github.com/umdjs/umd/blob/master/returnExports.js
+(function (root, factory) {
+  if (typeof exports === 'object') {
+    module.exports = factory();
+  } else {
+    factory().runTest();
+  }
+}(this, function () {
 
-describe('Test', function() {
-  this.timeout(10000);
+  function runTest() {
+    describe('Test', function() {
+      this.timeout(10000);
 
-  var m;
+      var m;
 
-  before(function() {
-    var nmf = '/base/out/test/integration/rot13/rot13.nmf',
-        mimeType = 'application/x-nacl';
+      before(function() {
+        var nmf = '/base/out/test/integration/rot13/rot13.nmf',
+            mimeType = 'application/x-nacl';
 
-    m = rot13Module.create(nmf, mimeType);
-  });
+        m = rot13Module.create(nmf, mimeType);
+      });
 
-  function rot13(s, cb) {
-    var p = m.malloc(s.length + 1);
-    m.memcpy(p, s, s.length + 1);
-    m.rot13(p, s.length);
-    var v = m.char_to_var(p);
-    m.var_release(v);
-    m.free(p);
-    m.$commitDestroy([v], cb);
+      function rot13(s, cb) {
+        var p = m.malloc(s.length + 1);
+        m.memcpy(p, s, s.length + 1);
+        m.rot13(p, s.length);
+        var v = m.char_to_var(p);
+        m.var_release(v);
+        m.free(p);
+        m.$commitDestroy([v], cb);
+      }
+
+      it('should work', function(done) {
+        rot13('Hello', function(result) {
+          assert.strictEqual(result, 'Uryyb');
+          done();
+        });
+      });
+    });
   }
 
-  it('should work', function(done) {
-    rot13('Hello', function(result) {
-      assert.strictEqual(result, 'Uryyb');
-      done();
-    });
-  });
-});
+  return {
+    runTest: runTest
+  };
 
-})();
-
+}));
