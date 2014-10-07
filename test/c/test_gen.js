@@ -119,4 +119,8 @@ describe('C Generator Tests', function() {
   it('should succeed for test_variadic', function(done) {
     genAndRun('variadic.h', 'variadic.c', 'test_variadic.cc', done);
   });
+
+  it('should succeed for test_const', function(done) {
+    genAndRun('const.h', 'const.c', 'test_const.cc', done);
+  });
 });

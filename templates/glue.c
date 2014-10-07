@@ -289,7 +289,7 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
 [[    elif result_type.kind == TypeKind.DOUBLE:]]
   bool register_ok = nb_handle_register_double(ret, result);
 [[    elif result_type.kind == TypeKind.POINTER:]]
-  bool register_ok = nb_handle_register_voidp(ret, result);
+  bool register_ok = nb_handle_register_voidp(ret, (void*) result);
 [[    elif result_type.kind == TypeKind.RECORD and result_type.spelling == 'struct PP_Var':]]
   bool register_ok = nb_handle_register_var(ret, result);
 [[    else:]]
