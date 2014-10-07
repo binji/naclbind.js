@@ -187,7 +187,12 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
 [[        else:]]
   (void)handle{{i}};
   {{arg.get_array_element_type().spelling}}* arg{{i}} = NULL;
-  ERROR("Constant arrays are not currently supported.");
+  ERROR("Arrays are not currently supported.");
+[[      elif arg.kind == TypeKind.INCOMPLETEARRAY:]]
+  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}} {{orig_arg.spelling}}
+  (void)handle{{i}};
+  {{arg.get_array_element_type().spelling}}* arg{{i}} = NULL;
+  ERROR("Arrays are not currently supported.");
 [[      elif arg.kind == TypeKind.RECORD:]]
   (void)handle{{i}};
   {{arg.spelling}} arg{{i}};
