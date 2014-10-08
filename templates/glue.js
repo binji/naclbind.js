@@ -42,16 +42,16 @@ var tags = {},
 [[  if type.kind == TypeKind.UNEXPOSED:]]
 [[    type = type.get_canonical()]]
 [[  elif type.kind == TypeKind.TYPEDEF:]]
-{{type.js_inline}} = type.Typedef('{{type.GetName()}}', {{type.GetUnderlyingTypedefType().js_inline}});
+{{type.js_inline}} = type.Typedef('{{type.name}}', {{type.GetUnderlyingTypedefType().js_inline}});
 [[  elif type.kind == TypeKind.RECORD:]]
 [[    if type.get_declaration().kind == CursorKind.UNION_DECL:]]
 [[      record_type = 'type.UNION']]
 [[    else:]]
 [[      record_type = 'type.STRUCT']]
 [[    ]]
-{{type.js_inline}} = type.Record('{{type.GetName()}}', {{type.get_size()}}, {{record_type}});
+{{type.js_inline}} = type.Record('{{type.name}}', {{type.get_size()}}, {{record_type}});
 [[  elif type.kind == TypeKind.ENUM:]]
-{{type.js_inline}} = type.Enum('{{type.GetName()}}');
+{{type.js_inline}} = type.Enum('{{type.name}}');
 [[  else:]]
 // {{type.kind}} {{type.spelling}}
 [[  ]]

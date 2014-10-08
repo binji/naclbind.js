@@ -616,4 +616,41 @@ describe('Generate JS', function() {
     });
 
   });
+
+  it('should handle qualified anonymous return types', function(done) {
+    genFile('data/qualified_anonymous.h', function(error, m, type) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(2, m.$functionsCount);
+      assert.strictEqual(1, m.$typesCount);
+      assert.strictEqual(1, m.$tagsCount);
+
+      assert.ok(m.$types.s1);
+      assert.strictEqual('s1', m.$types.s1.tag);
+      assertTypesEqual(m.$tags.__anon_record_0, m.$types.s1.alias);
+      assert.strictEqual('s1', m.$types.s1.spelling);
+
+      var anon = m.$tags.__anon_record_0;
+
+      assert.ok(anon);
+      assert.strictEqual('__anon_record_0', anon.tag);
+      assert.strictEqual(4, anon.size);
+      assert.strictEqual(1, anon.fields.length);
+      assert.strictEqual(false, anon.isUnion);
+
+      assertFieldsEqual(anon.fields[0], 'f', type.int, 0);
+
+      assert.strictEqual(m.f1.types.length, 1);
+      assertTypesEqual(type.Function(anon, []), m.f1.types[0]);
+
+      assert.strictEqual(m.f2.types.length, 1);
+      // TODO(binji): anon should be const qualified.
+      assertTypesEqual(type.Function(anon, []), m.f2.types[0]);
+
+      done();
+    });
+
+  });
 });

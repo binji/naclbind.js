@@ -413,24 +413,24 @@ KIND_TO_ANON = {
   TypeKind.RECORD.value: 'record'
 }
 def SpellingBaseName(t):
+  # Remove all prefixes
+  parts = t.spelling.split(' ')
+  for i, part in enumerate(parts):
+    if part not in VALID_SPELLING_PARTS:
+      break
+
+  spelling = ' '.join(parts[i:])
+
   if t.get_declaration().spelling == '':
-    if t.spelling in anonymous_names:
-      return anonymous_names[t.spelling]
+    if spelling in anonymous_names:
+      return anonymous_names[spelling]
 
     count = len(anonymous_names)
     name = '__anon_%s_%d' % (KIND_TO_ANON[t.kind.value], count)
-    anonymous_names[t.spelling] = name
+    anonymous_names[spelling] = name
     return name
-
-  spelling = t.spelling
-
-  parts = spelling.split(' ')
-  if not all(p in VALID_SPELLING_PARTS for p in parts[:-1]):
-    print 'Spelling: %r, Bad parts: %r' % (
-        spelling,
-        ' '.join(set(parts) - set(VALID_SPELLING_PARTS)))
-    assert False
-  return parts[-1]
+  else:
+    return spelling
 
 
 def GetJsInline(t):
@@ -585,6 +585,11 @@ class Type(object):
     self.type = t
     self.js_inline = GetJsInline(t)
     self.js_mangle = Mangle(t, canonical=False)
+    self.name = None
+    try:
+      self.name = self.GetName()
+    except Error:
+      pass
 
   def IsPrimitive(self):
     return self.type.kind.value in PRIMITIVE_TYPES
@@ -678,9 +683,9 @@ class Type(object):
       import pdb; pdb.set_trace()
 
     if t1.kind == TypeKind.ENUM:
-      return t1.spelling == t2.spelling
+      return self.name == other.name
     elif t1.kind == TypeKind.RECORD:
-      return t1.get_canonical().spelling == t2.get_canonical().spelling
+      return self.name == other.name
     elif t1.kind == TypeKind.POINTER:
       return self.get_pointee() == other.get_pointee()
     elif t1.kind == TypeKind.CONSTANTARRAY:
@@ -695,7 +700,7 @@ class Type(object):
       return t1 == t2
     elif t1.kind == TypeKind.TYPEDEF:
       return (
-          t1.spelling == t2.spelling and
+          self.name == other.name and
           self.GetUnderlyingTypedefType() == other.GetUnderlyingTypedefType())
     elif t1.kind == TypeKind.UNEXPOSED:
       return self.get_canonical() == other.get_canonical()
@@ -710,15 +715,15 @@ class Type(object):
     if self.IsPrimitive():
       return hash(self.type.kind)
     if self.type.kind == TypeKind.ENUM:
-      return hash(self.type.spelling)
+      return hash(self.name)
     elif self.type.kind == TypeKind.RECORD:
-      return hash(self.type.get_canonical().spelling)
+      return hash(self.name)
     elif self.type.kind == TypeKind.POINTER:
       return hash(self.get_pointee())
     elif self.type.kind == TypeKind.CONSTANTARRAY:
       return hash(self.get_array_element_type()) ^ hash(self.get_array_size())
     elif self.type.kind == TypeKind.TYPEDEF:
-      return hash(self.type.spelling) ^ hash(self.GetUnderlyingTypedefType())
+      return hash(self.name) ^ hash(self.GetUnderlyingTypedefType())
     elif self.type.kind == TypeKind.UNEXPOSED:
       return hash(self.get_canonical())
     else:
@@ -775,7 +780,7 @@ class Collector(object):
   def _VisitType(self, t, level=1):
     t = Type(t)
 
-    logging.debug('%s+Visiting Type %s' % (' '*level, t.spelling))
+    logging.debug('%s+Visiting Type %s (%s)' % (' '*level, t.spelling, t.kind))
 
     if t in self.types:
       logging.debug('%s  Skipping %s' % (' '*level, t.spelling))
@@ -785,7 +790,7 @@ class Collector(object):
     if t.kind == TypeKind.TYPEDEF:
       deps.append(t.GetUnderlyingTypedefType())
     elif t.kind == TypeKind.UNEXPOSED:
-      self._VisitType(t.get_canonical(), level+1)
+      self._VisitType(t.get_canonical(), level)
       return
     elif t.kind == TypeKind.POINTER:
       deps.append(t.get_pointee())
