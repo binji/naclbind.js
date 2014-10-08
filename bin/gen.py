@@ -22,6 +22,8 @@ import re
 import subprocess
 import sys
 
+import gen_types
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 PYTHON_BINDINGS_DIR = os.path.join(ROOT_DIR, 'third_party', 'clang', 'bindings',
@@ -322,435 +324,6 @@ class Acceptor(object):
     return self.default
 
 
-PRIMITIVE_TYPES = set([
-  TypeKind.VOID.value, TypeKind.BOOL.value, TypeKind.CHAR_U.value,
-  TypeKind.UCHAR.value, TypeKind.CHAR16.value, TypeKind.CHAR32.value,
-  TypeKind.USHORT.value, TypeKind.UINT.value, TypeKind.ULONG.value,
-  TypeKind.ULONGLONG.value, TypeKind.UINT128.value, TypeKind.CHAR_S.value,
-  TypeKind.SCHAR.value, TypeKind.WCHAR.value, TypeKind.SHORT.value,
-  TypeKind.INT.value, TypeKind.LONG.value, TypeKind.LONGLONG.value,
-  TypeKind.INT128.value, TypeKind.FLOAT.value, TypeKind.DOUBLE.value,
-  TypeKind.LONGDOUBLE.value,
-])
-
-PRIMITIVE_TYPE_KINDS_NAME = {
-  TypeKind.VOID.value: 'void',
-  TypeKind.BOOL.value: 'bool',
-  TypeKind.CHAR_U.value: 'char',
-  TypeKind.UCHAR.value: 'uchar',
-  TypeKind.CHAR16.value: 'char16',
-  TypeKind.CHAR32.value: 'char32',
-  TypeKind.USHORT.value: 'ushort',
-  TypeKind.UINT.value: 'uint',
-  TypeKind.ULONG.value: 'ulong',
-  TypeKind.ULONGLONG.value: 'ulonglong',
-  TypeKind.UINT128.value: 'uint128',
-  TypeKind.CHAR_S.value: 'char',
-  TypeKind.SCHAR.value: 'schar',
-  TypeKind.WCHAR.value: 'wchar',
-  TypeKind.SHORT.value: 'short',
-  TypeKind.INT.value: 'int',
-  TypeKind.LONG.value: 'long',
-  TypeKind.LONGLONG.value: 'longlong',
-  TypeKind.INT128.value: 'int128',
-  TypeKind.FLOAT.value: 'float',
-  TypeKind.DOUBLE.value: 'double',
-  TypeKind.LONGDOUBLE.value: 'longdouble',
-}
-
-PRIMITIVE_TYPE_KINDS_KIND = {
-  TypeKind.VOID.value: 'VOID',
-  TypeKind.BOOL.value: 'BOOL',
-  TypeKind.CHAR_U.value: 'CHAR_U',
-  TypeKind.UCHAR.value: 'UCHAR',
-  TypeKind.CHAR16.value: 'CHAR16',
-  TypeKind.CHAR32.value: 'CHAR32',
-  TypeKind.USHORT.value: 'USHORT',
-  TypeKind.UINT.value: 'UINT',
-  TypeKind.ULONG.value: 'ULONG',
-  TypeKind.ULONGLONG.value: 'ULONGLONG',
-  TypeKind.UINT128.value: 'UINT128',
-  TypeKind.CHAR_S.value: 'CHAR_S',
-  TypeKind.SCHAR.value: 'SCHAR',
-  TypeKind.WCHAR.value: 'WCHAR',
-  TypeKind.SHORT.value: 'SHORT',
-  TypeKind.INT.value: 'INT',
-  TypeKind.LONG.value: 'LONG',
-  TypeKind.LONGLONG.value: 'LONGLONG',
-  TypeKind.INT128.value: 'INT128',
-  TypeKind.FLOAT.value: 'FLOAT',
-  TypeKind.DOUBLE.value: 'DOUBLE',
-  TypeKind.LONGDOUBLE.value: 'LONGDOUBLE',
-}
-
-
-def IsQualified(t):
-  return (t.is_const_qualified() or t.is_volatile_qualified() or
-          t.is_restrict_qualified())
-
-def GetJsQualifiedArg(t):
-  a = []
-  if t.is_const_qualified():
-    a.append('type.CONST')
-  if t.is_volatile_qualified():
-    a.append('type.VOLATILE')
-  if t.is_restrict_qualified():
-    a.append('type.RESTRICT')
-  return '|'.join(a)
-
-def GetJsQualifiedArgWithComma(t):
-  q = GetJsQualifiedArg(t)
-  if q:
-    return ', ' + q
-  return q
-
-anonymous_names = {}
-
-VALID_SPELLING_PARTS = ('struct', 'union', 'enum', 'const', 'volatile',
-                        'restrict')
-KIND_TO_ANON = {
-  TypeKind.ENUM.value: 'enum',
-  TypeKind.RECORD.value: 'record'
-}
-def SpellingBaseName(t):
-  # Remove all prefixes
-  parts = t.spelling.split(' ')
-  for i, part in enumerate(parts):
-    if part not in VALID_SPELLING_PARTS:
-      break
-
-  spelling = ' '.join(parts[i:])
-
-  if t.get_declaration().spelling == '':
-    if spelling in anonymous_names:
-      return anonymous_names[spelling]
-
-    count = len(anonymous_names)
-    name = '__anon_%s_%d' % (KIND_TO_ANON[t.kind.value], count)
-    anonymous_names[spelling] = name
-    return name
-  else:
-    return spelling
-
-
-def GetJsInline(t):
-  if t.kind.value in PRIMITIVE_TYPES:
-    if IsQualified(t):
-      return 'type.Numeric(type.%s, %s)' % (
-          PRIMITIVE_TYPE_KINDS_KIND[t.kind.value], GetJsQualifiedArg(t))
-    else:
-      return 'type.%s' % PRIMITIVE_TYPE_KINDS_NAME[t.kind.value]
-
-  value = TYPE_KINDS_JS_INLINE.get(t.kind.value, None)
-  if not value:
-    raise Error('Unsupported type: %s: %r' % (t.kind, t.spelling))
-
-  if type(value) is str:
-    return value
-  return value(t)
-
-def GetJsInline_Pointer(t):
-  return 'type.Pointer(%s%s)' % (GetJsInline(t.get_pointee()),
-                                 GetJsQualifiedArgWithComma(t))
-
-def GetJsInline_Record(t):
-  return 'tags.%s' % SpellingBaseName(t)
-
-def GetJsInline_FunctionProto(t):
-  return 'type.Function(%s, [%s])' % (
-      GetJsInline(t.get_result()),
-      ', '.join(GetJsInline(a) for a in t.argument_types()))
-
-def GetJsInline_FunctionNoProto(t):
-  return 'type.FunctionNoProto(%s)' % GetJsInline(t.get_result())
-
-def GetJsInline_Typedef(t):
-  return 'types.%s' % SpellingBaseName(t)
-
-def GetJsInline_Enum(t):
-  return 'tags.%s' % SpellingBaseName(t)
-
-def GetJsInline_Unexposed(t):
-  can = t.get_canonical()
-  if can.kind != TypeKind.UNEXPOSED:
-    return GetJsInline(can)
-
-  return 'types.%s' % SpellingBaseName(t)
-
-def GetJsInline_ConstantArray(t):
-  return 'type.Array(%s, %d%s)' % (
-      GetJsInline(t.get_array_element_type()), t.get_array_size(),
-      GetJsQualifiedArgWithComma(t))
-
-def GetJsInline_IncompleteArray(t):
-  return 'type.Array(%s%s)' % (GetJsInline(t.get_array_element_type()),
-                               GetJsQualifiedArgWithComma(t))
-
-TYPE_KINDS_JS_INLINE = {
-  TypeKind.POINTER.value: GetJsInline_Pointer,
-  TypeKind.RECORD.value: GetJsInline_Record,
-  TypeKind.FUNCTIONPROTO.value: GetJsInline_FunctionProto,
-  TypeKind.FUNCTIONNOPROTO.value: GetJsInline_FunctionNoProto,
-  TypeKind.TYPEDEF.value: GetJsInline_Typedef,
-  TypeKind.ENUM.value: GetJsInline_Enum,
-  TypeKind.UNEXPOSED.value: GetJsInline_Unexposed,
-  TypeKind.CONSTANTARRAY.value: GetJsInline_ConstantArray,
-  TypeKind.INCOMPLETEARRAY.value: GetJsInline_IncompleteArray,
-}
-
-
-PRIMITIVE_TYPE_KINDS_MANGLE = {
-  TypeKind.VOID.value: 'v',
-  TypeKind.BOOL.value: 'b',
-  TypeKind.CHAR_U.value: 'c',
-  TypeKind.UCHAR.value: 'h',
-  TypeKind.CHAR16.value: 'Ds',
-  TypeKind.CHAR32.value: 'Di',
-  TypeKind.USHORT.value: 't',
-  TypeKind.UINT.value: 'j',
-  TypeKind.ULONG.value: 'm',
-  TypeKind.ULONGLONG.value: 'y',
-  TypeKind.UINT128.value: 'o',
-  TypeKind.CHAR_S.value: 'c',
-  TypeKind.SCHAR.value: 'a',
-  TypeKind.WCHAR.value: 'w',
-  TypeKind.SHORT.value: 's',
-  TypeKind.INT.value: 'i',
-  TypeKind.LONG.value: 'l',
-  TypeKind.LONGLONG.value: 'x',
-  TypeKind.INT128.value: 'n',
-  TypeKind.FLOAT.value: 'f',
-  TypeKind.DOUBLE.value: 'd',
-  TypeKind.LONGDOUBLE.value: 'e',
-}
-
-
-def MangleName(s):
-  return '%d%s' % (len(s), s)
-
-
-def Mangle(t, canonical=True):
-  ret = ''
-  if t.is_restrict_qualified():
-    ret += 'r'
-  if t.is_volatile_qualified():
-    ret += 'v'
-  if t.is_const_qualified():
-    ret += 'K'
-
-  if t.kind.value in PRIMITIVE_TYPE_KINDS_MANGLE:
-    ret += PRIMITIVE_TYPE_KINDS_MANGLE[t.kind.value]
-  elif t.kind == TypeKind.POINTER:
-    ret += 'P' + Mangle(t.get_pointee())
-  elif t.kind == TypeKind.TYPEDEF:
-    if canonical:
-      ret += Mangle(t.get_declaration().underlying_typedef_type)
-    else:
-      ret += MangleName(SpellingBaseName(t))
-  elif t.kind in (TypeKind.RECORD, TypeKind.ENUM):
-    ret += MangleName(SpellingBaseName(t))
-  elif t.kind == TypeKind.FUNCTIONPROTO:
-    ret += 'F'
-    ret += Mangle(t.get_result())
-    args = list(t.argument_types())
-    if len(args) == 0:
-      ret += 'v'
-    else:
-      ret += ''.join(Mangle(a) for a in t.argument_types())
-    if t.is_function_variadic():
-      ret += 'z'
-    ret += 'E'
-  elif t.kind == TypeKind.FUNCTIONNOPROTO:
-    ret += 'F'
-    ret += Mangle(t.get_result())
-    ret += 'E'
-  elif t.kind == TypeKind.INCOMPLETEARRAY:
-    ret += 'P%s' % Mangle(t.get_array_element_type())
-  elif t.kind == TypeKind.CONSTANTARRAY:
-    ret += 'A%d_%s' % (t.get_array_size(), Mangle(t.get_array_element_type()))
-  elif t.kind == TypeKind.UNEXPOSED:
-    if canonical or t.get_canonical().kind != TypeKind.UNEXPOSED:
-      ret += Mangle(t.get_canonical())
-    else:
-      ret += MangleName(SpellingBaseName(t))
-  else:
-    print t.kind, t.spelling
-    import pdb; pdb.set_trace()
-    assert False
-  return ret
-
-
-class Type(object):
-  def __init__(self, t):
-    self.type = t
-    self.js_inline = GetJsInline(t)
-    self.js_mangle = Mangle(t, canonical=False)
-    self.name = None
-    try:
-      self.name = self.GetName()
-    except Error:
-      pass
-
-  def IsPrimitive(self):
-    return self.type.kind.value in PRIMITIVE_TYPES
-
-  def IsTagType(self):
-    return self.type.kind.value in (TypeKind.RECORD.value, TypeKind.ENUM.value)
-
-  def IsAnonymous(self):
-    return self.type.get_declaration().spelling == ''
-
-  def GetName(self):
-    if self.type.kind.value in (TypeKind.TYPEDEF.value, TypeKind.RECORD.value,
-                                TypeKind.ENUM.value):
-      return SpellingBaseName(self.type)
-    raise Error('Don\'t know how to get name of type %s' % self.type.spelling)
-
-  def GetUnderlyingTypedefType(self):
-    return Type(self.type.get_declaration().underlying_typedef_type)
-
-  def argument_types(self):
-    for t in self.type.argument_types():
-      yield Type(t)
-
-  def fields(self):
-    # TODO(binji): This is an ugly hack to support the various types of
-    # nested structs:
-    # anonymous vs named struct * unnamed vs. named field
-    #
-    # anonymous struct, unnamed field: embed struct's fields
-    # anonymous struct, named field: use named field
-    # named struct, unnamed field: do nothing
-    # named struct, named field: use named field
-    #
-    # The trouble is that we can't easily tell from the LLVM data which
-    # is which: basically we get the following info:
-    #
-    # anonymous struct, unnamed field: STRUCT_DECL (spelling == '')
-    # anonymous struct, named field: STUCT_DECL (spelling == ''), FIELD_DECL
-    # named struct, unnamed field: STRUCT_DECL
-    # named struct, named field: STRUCT_DECL, FIELD_DECL
-    #
-    # So if there is a FIELD_DECL, we should always use it. But we should only
-    # use a STRUCT_DECL if the spelling is ''. But that will embed fields in
-    # the second case listed above (anonymous struct, named field), which is
-    # incorrect.
-    #
-    # The correct solution is to only include a STRUCT_DECL if a matching
-    # FIELD_DECL is not found. That requires checking that anonymous types
-    # match, which is currently broken. This hack relies on LLVM's get_offset:
-    # if it returns < 0, then that name is not a field of the struct. This can
-    # break if that name exists in the field for any other reason.
-    for f in self.type.get_declaration().get_children():
-      if f.kind == CursorKind.FIELD_DECL:
-        yield f.spelling, Type(f.type), self.type.get_offset(f.spelling) / 8
-
-    for f in self.type.get_declaration().get_children():
-      if (f.kind in (CursorKind.STRUCT_DECL, CursorKind.UNION_DECL) and
-          f.spelling == ''):
-        ftype = Type(f.type)
-        # For unnamed nested structs, embed the fields directly
-        for nf_spelling, nf_type, _ in ftype.fields():
-          nf_offset = self.type.get_offset(nf_spelling) / 8
-          if nf_offset >= 0:
-            yield nf_spelling, nf_type, nf_offset
-
-  def __getattr__(self, name):
-    val = getattr(self.type, name)
-    if callable(val):
-      def wrapper(*args, **kwargs):
-        result = val(*args, **kwargs)
-        if isinstance(result, clang.cindex.Type):
-          return Type(result)
-        return result
-      return wrapper
-    return val
-
-  def __eq__(self, other):
-    if type(self) != type(other):
-      return False
-
-    t1 = self.type
-    t2 = other.type
-
-    if t1.kind != t2.kind:
-      return False
-
-    if self.IsPrimitive():
-      return True
-
-    if t1.spelling == '':
-      import pdb; pdb.set_trace()
-
-    if t1.kind == TypeKind.ENUM:
-      return self.name == other.name
-    elif t1.kind == TypeKind.RECORD:
-      return self.name == other.name
-    elif t1.kind == TypeKind.POINTER:
-      return self.get_pointee() == other.get_pointee()
-    elif t1.kind == TypeKind.CONSTANTARRAY:
-      return (
-          self.get_array_element_type() == other.get_array_element_type() and
-          t1.get_array_size() == t2.get_array_size())
-    elif t1.kind == TypeKind.INCOMPLETEARRAY:
-      return self.get_array_element_type() == other.get_array_element_type()
-    elif t1.kind == TypeKind.FUNCTIONPROTO:
-      return t1 == t2
-    elif t1.kind == TypeKind.FUNCTIONNOPROTO:
-      return t1 == t2
-    elif t1.kind == TypeKind.TYPEDEF:
-      return (
-          self.name == other.name and
-          self.GetUnderlyingTypedefType() == other.GetUnderlyingTypedefType())
-    elif t1.kind == TypeKind.UNEXPOSED:
-      return self.get_canonical() == other.get_canonical()
-    else:
-      print t1.kind, t1.spelling, t2.spelling
-      import pdb; pdb.set_trace()
-
-  def __ne__(self, other):
-    return not self.__eq__(other)
-
-  def __hash__(self):
-    if self.IsPrimitive():
-      return hash(self.type.kind)
-    if self.type.kind == TypeKind.ENUM:
-      return hash(self.name)
-    elif self.type.kind == TypeKind.RECORD:
-      return hash(self.name)
-    elif self.type.kind == TypeKind.POINTER:
-      return hash(self.get_pointee())
-    elif self.type.kind == TypeKind.CONSTANTARRAY:
-      return hash(self.get_array_element_type()) ^ hash(self.get_array_size())
-    elif self.type.kind == TypeKind.TYPEDEF:
-      return hash(self.name) ^ hash(self.GetUnderlyingTypedefType())
-    elif self.type.kind == TypeKind.UNEXPOSED:
-      return hash(self.get_canonical())
-    else:
-      return hash(self.type.spelling)
-
-
-class Function(object):
-  def __init__(self, fn):
-    self.fn = fn
-    self.type = Type(fn.type)
-
-  def __getattr__(self, name):
-    return getattr(self.fn, name)
-
-  def __eq__(self, other):
-    if type(self) != type(other):
-      return False
-
-    return self.fn.spelling == other.fn.spelling
-
-  def __ne__(self, other):
-    return not self.__eq__(other)
-
-  def __hash__(self):
-    return hash(self.fn.spelling)
-
-
 class Collector(object):
   def __init__(self, acceptor, tu):
     self.acceptor = acceptor
@@ -760,74 +333,38 @@ class Collector(object):
     self.functions = []
     self.function_types = {}
 
-  def _VisitFunctionDecl(self, f):
-    logging.debug('+Visiting Function %s' % f.spelling)
-
-    self._VisitType(f.result_type)
-    for child in f.get_children():
-      if child.kind == CursorKind.PARM_DECL:
-        self._VisitType(child.type)
-
-    f = Function(f)
-    self.functions.append(f)
-    t = f.type.get_canonical()
-    if t not in self.function_types:
-      self.function_types[t] = []
-    self.function_types[t].append(f)
-
-    logging.debug('-Visiting Function %s' % f.spelling)
-
-  def _VisitType(self, t, level=1):
-    t = Type(t)
-
-    logging.debug('%s+Visiting Type %s (%s)' % (' '*level, t.spelling, t.kind))
-
-    if t in self.types:
-      logging.debug('%s  Skipping %s' % (' '*level, t.spelling))
-      return
-
-    deps = []
-    if t.kind == TypeKind.TYPEDEF:
-      deps.append(t.GetUnderlyingTypedefType())
-    elif t.kind == TypeKind.UNEXPOSED:
-      self._VisitType(t.get_canonical(), level)
-      return
-    elif t.kind == TypeKind.POINTER:
-      deps.append(t.get_pointee())
-    elif t.kind == TypeKind.CONSTANTARRAY:
-      deps.append(t.get_array_element_type())
-    elif t.kind == TypeKind.INCOMPLETEARRAY:
-      deps.append(t.get_array_element_type())
-    elif t.kind == TypeKind.FUNCTIONPROTO:
-      deps.append(t.get_result())
-      deps.extend(list(t.argument_types()))
-    elif t.kind == TypeKind.RECORD:
-      for c in t.get_declaration().get_children():
-        if c.kind == CursorKind.FIELD_DECL:
-          deps.append(c.type)
-        elif (c.kind in (CursorKind.STRUCT_DECL, CursorKind.UNION_DECL) and
-              c.spelling == ''):
-          deps.append(c.type)
-
-    self.types.add(t)
-
-    for dep in deps:
-      self._VisitType(dep, level+1)
-
-    logging.debug('%s-Done with %s' % (' '*level, t.spelling))
-
-    self.types_topo.append(t)
-
   def Collect(self):
-    is_fn_decl = lambda c: c.kind == CursorKind.FUNCTION_DECL
-    for fn_decl in CollectCursors(self.tu.cursor, is_fn_decl):
-      if self.acceptor.Accept(fn_decl.location.file.name, fn_decl.spelling):
-        self._VisitFunctionDecl(fn_decl)
+    for fn in gen_types.IterFunctions(self.tu.cursor):
+      if self.acceptor.Accept(fn.file_name, fn.spelling):
+        logging.debug('ACCEPTED %s' % fn.spelling)
+        self._VisitFunction(fn)
+      else:
+        logging.debug('REJECTED %s' % fn.spelling)
 
   def SortedFunctionTypes(self):
-    key = lambda f: Mangle(f, canonical=False)
+    key = lambda f: f.mangled
     for fn_type in sorted(self.function_types.keys(), key=key):
       yield fn_type, self.function_types[fn_type]
+
+  def _VisitFunction(self, fn):
+    fn.VisitTypes(self)
+
+    self.functions.append(fn)
+    fn_type = fn.type.canonical
+    if fn_type not in self.function_types:
+      self.function_types[fn_type] = []
+    self.function_types[fn_type].append(fn)
+
+  def EnterType(self, t):
+    t = t.Unqualified()
+    if t in self.types:
+      return False
+    self.types.add(t)
+    return True
+
+  def ExitType(self, t):
+    self.types_topo.append(t.Unqualified())
+
 
 def StripCopyright(text):
   # Assume that the first C-style comment is the copyright
@@ -923,8 +460,7 @@ def main(args):
       self.__dict__ = self
 
   template_dict = AttrDict()
-  template_dict.TypeKind = TypeKind
-  template_dict.CursorKind = CursorKind
+  template_dict.TypeKind = gen_types.TypeKind
   template_dict.collector = collector
   template_dict.filename = filename
   template_dict.module_name = options.module_name

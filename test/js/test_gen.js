@@ -643,10 +643,10 @@ describe('Generate JS', function() {
       assertFieldsEqual(anon.fields[0], 'f', type.int, 0);
 
       assert.strictEqual(m.f1.types.length, 1);
-      assertTypesEqual(type.Function(anon, []), m.f1.types[0]);
+      assertTypesEqual(type.Function(anon.qualify(type.CONST), []),
+                       m.f1.types[0]);
 
       assert.strictEqual(m.f2.types.length, 1);
-      // TODO(binji): anon should be const qualified.
       assertTypesEqual(type.Function(anon, []), m.f2.types[0]);
 
       done();

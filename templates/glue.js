@@ -39,50 +39,46 @@ var tags = {},
     types = {};
 
 [[for type in collector.types_topo:]]
-[[  if type.kind == TypeKind.UNEXPOSED:]]
-[[    type = type.get_canonical()]]
-[[  elif type.kind == TypeKind.TYPEDEF:]]
-{{type.js_inline}} = type.Typedef('{{type.name}}', {{type.GetUnderlyingTypedefType().js_inline}});
+[[  if type.kind == TypeKind.TYPEDEF:]]
+{{type.js_spelling}} = type.Typedef('{{type.name}}', {{type.alias_type.js_spelling}});
 [[  elif type.kind == TypeKind.RECORD:]]
-[[    if type.get_declaration().kind == CursorKind.UNION_DECL:]]
+[[    if type.is_union:]]
 [[      record_type = 'type.UNION']]
 [[    else:]]
 [[      record_type = 'type.STRUCT']]
 [[    ]]
-{{type.js_inline}} = type.Record('{{type.name}}', {{type.get_size()}}, {{record_type}});
+{{type.js_spelling}} = type.Record('{{type.js_tag}}', {{type.size}}, {{record_type}});
 [[  elif type.kind == TypeKind.ENUM:]]
-{{type.js_inline}} = type.Enum('{{type.name}}');
-[[  else:]]
-// {{type.kind}} {{type.spelling}}
+{{type.js_spelling}} = type.Enum('{{type.js_tag}}');
 [[  ]]
 [[]]
 
 [[for type in collector.types_topo:]]
 [[  if type.kind == TypeKind.RECORD:]]
-[[    for name, ftype, offset in type.fields():]]
-{{type.js_inline}}.addField('{{name}}', {{ftype.js_inline}}, {{offset}});
+[[    for name, ftype, offset in type.fields:]]
+{{type.js_spelling}}.addField('{{name}}', {{ftype.js_spelling}}, {{offset}});
 [[    ]]
 [[]]
 
 [[for type, fns in collector.SortedFunctionTypes():]]
-// {{type.get_canonical().spelling}} -- {{', '.join(fn.spelling for fn in fns)}}
-[[  if type.type.kind == TypeKind.FUNCTIONPROTO:]]
-var funcType_{{type.js_mangle}} = type.Function(
-  {{type.get_result().get_canonical().js_inline}},
+// {{type.canonical.c_spelling}} -- {{', '.join(fn.spelling for fn in fns)}}
+[[  if type.kind == TypeKind.FUNCTIONPROTO:]]
+var funcType_{{type.mangled}} = type.Function(
+  {{type.result_type.canonical.js_spelling}},
   [
-[[    for arg_type in type.argument_types():]]
-    {{arg_type.get_canonical().js_inline}},
+[[    for arg_type in type.arg_types:]]
+    {{arg_type.canonical.js_spelling}},
 [[  ]]
-[[    if type.is_function_variadic():]]
+[[    if type.is_variadic:]]
   ], type.VARIADIC
 [[    else:]]
   ]
 [[    ]]
-[[  elif type.type.kind == TypeKind.FUNCTIONNOPROTO:]]
-var funcType_{{type.js_mangle}} = type.FunctionNoProto(
-  {{type.get_result().get_canonical().js_inline}}
+[[  elif type.kind == TypeKind.FUNCTIONNOPROTO:]]
+var funcType_{{type.mangled}} = type.FunctionNoProto(
+  {{type.result_type.canonical.js_spelling}}
 [[  else:]]
-[[    raise Error('Unexpected function type: %s' % type.type.kind)]]
+[[    raise Error('Unexpected function type: %s' % type.kind)]]
 [[  ]]
 );
 [[]]
@@ -106,7 +102,7 @@ function createModule(nmf, mimeType) {
   m = mod.Module(embed);
 
 [[for i, fn in enumerate(collector.functions):]]
-  m.$defineFunction('{{fn.spelling}}', [mod.Function({{i+1}}, funcType_{{fn.type.get_canonical().js_mangle}})]);
+  m.$defineFunction('{{fn.spelling}}', [mod.Function({{i+1}}, funcType_{{fn.type.canonical.mangled}})]);
 [[]]
 
   m.$types = types;

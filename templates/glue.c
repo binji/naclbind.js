@@ -61,13 +61,13 @@ def FuncCall(fname, nargs, iargs, dargs):
 ]]]
 
 [[for type in collector.types_topo:]]
-[[  if type.kind != TypeKind.RECORD or type.IsAnonymous():]]
+[[  if type.kind != TypeKind.RECORD or type.is_anonymous:]]
 [[    continue]]
 [[  ]]
-[[  if type.get_size() > 0:]]
-COMPILE_ASSERT(sizeof({{type.spelling}}) == {{type.get_size()}});
-[[  for name, ftype, offset in type.fields():]]
-COMPILE_ASSERT(offsetof({{type.spelling}}, {{name}}) == {{offset}});
+[[  if type.size > 0:]]
+COMPILE_ASSERT(sizeof({{type.c_spelling}}) == {{type.size}});
+[[  for name, ftype, offset in type.fields:]]
+COMPILE_ASSERT(offsetof({{type.c_spelling}}, {{name}}) == {{offset}});
 [[  ]]
 [[]]
 
@@ -75,9 +75,9 @@ COMPILE_ASSERT(offsetof({{type.spelling}}, {{name}}) == {{offset}});
 // {{fn.displayname}}
 static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_idx) {
 [[  if fn.type.kind == TypeKind.FUNCTIONPROTO:]]
-[[    arguments = list(fn.type.argument_types())]]
+[[    arguments = list(fn.type.arg_types)]]
   int arg_count = nb_message_command_arg_count(message, command_idx);
-[[    if fn.type.is_function_variadic():]]
+[[    if fn.type.is_variadic:]]
   if (arg_count < {{len(arguments)}}) {
     VERROR("Expected at least %d args, got %d.", {{len(arguments)}}, arg_count);
 [[    else:]]
@@ -87,10 +87,10 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     return FALSE;
   }
 [[    for i, arg in enumerate(arguments):]]
-[[      orig_arg, arg = arg, arg.get_canonical()]]
+[[      orig_arg, arg = arg, arg.canonical]]
   Handle handle{{i}} = nb_message_command_arg(message, command_idx, {{i}});
 [[      if arg.kind == TypeKind.POINTER:]]
-[[        pointee = arg.get_pointee()]]
+[[        pointee = arg.pointee]]
 [[        if pointee.kind in (TypeKind.CHAR_S, TypeKind.CHAR_U):]]
   char* arg{{i}};
   if (!nb_handle_get_charp(handle{{i}}, &arg{{i}})) {
@@ -104,7 +104,7 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     return FALSE;
   }
 [[        elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
+  // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}}
   (void)handle{{i}};
   void* arg{{i}} = NULL;
   ERROR("Function pointers are not currently supported.");
@@ -114,7 +114,7 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     VERROR("Unable to get handle %d as void*.", handle{{i}});
     return FALSE;
   }
-  {{arg.spelling}} arg{{i}} = ({{arg.spelling}}) arg{{i}}x;
+  {{arg.c_spelling}} arg{{i}} = ({{arg.c_spelling}}) arg{{i}}x;
 [[      elif arg.kind == TypeKind.LONG:]]
   int32_t arg{{i}}x;
   if (!nb_handle_get_int32(handle{{i}}, &arg{{i}}x)) {
@@ -171,37 +171,37 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
     VERROR("Unable to get handle %d as int32_t.", handle{{i}});
     return FALSE;
   }
-  {{arg.spelling}} arg{{i}} = ({{arg.spelling}}) arg{{i}}x;
-[[      elif arg.kind == TypeKind.RECORD and arg.spelling == 'struct PP_Var':]]
+  {{arg.c_spelling}} arg{{i}} = ({{arg.c_spelling}}) arg{{i}}x;
+[[      elif arg.kind == TypeKind.RECORD and arg.c_spelling == 'struct PP_Var':]]
   struct PP_Var arg{{i}};
   if (!nb_handle_get_var(handle{{i}}, &arg{{i}})) {
     VERROR("Unable to get handle %d as struct PP_Var.", handle{{i}});
     return FALSE;
   }
 [[      elif arg.kind == TypeKind.CONSTANTARRAY:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}} {{orig_arg.spelling}}
-[[        if orig_arg.spelling == '__gnuc_va_list':]]
+  // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} {{orig_arg.c_spelling}}
+[[        if orig_arg.c_spelling == '__gnuc_va_list':]]
   (void)handle{{i}};
   va_list arg{{i}};
   ERROR("va_lists are not currently supported.");
 [[        else:]]
   (void)handle{{i}};
-  {{arg.get_array_element_type().spelling}}* arg{{i}} = NULL;
+  {{arg.element_type.c_spelling}}* arg{{i}} = NULL;
   ERROR("Arrays are not currently supported.");
 [[      elif arg.kind == TypeKind.INCOMPLETEARRAY:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}} {{orig_arg.spelling}}
+  // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} {{orig_arg.c_spelling}}
   (void)handle{{i}};
-  {{arg.get_array_element_type().spelling}}* arg{{i}} = NULL;
+  {{arg.element_type.c_spelling}}* arg{{i}} = NULL;
   ERROR("Arrays are not currently supported.");
 [[      elif arg.kind == TypeKind.RECORD:]]
   (void)handle{{i}};
-  {{arg.spelling}} arg{{i}};
+  {{arg.c_spelling}} arg{{i}};
   ERROR("Passing structs and unions by value is not currently supported.");
 [[      else:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.spelling}}
-  ERROR("Type {{arg.spelling}} is not currently supported.");
+  // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}}
+  ERROR("Type {{arg.c_spelling}} is not currently supported.");
 [[    ]]
-[[    if fn.type.is_function_variadic():]]
+[[    if fn.type.is_variadic:]]
   nb_vararg_int_t iargs[MAX_INT_VARARGS];
   nb_vararg_int_t* iargsp = iargs;
   nb_vararg_int_t* iargs_end = &iargs[MAX_INT_VARARGS];
@@ -229,15 +229,15 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
 [[    arguments = []]]
 [[  else:]]
 [[    raise Error('Unexpected function type: %s' % fn.type.kind)]]
-[[  result_type = fn.type.get_result().get_canonical()]]
+[[  result_type = fn.type.result_type.canonical]]
 [[  if result_type.kind != TypeKind.VOID:]]
   if (!nb_message_command_has_ret(message, command_idx)) {
     ERROR("Return type is non-void, but no return handle given.");
     return FALSE;
   }
   Handle ret = nb_message_command_ret(message, command_idx);
-[[    if fn.type.kind == TypeKind.FUNCTIONPROTO and fn.type.is_function_variadic():]]
-  {{result_type.spelling}} result;
+[[    if fn.type.kind == TypeKind.FUNCTIONPROTO and fn.type.is_variadic:]]
+  {{result_type.c_spelling}} result;
 #ifdef __x86_64__
   /* This relies on the fact that the x86_64 calling convention for variadic
    * functions does not preserve ordering w.r.t. floating-point values. We can
@@ -267,7 +267,7 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
   }
 #endif
 [[    else:]]
-  {{result_type.spelling}} result = {{FuncCall(fn.spelling, len(arguments), 0, 0)}};
+  {{result_type.c_spelling}} result = {{FuncCall(fn.spelling, len(arguments), 0, 0)}};
 [[    ]]
 [[    if result_type.kind in (TypeKind.SCHAR, TypeKind.CHAR_S):]]
   bool register_ok = nb_handle_register_int8(ret, result);
@@ -295,15 +295,15 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
   bool register_ok = nb_handle_register_double(ret, result);
 [[    elif result_type.kind == TypeKind.POINTER:]]
   bool register_ok = nb_handle_register_voidp(ret, (void*) result);
-[[    elif result_type.kind == TypeKind.RECORD and result_type.spelling == 'struct PP_Var':]]
+[[    elif result_type.kind == TypeKind.RECORD and result_type.c_spelling == 'struct PP_Var':]]
   bool register_ok = nb_handle_register_var(ret, result);
 [[    else:]]
-  // UNSUPPORTED: {{result_type.kind}} {{result_type.spelling}}
+  // UNSUPPORTED: {{result_type.kind}} {{result_type.c_spelling}}
   (void)result;
   bool register_ok = FALSE;
 [[    ]]
   if (!register_ok) {
-    VERROR("Failed to register handle %d of type {{result_type.spelling}}.", ret);
+    VERROR("Failed to register handle %d of type {{result_type.c_spelling}}.", ret);
     return FALSE;
   }
   return TRUE;
