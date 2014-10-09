@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef MESSAGE_H_
-#define MESSAGE_H_
+#ifndef NB_MESSAGE_H_
+#define NB_MESSAGE_H_
 
 #include <ppapi/c/pp_var.h>
 
@@ -27,32 +27,36 @@
 extern "C" {
 #endif
 
-struct Message;
+struct NB_Message;
 
-struct Message* nb_message_create(struct PP_Var);
-void nb_message_destroy(struct Message*);
+struct NB_Message* nb_message_create(struct PP_Var);
+void nb_message_destroy(struct NB_Message*);
 
-int nb_message_id(struct Message* message);
+int nb_message_id(struct NB_Message* NB_Message);
 
-int nb_message_sethandles_count(struct Message*);
-void nb_message_sethandle(struct Message*, int index,
-                          Handle* out_handle, struct PP_Var* value);
+int nb_message_sethandles_count(struct NB_Message*);
+void nb_message_sethandle(struct NB_Message*,
+                          int index,
+                          NB_Handle* out_handle,
+                          struct PP_Var* value);
 
-int nb_message_gethandles_count(struct Message*);
-Handle nb_message_gethandle(struct Message*, int index);
+int nb_message_gethandles_count(struct NB_Message*);
+NB_Handle nb_message_gethandle(struct NB_Message*, int index);
 
-int nb_message_destroyhandles_count(struct Message*);
-Handle nb_message_destroyhandle(struct Message*, int index);
+int nb_message_destroyhandles_count(struct NB_Message*);
+NB_Handle nb_message_destroyhandle(struct NB_Message*, int index);
 
-int nb_message_commands_count(struct Message*);
-int nb_message_command_function(struct Message*, int command_idx);
-int nb_message_command_arg_count(struct Message*, int command_idx);
-Handle nb_message_command_arg(struct Message*, int command_idx, int arg_idx);
-bool nb_message_command_has_ret(struct Message*, int command_idx);
-Handle nb_message_command_ret(struct Message*, int command_idx);
+int nb_message_commands_count(struct NB_Message*);
+int nb_message_command_function(struct NB_Message*, int command_idx);
+int nb_message_command_arg_count(struct NB_Message*, int command_idx);
+NB_Handle nb_message_command_arg(struct NB_Message*,
+                                 int command_idx,
+                                 int arg_idx);
+NB_Bool nb_message_command_has_ret(struct NB_Message*, int command_idx);
+NB_Handle nb_message_command_ret(struct NB_Message*, int command_idx);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* MESSAGE_H_ */
+#endif /* NB_MESSAGE_H_ */

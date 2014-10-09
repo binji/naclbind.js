@@ -19,7 +19,7 @@
 #include "handle.h"
 #include "var.h"
 
-bool operator ==(struct PP_Var v1, struct PP_Var v2) {
+bool operator==(struct PP_Var v1, struct PP_Var v2) {
   if (v1.type != v2.type) {
     return false;
   }
@@ -27,7 +27,7 @@ bool operator ==(struct PP_Var v1, struct PP_Var v2) {
   switch (v1.type) {
     case PP_VARTYPE_UNDEFINED:
     case PP_VARTYPE_NULL:
-      return true;
+      return NB_TRUE;
 
     case PP_VARTYPE_BOOL:
       return v1.value.as_bool == v2.value.as_bool;
@@ -51,7 +51,7 @@ bool operator ==(struct PP_Var v1, struct PP_Var v2) {
   }
 }
 
-bool operator ==(struct PP_Var v, void* p) {
+bool operator==(struct PP_Var v, void* p) {
   switch (v.type) {
     case PP_VARTYPE_STRING: {
       const char* s;
@@ -60,7 +60,7 @@ bool operator ==(struct PP_Var v, void* p) {
         return false;
       }
 
-      return strcmp(s, (char*) p) == 0;
+      return strcmp(s, (char*)p) == 0;
     }
 
     case PP_VARTYPE_NULL:
@@ -71,7 +71,7 @@ bool operator ==(struct PP_Var v, void* p) {
   }
 }
 
-bool operator ==(void* p, struct PP_Var v) {
+bool operator==(void* p, struct PP_Var v) {
   return v == p;
 }
 
@@ -79,52 +79,52 @@ class HandleTest : public ::testing::Test {
  public:
   HandleTest() {}
 
-  virtual void SetUp() {
-    EXPECT_EQ(0, nb_handle_count());
-  }
+  virtual void SetUp() { EXPECT_EQ(0, nb_handle_count()); }
 
   virtual void TearDown() {
-    EXPECT_EQ(TRUE, fake_var_check_no_references());
+    EXPECT_EQ(NB_TRUE, fake_var_check_no_references());
     EXPECT_EQ(0, nb_handle_count());
   }
 };
 
-#define EXPECT_GET(type, suffix, handle, expected) \
-  type val_##suffix; \
-  bool result_##suffix = nb_handle_get_##suffix(handle, &val_##suffix); \
-  EXPECT_EQ(TRUE, result_##suffix); \
-  if (result_##suffix) { EXPECT_EQ(expected, val_##suffix); }
+#define EXPECT_GET(type, suffix, handle, expected)                         \
+  type val_##suffix;                                                       \
+  NB_Bool result_##suffix = nb_handle_get_##suffix(handle, &val_##suffix); \
+  EXPECT_EQ(NB_TRUE, result_##suffix);                                     \
+  if (result_##suffix) {                                                   \
+    EXPECT_EQ(expected, val_##suffix);                                     \
+  }
 
 #define EXPECT_FAIL(type, suffix, handle) \
-  type val_##suffix; \
-  EXPECT_EQ(FALSE, nb_handle_get_##suffix(handle, &val_##suffix))
+  type val_##suffix;                      \
+  EXPECT_EQ(NB_FALSE, nb_handle_get_##suffix(handle, &val_##suffix))
 
 #define EXPECT_O(type, suffix, handle, expected) \
   EXPECT_GET(type, suffix, handle, expected)
 
 #define EXPECT_T(type, suffix, handle, expected) \
-  type val_##suffix; \
-  EXPECT_EQ(TRUE, nb_handle_get_##suffix(handle, &val_##suffix)); \
+  type val_##suffix;                             \
+  EXPECT_EQ(NB_TRUE, nb_handle_get_##suffix(handle, &val_##suffix));
 
 #define EXPECT__(type, suffix, handle, expected) \
   EXPECT_FAIL(type, suffix, handle)
 
 #define ROW(reg, val, i8, u8, i16, u16, i32, u32, i64, u64, f32, f64, vp, v) \
-  { \
-    EXPECT_EQ(TRUE, nb_handle_register_##reg(1, val)); \
-    EXPECT_##i8(int8_t, int8, 1, val); \
-    EXPECT_##u8(uint8_t, uint8, 1, val); \
-    EXPECT_##i16(int16_t, int16, 1, val); \
-    EXPECT_##u16(uint16_t, uint16, 1, val); \
-    EXPECT_##i32(int32_t, int32, 1, val); \
-    EXPECT_##u32(uint32_t, uint32, 1, val); \
-    EXPECT_##i64(int64_t, int64, 1, val); \
-    EXPECT_##u64(uint64_t, uint64, 1, val); \
-    EXPECT_##f32(float, float, 1, val); \
-    EXPECT_##f64(double, double, 1, val); \
-    EXPECT_##vp(void*, voidp, 1, val); \
-    EXPECT_##v(struct PP_Var, var, 1, val); \
-    nb_handle_destroy(1); \
+  {                                                                          \
+    EXPECT_EQ(NB_TRUE, nb_handle_register_##reg(1, val));                    \
+    EXPECT_##i8(int8_t, int8, 1, val);                                       \
+    EXPECT_##u8(uint8_t, uint8, 1, val);                                     \
+    EXPECT_##i16(int16_t, int16, 1, val);                                    \
+    EXPECT_##u16(uint16_t, uint16, 1, val);                                  \
+    EXPECT_##i32(int32_t, int32, 1, val);                                    \
+    EXPECT_##u32(uint32_t, uint32, 1, val);                                  \
+    EXPECT_##i64(int64_t, int64, 1, val);                                    \
+    EXPECT_##u64(uint64_t, uint64, 1, val);                                  \
+    EXPECT_##f32(float, float, 1, val);                                      \
+    EXPECT_##f64(double, double, 1, val);                                    \
+    EXPECT_##vp(void*, voidp, 1, val);                                       \
+    EXPECT_##v(struct PP_Var, var, 1, val);                                  \
+    nb_handle_destroy(1);                                                    \
   }
 
 TEST_F(HandleTest, Basic) {
@@ -133,18 +133,18 @@ TEST_F(HandleTest, Basic) {
 
   var = nb_var_string_create("hello", 5);
 
-  EXPECT_EQ(TRUE, nb_handle_register_int8(1, -42));
-  EXPECT_EQ(TRUE, nb_handle_register_uint8(2, 42));
-  EXPECT_EQ(TRUE, nb_handle_register_int16(3, -420));
-  EXPECT_EQ(TRUE, nb_handle_register_uint16(4, 420));
-  EXPECT_EQ(TRUE, nb_handle_register_int32(5, -420000L));
-  EXPECT_EQ(TRUE, nb_handle_register_uint32(6, 420000UL));
-  EXPECT_EQ(TRUE, nb_handle_register_int64(7, -42000000000LL));
-  EXPECT_EQ(TRUE, nb_handle_register_uint64(8, 42000000000ULL));
-  EXPECT_EQ(TRUE, nb_handle_register_float(9, 3.25));
-  EXPECT_EQ(TRUE, nb_handle_register_double(10, 1e30));
-  EXPECT_EQ(TRUE, nb_handle_register_voidp(11, voidp));
-  EXPECT_EQ(TRUE, nb_handle_register_var(12, var));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_int8(1, -42));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_uint8(2, 42));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_int16(3, -420));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_uint16(4, 420));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_int32(5, -420000L));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_uint32(6, 420000UL));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_int64(7, -42000000000LL));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_uint64(8, 42000000000ULL));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_float(9, 3.25));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_double(10, 1e30));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_voidp(11, voidp));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_var(12, var));
 
   EXPECT_GET(int8_t, int8, 1, -42);
   EXPECT_GET(uint8_t, uint8, 2, 42);
@@ -159,13 +159,13 @@ TEST_F(HandleTest, Basic) {
   EXPECT_GET(void*, voidp, 11, voidp);
 
   struct PP_Var val_var;
-  EXPECT_EQ(TRUE, nb_handle_get_var(12, &val_var));
+  EXPECT_EQ(NB_TRUE, nb_handle_get_var(12, &val_var));
   EXPECT_EQ(PP_VARTYPE_STRING, val_var.type);
   EXPECT_EQ(val_var.value.as_id, var.value.as_id);
 
   nb_var_release(var);
 
-  Handle to_destroy[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+  NB_Handle to_destroy[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
   nb_handle_destroy_many(&to_destroy[0], 12);
 }
 
@@ -293,11 +293,11 @@ TEST_F(HandleTest, Voidp) {
 }
 
 TEST_F(HandleTest, Var) {
-  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeUndefined()));
-  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeNull()));
-  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeBool(PP_TRUE)));
-  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeInt32(42)));
-  EXPECT_EQ(FALSE, nb_handle_register_var(1, PP_MakeDouble(3.25)));
+  EXPECT_EQ(NB_FALSE, nb_handle_register_var(1, PP_MakeUndefined()));
+  EXPECT_EQ(NB_FALSE, nb_handle_register_var(1, PP_MakeNull()));
+  EXPECT_EQ(NB_FALSE, nb_handle_register_var(1, PP_MakeBool(PP_TRUE)));
+  EXPECT_EQ(NB_FALSE, nb_handle_register_var(1, PP_MakeInt32(42)));
+  EXPECT_EQ(NB_FALSE, nb_handle_register_var(1, PP_MakeDouble(3.25)));
 
   {
     struct PP_Var v = nb_var_string_create("hi", 2);
@@ -330,39 +330,38 @@ TEST_F(HandleTest, Var) {
 
 TEST_F(HandleTest, Charp) {
   struct PP_Var v = nb_var_string_create("hi", 2);
-  ASSERT_EQ(TRUE, nb_handle_register_var(1, v));
+  ASSERT_EQ(NB_TRUE, nb_handle_register_var(1, v));
   nb_var_release(v);
 
   char* s;
-  EXPECT_EQ(TRUE, nb_handle_get_charp(1, &s));
+  EXPECT_EQ(NB_TRUE, nb_handle_get_charp(1, &s));
   EXPECT_STREQ("hi", s);
 
   void* p;
-  EXPECT_EQ(TRUE, nb_handle_get_voidp(1, &p));
-  EXPECT_STREQ("hi", (char*) p);
+  EXPECT_EQ(NB_TRUE, nb_handle_get_voidp(1, &p));
+  EXPECT_STREQ("hi", (char*)p);
 
   nb_handle_destroy(1);
 }
 
-#define CONVERT_OK(reg, val, pp_type, as) \
-  { \
-    struct PP_Var var; \
-    EXPECT_EQ(TRUE, nb_handle_register_##reg(1, val)); \
-    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var)); \
-    EXPECT_EQ(pp_type, var.type); \
-    EXPECT_EQ(val, var.value.as); \
-    nb_var_release(var); \
-    nb_handle_destroy(1); \
+#define CONVERT_OK(reg, val, pp_type, as)                  \
+  {                                                        \
+    struct PP_Var var;                                     \
+    EXPECT_EQ(NB_TRUE, nb_handle_register_##reg(1, val));  \
+    EXPECT_EQ(NB_TRUE, nb_handle_convert_to_var(1, &var)); \
+    EXPECT_EQ(pp_type, var.type);                          \
+    EXPECT_EQ(val, var.value.as);                          \
+    nb_var_release(var);                                   \
+    nb_handle_destroy(1);                                  \
   }
 
-#define CONVERT_FAIL(reg, val) \
-  { \
-    struct PP_Var var; \
-    EXPECT_EQ(TRUE, nb_handle_register_##reg(1, val)); \
-    EXPECT_EQ(FALSE, nb_handle_convert_to_var(1, &var)); \
-    nb_handle_destroy(1); \
+#define CONVERT_FAIL(reg, val)                              \
+  {                                                         \
+    struct PP_Var var;                                      \
+    EXPECT_EQ(NB_TRUE, nb_handle_register_##reg(1, val));   \
+    EXPECT_EQ(NB_FALSE, nb_handle_convert_to_var(1, &var)); \
+    nb_handle_destroy(1);                                   \
   }
-
 
 TEST_F(HandleTest, ConvertToVar) {
   CONVERT_OK(int8, 0x70, PP_VARTYPE_INT32, as_int);
@@ -377,8 +376,8 @@ TEST_F(HandleTest, ConvertToVar) {
   {
     struct PP_Var var;
     struct PP_Var dummy = nb_var_array_create();
-    EXPECT_EQ(TRUE, nb_handle_register_var(1, dummy));
-    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(NB_TRUE, nb_handle_register_var(1, dummy));
+    EXPECT_EQ(NB_TRUE, nb_handle_convert_to_var(1, &var));
     EXPECT_EQ(dummy.type, var.type);
     EXPECT_EQ(dummy.value.as_id, var.value.as_id);
     nb_var_release(var);
@@ -390,8 +389,8 @@ TEST_F(HandleTest, ConvertToVar) {
     struct PP_Var var;
     int dummy;
     void* voidp = &dummy;
-    EXPECT_EQ(TRUE, nb_handle_register_voidp(1, voidp));
-    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(NB_TRUE, nb_handle_register_voidp(1, voidp));
+    EXPECT_EQ(NB_TRUE, nb_handle_convert_to_var(1, &var));
     EXPECT_EQ(PP_VARTYPE_INT32, var.type);
     EXPECT_EQ(1, var.value.as_int);  // Returns the handle, of the void*
     nb_var_release(var);
@@ -400,8 +399,8 @@ TEST_F(HandleTest, ConvertToVar) {
   // voidp (NULL)
   {
     struct PP_Var var;
-    EXPECT_EQ(TRUE, nb_handle_register_voidp(1, NULL));
-    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(NB_TRUE, nb_handle_register_voidp(1, NULL));
+    EXPECT_EQ(NB_TRUE, nb_handle_convert_to_var(1, &var));
     EXPECT_EQ(PP_VARTYPE_NULL, var.type);
     nb_var_release(var);
     nb_handle_destroy(1);
@@ -409,8 +408,8 @@ TEST_F(HandleTest, ConvertToVar) {
   // int64
   {
     struct PP_Var var;
-    EXPECT_EQ(TRUE, nb_handle_register_int64(1, 0x10000000000LL));
-    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(NB_TRUE, nb_handle_register_int64(1, 0x10000000000LL));
+    EXPECT_EQ(NB_TRUE, nb_handle_convert_to_var(1, &var));
     EXPECT_EQ(PP_VARTYPE_ARRAY, var.type);
     EXPECT_EQ(2, nb_var_array_length(var));
     EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 0).type);
@@ -423,8 +422,8 @@ TEST_F(HandleTest, ConvertToVar) {
   // uint64
   {
     struct PP_Var var;
-    EXPECT_EQ(TRUE, nb_handle_register_uint64(1, 0xf00000000000000fLL));
-    EXPECT_EQ(TRUE, nb_handle_convert_to_var(1, &var));
+    EXPECT_EQ(NB_TRUE, nb_handle_register_uint64(1, 0xf00000000000000fLL));
+    EXPECT_EQ(NB_TRUE, nb_handle_convert_to_var(1, &var));
     EXPECT_EQ(PP_VARTYPE_ARRAY, var.type);
     EXPECT_EQ(2, nb_var_array_length(var));
     EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 0).type);

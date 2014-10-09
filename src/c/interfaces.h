@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef INTERFACES_H_
-#define INTERFACES_H_
+#ifndef NB_INTERFACES_H_
+#define NB_INTERFACES_H_
 
 #include <ppapi/c/pp_instance.h>
 #include <ppapi/c/ppb.h>
@@ -28,12 +28,12 @@
 extern "C" {
 #endif
 
-extern PP_Instance g_pp_instance;
-extern struct PPB_Var_1_1* g_ppb_var;
-extern struct PPB_VarArray_1_0* g_ppb_var_array;
-extern struct PPB_VarArrayBuffer_1_0* g_ppb_var_array_buffer;
-extern struct PPB_VarDictionary_1_0* g_ppb_var_dictionary;
-extern struct PPB_Messaging_1_0* g_ppb_messaging;
+extern PP_Instance g_nb_pp_instance;
+extern struct PPB_Var_1_1* g_nb_ppb_var;
+extern struct PPB_VarArray_1_0* g_nb_ppb_var_array;
+extern struct PPB_VarArrayBuffer_1_0* g_nb_ppb_var_array_buffer;
+extern struct PPB_VarDictionary_1_0* g_nb_ppb_var_dictionary;
+extern struct PPB_Messaging_1_0* g_nb_ppb_messaging;
 
 void nb_interfaces_init(PP_Instance, PPB_GetInterface);
 
@@ -41,4 +41,4 @@ void nb_interfaces_init(PP_Instance, PPB_GetInterface);
 }
 #endif
 
-#endif  /* INTERFACES_H_ */
+#endif /* NB_INTERFACES_H_ */

@@ -42,14 +42,14 @@ class MessageTest : public ::testing::Test {
       nb_message_destroy(message);
     }
 
-    EXPECT_EQ(TRUE, fake_var_check_no_references());
+    EXPECT_EQ(NB_TRUE, fake_var_check_no_references());
   }
 
  protected:
-  Message* message;
+  NB_Message* message;
 };
 
-Message* NULL_MESSAGE = NULL;
+NB_Message* NULL_MESSAGE = NULL;
 
 TEST_F(MessageTest, Valid) {
   const char* valid_messages[] = {
@@ -130,7 +130,7 @@ TEST_F(MessageTest, SetHandles) {
   EXPECT_EQ(1, nb_message_id(message));
   EXPECT_EQ(2, nb_message_sethandles_count(message));
 
-  Handle handle;
+  NB_Handle handle;
   struct PP_Var value;
 
   nb_message_sethandle(message, 0, &handle, &value);
@@ -154,7 +154,7 @@ TEST_F(MessageTest, SetHandles_String) {
   EXPECT_EQ(1, nb_message_id(message));
   EXPECT_EQ(1, nb_message_sethandles_count(message));
 
-  Handle handle;
+  NB_Handle handle;
   struct PP_Var value;
 
   nb_message_sethandle(message, 0, &handle, &value);
@@ -163,7 +163,7 @@ TEST_F(MessageTest, SetHandles_String) {
 
   const char* s;
   uint32_t len;
-  EXPECT_EQ(TRUE, nb_var_string(value, &s, &len));
+  EXPECT_EQ(NB_TRUE, nb_var_string(value, &s, &len));
   EXPECT_EQ(2, len);
   EXPECT_STREQ("Hi", s);
   nb_var_release(value);
@@ -177,7 +177,7 @@ TEST_F(MessageTest, SetHandles_Null) {
   EXPECT_EQ(1, nb_message_id(message));
   EXPECT_EQ(1, nb_message_sethandles_count(message));
 
-  Handle handle;
+  NB_Handle handle;
   struct PP_Var value;
 
   nb_message_sethandle(message, 0, &handle, &value);
@@ -194,7 +194,7 @@ TEST_F(MessageTest, SetHandles_Long) {
   EXPECT_EQ(1, nb_message_id(message));
   EXPECT_EQ(1, nb_message_sethandles_count(message));
 
-  Handle handle;
+  NB_Handle handle;
   struct PP_Var value;
 
   nb_message_sethandle(message, 0, &handle, &value);
@@ -247,6 +247,6 @@ TEST_F(MessageTest, Commands) {
   EXPECT_EQ(2, nb_message_command_arg_count(message, 0));
   EXPECT_EQ(42, nb_message_command_arg(message, 0, 0));
   EXPECT_EQ(3, nb_message_command_arg(message, 0, 1));
-  EXPECT_EQ(TRUE, nb_message_command_has_ret(message, 0));
+  EXPECT_EQ(NB_TRUE, nb_message_command_has_ret(message, 0));
   EXPECT_EQ(5, nb_message_command_ret(message, 0));
 }

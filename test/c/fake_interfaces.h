@@ -23,7 +23,7 @@ extern "C" {
 
 void fake_var_init(void);
 void fake_var_destroy(void);
-bool fake_var_check_no_references(void);
+NB_Bool fake_var_check_no_references(void);
 const void* fake_get_browser_interface(const char* interface_name);
 
 #ifdef __cplusplus

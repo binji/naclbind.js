@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef TYPE_H_
-#define TYPE_H_
+#ifndef NB_TYPE_H_
+#define NB_TYPE_H_
 
 #include <stdint.h>
 
@@ -23,27 +23,27 @@ extern "C" {
 #endif
 
 enum {
-  TYPE_INVALID,
-  TYPE_INT8,
-  TYPE_UINT8,
-  TYPE_INT16,
-  TYPE_UINT16,
-  TYPE_INT32,
-  TYPE_UINT32,
-  TYPE_INT64,
-  TYPE_UINT64,
-  TYPE_FLOAT,
-  TYPE_DOUBLE,
-  TYPE_VOID_P,
-  TYPE_VAR,
-  NUM_BUILTIN_TYPES
+  NB_TYPE_INVALID,
+  NB_TYPE_INT8,
+  NB_TYPE_UINT8,
+  NB_TYPE_INT16,
+  NB_TYPE_UINT16,
+  NB_TYPE_INT32,
+  NB_TYPE_UINT32,
+  NB_TYPE_INT64,
+  NB_TYPE_UINT64,
+  NB_TYPE_FLOAT,
+  NB_TYPE_DOUBLE,
+  NB_TYPE_VOID_P,
+  NB_TYPE_VAR,
+  NB_NUM_BUILTIN_TYPES
 };
-typedef int32_t Type;
+typedef int32_t NB_Type;
 
-const char* nb_type_to_string(Type);
+const char* nb_type_to_string(NB_Type);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* TYPE_H_ */
+#endif /* NB_TYPE_H_ */

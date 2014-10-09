@@ -12,57 +12,65 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BUILTINS_H_
-#define BUILTINS_H_
+#ifndef NB_BUILTINS_H_
+#define NB_BUILTINS_H_
 
-#define FOREACH_PRIMITIVE(x) \
-  x(voidp, void*); \
-  x(char, char); \
-  x(schar, signed char); \
-  x(uchar, unsigned char); \
-  x(short, short); \
-  x(ushort, unsigned short); \
-  x(int, int); \
-  x(uint, unsigned int); \
-  x(long, long); \
-  x(ulong, unsigned long); \
-  x(longlong, long long); \
+#define NB_FOREACH_PRIMITIVE(x)     \
+  x(voidp, void*);                  \
+  x(char, char);                    \
+  x(schar, signed char);            \
+  x(uchar, unsigned char);          \
+  x(short, short);                  \
+  x(ushort, unsigned short);        \
+  x(int, int);                      \
+  x(uint, unsigned int);            \
+  x(long, long);                    \
+  x(ulong, unsigned long);          \
+  x(longlong, long long);           \
   x(ulonglong, unsigned long long); \
-  x(float, float); \
+  x(float, float);                  \
   x(double, double);
 
-#define FOREACH_ADDSUB(x) \
-  x(voidp, void*, int); \
-  x(int, int, int); \
-  x(uint, unsigned int, unsigned int); \
-  x(longlong, long long, long long); \
+#define NB_FOREACH_ADDSUB(x)                            \
+  x(voidp, void*, int);                                 \
+  x(int, int, int);                                     \
+  x(uint, unsigned int, unsigned int);                  \
+  x(longlong, long long, long long);                    \
   x(ulonglong, unsigned long long, unsigned long long); \
-  x(float, float, float); \
+  x(float, float, float);                               \
   x(double, double, double);
 
-#define GET(name, t) static inline t nb_get_##name(t* p) { return *p; }
-#define SET(name, t) static inline void nb_set_##name(t* p, t x) { *p = x; }
-#define LT(name, t) static inline int nb_lt_##name(t a, t b) { return a < b; }
-#define LE(name, t) static inline int nb_le_##name(t a, t b) { return a <= b; }
-#define GT(name, t) static inline int nb_gt_##name(t a, t b) { return a > b; }
-#define GE(name, t) static inline int nb_ge_##name(t a, t b) { return a >= b; }
-#define EQ(name, t) static inline int nb_eq_##name(t a, t b) { return a == b; }
-#define NE(name, t) static inline int nb_ne_##name(t a, t b) { return a != b; }
-#define ADD(name, t1, t2) \
+#define NB_GET(name, t) \
+  static inline t nb_get_##name(t* p) { return *p; }
+#define NB_SET(name, t) \
+  static inline void nb_set_##name(t* p, t x) { *p = x; }
+#define NB_LT(name, t) \
+  static inline int nb_lt_##name(t a, t b) { return a < b; }
+#define NB_LE(name, t) \
+  static inline int nb_le_##name(t a, t b) { return a <= b; }
+#define NB_GT(name, t) \
+  static inline int nb_gt_##name(t a, t b) { return a > b; }
+#define NB_GE(name, t) \
+  static inline int nb_ge_##name(t a, t b) { return a >= b; }
+#define NB_EQ(name, t) \
+  static inline int nb_eq_##name(t a, t b) { return a == b; }
+#define NB_NE(name, t) \
+  static inline int nb_ne_##name(t a, t b) { return a != b; }
+#define NB_ADD(name, t1, t2) \
   static inline t1 nb_add_##name(t1 a, t2 b) { return a + b; }
-#define SUB(name, t1, t2) \
+#define NB_SUB(name, t1, t2) \
   static inline t1 nb_sub_##name(t1 a, t2 b) { return a - b; }
 
-FOREACH_PRIMITIVE(GET)
-FOREACH_PRIMITIVE(SET)
-FOREACH_ADDSUB(ADD)
-FOREACH_ADDSUB(SUB)
-FOREACH_PRIMITIVE(LT)
-FOREACH_PRIMITIVE(LE)
-FOREACH_PRIMITIVE(GT)
-FOREACH_PRIMITIVE(GE)
-FOREACH_PRIMITIVE(EQ)
-FOREACH_PRIMITIVE(NE)
+NB_FOREACH_PRIMITIVE(NB_GET)
+NB_FOREACH_PRIMITIVE(NB_SET)
+NB_FOREACH_ADDSUB(NB_ADD)
+NB_FOREACH_ADDSUB(NB_SUB)
+NB_FOREACH_PRIMITIVE(NB_LT)
+NB_FOREACH_PRIMITIVE(NB_LE)
+NB_FOREACH_PRIMITIVE(NB_GT)
+NB_FOREACH_PRIMITIVE(NB_GE)
+NB_FOREACH_PRIMITIVE(NB_EQ)
+NB_FOREACH_PRIMITIVE(NB_NE)
 
 /* naclbind-gen:
   -r nb_get_voidp=get
@@ -203,17 +211,17 @@ FOREACH_PRIMITIVE(NE)
 
 */
 
-#undef GET
-#undef SET
-#undef ADD
-#undef SUB
-#undef LT
-#undef LTE
-#undef GT
-#undef GTE
-#undef EQ
-#undef NE
-#undef FOREACH_PRIMITIVE
-#undef FOREACH_ADDSUB
+#undef NB_GET
+#undef NB_SET
+#undef NB_ADD
+#undef NB_SUB
+#undef NB_LT
+#undef NB_LTE
+#undef NB_GT
+#undef NB_GTE
+#undef NB_EQ
+#undef NB_NE
+#undef NB_FOREACH_PRIMITIVE
+#undef NB_FOREACH_ADDSUB
 
-#endif  // BUILTINS_H_
+#endif /* NB_BUILTINS_H_ */

@@ -32,8 +32,9 @@ class JsonTest : public ::testing::Test {
   }
 
   virtual void TearDown() {
-    EXPECT_EQ(TRUE, fake_var_check_no_references());
+    EXPECT_EQ(NB_TRUE, fake_var_check_no_references());
   }
+
  private:
 };
 

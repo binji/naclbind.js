@@ -45,8 +45,8 @@
 #include "{{filename}}"
 #include <stdarg.h>
 
-#define MAX_INT_VARARGS {{MAX_INT_VARARGS}}
-#define MAX_DBL_VARARGS {{MAX_DBL_VARARGS}}
+#define NB_MAX_INT_VARARGS {{MAX_INT_VARARGS}}
+#define NB_MAX_DBL_VARARGS {{MAX_DBL_VARARGS}}
 
 [[[
 def FuncCall(fname, nargs, iargs, dargs):
@@ -65,156 +65,156 @@ def FuncCall(fname, nargs, iargs, dargs):
 [[    continue]]
 [[  ]]
 [[  if type.size > 0:]]
-COMPILE_ASSERT(sizeof({{type.c_spelling}}) == {{type.size}});
+NB_COMPILE_ASSERT(sizeof({{type.c_spelling}}) == {{type.size}});
 [[  for name, ftype, offset in type.fields:]]
-COMPILE_ASSERT(offsetof({{type.c_spelling}}, {{name}}) == {{offset}});
+NB_COMPILE_ASSERT(offsetof({{type.c_spelling}}, {{name}}) == {{offset}});
 [[  ]]
 [[]]
 
 [[for fn in collector.functions:]]
 // {{fn.displayname}}
-static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_idx) {
+static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int command_idx) {
 [[  if fn.type.kind == TypeKind.FUNCTIONPROTO:]]
 [[    arguments = list(fn.type.arg_types)]]
   int arg_count = nb_message_command_arg_count(message, command_idx);
 [[    if fn.type.is_variadic:]]
   if (arg_count < {{len(arguments)}}) {
-    VERROR("Expected at least %d args, got %d.", {{len(arguments)}}, arg_count);
+    NB_VERROR("Expected at least %d args, got %d.", {{len(arguments)}}, arg_count);
 [[    else:]]
   if (arg_count != {{len(arguments)}}) {
-    VERROR("Expected %d args, got %d.", {{len(arguments)}}, arg_count);
+    NB_VERROR("Expected %d args, got %d.", {{len(arguments)}}, arg_count);
 [[    ]]
-    return FALSE;
+    return NB_FALSE;
   }
 [[    for i, arg in enumerate(arguments):]]
 [[      orig_arg, arg = arg, arg.canonical]]
-  Handle handle{{i}} = nb_message_command_arg(message, command_idx, {{i}});
+  NB_Handle handle{{i}} = nb_message_command_arg(message, command_idx, {{i}});
 [[      if arg.kind == TypeKind.POINTER:]]
 [[        pointee = arg.pointee]]
 [[        if pointee.kind in (TypeKind.CHAR_S, TypeKind.CHAR_U):]]
   char* arg{{i}};
   if (!nb_handle_get_charp(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as char*.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as char*.", handle{{i}});
+    return NB_FALSE;
   }
 [[        elif pointee.kind == TypeKind.VOID:]]
   void* arg{{i}};
   if (!nb_handle_get_voidp(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as void*.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as void*.", handle{{i}});
+    return NB_FALSE;
   }
 [[        elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}}
   (void)handle{{i}};
   void* arg{{i}} = NULL;
-  ERROR("Function pointers are not currently supported.");
+  NB_ERROR("Function pointers are not currently supported.");
 [[        else:]]
   void* arg{{i}}x;
   if (!nb_handle_get_voidp(handle{{i}}, &arg{{i}}x)) {
-    VERROR("Unable to get handle %d as void*.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as void*.", handle{{i}});
+    return NB_FALSE;
   }
   {{arg.c_spelling}} arg{{i}} = ({{arg.c_spelling}}) arg{{i}}x;
 [[      elif arg.kind == TypeKind.LONG:]]
   int32_t arg{{i}}x;
   if (!nb_handle_get_int32(handle{{i}}, &arg{{i}}x)) {
-    VERROR("Unable to get handle %d as int32_t.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as int32_t.", handle{{i}});
+    return NB_FALSE;
   }
   long arg{{i}} = (long) arg{{i}}x;
 [[      elif arg.kind == TypeKind.ULONG:]]
   uint32_t arg{{i}}x;
   if (!nb_handle_get_uint32(handle{{i}}, &arg{{i}}x)) {
-    VERROR("Unable to get handle %d as uint32_t.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as uint32_t.", handle{{i}});
+    return NB_FALSE;
   }
   unsigned long arg{{i}} = (unsigned long) arg{{i}}x;
 [[      elif arg.kind == TypeKind.LONGLONG:]]
   int64_t arg{{i}};
   if (!nb_handle_get_int64(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as int64_t.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as int64_t.", handle{{i}});
+    return NB_FALSE;
   }
 [[      elif arg.kind == TypeKind.ULONGLONG:]]
   uint64_t arg{{i}};
   if (!nb_handle_get_uint64(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as uint64_t.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as uint64_t.", handle{{i}});
+    return NB_FALSE;
   }
 [[      elif arg.kind in (TypeKind.INT, TypeKind.SHORT, TypeKind.SCHAR, TypeKind.CHAR_S):]]
   int32_t arg{{i}};
   if (!nb_handle_get_int32(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as int32_t.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as int32_t.", handle{{i}});
+    return NB_FALSE;
   }
 [[      elif arg.kind in (TypeKind.UINT, TypeKind.USHORT, TypeKind.UCHAR, TypeKind.CHAR_U):]]
   uint32_t arg{{i}};
   if (!nb_handle_get_uint32(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as uint32_t.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as uint32_t.", handle{{i}});
+    return NB_FALSE;
   }
 [[      elif arg.kind == TypeKind.FLOAT:]]
   float arg{{i}};
   if (!nb_handle_get_float(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as float.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as float.", handle{{i}});
+    return NB_FALSE;
   }
 [[      elif arg.kind == TypeKind.DOUBLE:]]
   double arg{{i}};
   if (!nb_handle_get_double(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as double.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as double.", handle{{i}});
+    return NB_FALSE;
   }
 [[      elif arg.kind == TypeKind.ENUM:]]
   int32_t arg{{i}}x;
   if (!nb_handle_get_int32(handle{{i}}, &arg{{i}}x)) {
-    VERROR("Unable to get handle %d as int32_t.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as int32_t.", handle{{i}});
+    return NB_FALSE;
   }
   {{arg.c_spelling}} arg{{i}} = ({{arg.c_spelling}}) arg{{i}}x;
 [[      elif arg.kind == TypeKind.RECORD and arg.c_spelling == 'struct PP_Var':]]
   struct PP_Var arg{{i}};
   if (!nb_handle_get_var(handle{{i}}, &arg{{i}})) {
-    VERROR("Unable to get handle %d as struct PP_Var.", handle{{i}});
-    return FALSE;
+    NB_VERROR("Unable to get handle %d as struct PP_Var.", handle{{i}});
+    return NB_FALSE;
   }
 [[      elif arg.kind == TypeKind.CONSTANTARRAY:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} {{orig_arg.c_spelling}}
 [[        if orig_arg.c_spelling == '__gnuc_va_list':]]
   (void)handle{{i}};
   va_list arg{{i}};
-  ERROR("va_lists are not currently supported.");
+  NB_ERROR("va_lists are not currently supported.");
 [[        else:]]
   (void)handle{{i}};
   {{arg.element_type.c_spelling}}* arg{{i}} = NULL;
-  ERROR("Arrays are not currently supported.");
+  NB_ERROR("Arrays are not currently supported.");
 [[      elif arg.kind == TypeKind.INCOMPLETEARRAY:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} {{orig_arg.c_spelling}}
   (void)handle{{i}};
   {{arg.element_type.c_spelling}}* arg{{i}} = NULL;
-  ERROR("Arrays are not currently supported.");
+  NB_ERROR("Arrays are not currently supported.");
 [[      elif arg.kind == TypeKind.RECORD:]]
   (void)handle{{i}};
   {{arg.c_spelling}} arg{{i}};
-  ERROR("Passing structs and unions by value is not currently supported.");
+  NB_ERROR("Passing structs and unions by value is not currently supported.");
 [[      else:]]
   // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}}
-  ERROR("Type {{arg.c_spelling}} is not currently supported.");
+  NB_ERROR("Type {{arg.c_spelling}} is not currently supported.");
 [[    ]]
 [[    if fn.type.is_variadic:]]
-  nb_vararg_int_t iargs[MAX_INT_VARARGS];
-  nb_vararg_int_t* iargsp = iargs;
-  nb_vararg_int_t* iargs_end = &iargs[MAX_INT_VARARGS];
-  nb_vararg_dbl_t dargs[MAX_DBL_VARARGS];
-  nb_vararg_dbl_t* dargsp = dargs;
-  nb_vararg_dbl_t* dargs_end = &dargs[MAX_DBL_VARARGS];
+  NB_VarArgInt iargs[NB_MAX_INT_VARARGS];
+  NB_VarArgInt* iargsp = iargs;
+  NB_VarArgInt* iargs_end = &iargs[NB_MAX_INT_VARARGS];
+  NB_VarArgDbl dargs[NB_MAX_DBL_VARARGS];
+  NB_VarArgDbl* dargsp = dargs;
+  NB_VarArgDbl* dargs_end = &dargs[NB_MAX_DBL_VARARGS];
   int i;
   for (i = 0; i < arg_count - {{len(arguments)}}; ++i) {
-    Handle handle = nb_message_command_arg(message, command_idx, i + {{len(arguments)}});
+    NB_Handle handle = nb_message_command_arg(message, command_idx, i + {{len(arguments)}});
     if (!nb_handle_get_default(handle, &iargsp, iargs_end,
                                        &dargsp, dargs_end)) {
-      ERROR("Failed to add variadic argument.");
-      return FALSE;
+      NB_ERROR("Failed to add variadic argument.");
+      return NB_FALSE;
     }
   }
   size_t iarg_count = iargsp - iargs;
@@ -223,8 +223,8 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
   int arg_count = nb_message_command_arg_count(message, command_idx);
   if (arg_count != 0) {
     // UNSUPPORTED: no proto with non-zero argument list.
-    VERROR("Function with no prototype passed non-zero args: %d", arg_count);
-    return FALSE;
+    NB_VERROR("Function with no prototype passed non-zero args: %d", arg_count);
+    return NB_FALSE;
   }
 [[    arguments = []]]
 [[  else:]]
@@ -232,10 +232,10 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
 [[  result_type = fn.type.result_type.canonical]]
 [[  if result_type.kind != TypeKind.VOID:]]
   if (!nb_message_command_has_ret(message, command_idx)) {
-    ERROR("Return type is non-void, but no return handle given.");
-    return FALSE;
+    NB_ERROR("Return type is non-void, but no return handle given.");
+    return NB_FALSE;
   }
-  Handle ret = nb_message_command_ret(message, command_idx);
+  NB_Handle ret = nb_message_command_ret(message, command_idx);
 [[    if fn.type.kind == TypeKind.FUNCTIONPROTO and fn.type.is_variadic:]]
   {{result_type.c_spelling}} result;
 #ifdef __x86_64__
@@ -251,11 +251,11 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
 [[        for k in range(MAX_DBL_VARARGS + 1):]]
         case {{k}}: result = {{FuncCall(fn.spelling, len(arguments), j, k)}}; break;
 [[        ]]
-        default: assert(!"darg_count >= {{MAX_DBL_VARARGS + 1}}"); return FALSE;
+        default: assert(!"darg_count >= {{MAX_DBL_VARARGS + 1}}"); return NB_FALSE;
       }
       break;
 [[      ]]
-    default: assert(!"iarg_count >= {{MAX_INT_VARARGS + 1}}"); return FALSE;
+    default: assert(!"iarg_count >= {{MAX_INT_VARARGS + 1}}"); return NB_FALSE;
   }
 #else
   (void)darg_count;
@@ -263,53 +263,53 @@ static bool nb_command_run_{{fn.spelling}}(struct Message* message, int command_
 [[      for j in range(MAX_INT_VARARGS + 1):]]
     case {{j}}: result = {{FuncCall(fn.spelling, len(arguments), j, 0)}}; break;
 [[      ]]
-    default: assert(!"iarg_count >= {{MAX_INT_VARARGS + 1}}"); return FALSE;
+    default: assert(!"iarg_count >= {{MAX_INT_VARARGS + 1}}"); return NB_FALSE;
   }
 #endif
 [[    else:]]
   {{result_type.c_spelling}} result = {{FuncCall(fn.spelling, len(arguments), 0, 0)}};
 [[    ]]
 [[    if result_type.kind in (TypeKind.SCHAR, TypeKind.CHAR_S):]]
-  bool register_ok = nb_handle_register_int8(ret, result);
+  NB_Bool register_ok = nb_handle_register_int8(ret, result);
 [[    elif result_type.kind in (TypeKind.UCHAR, TypeKind.CHAR_U):]]
-  bool register_ok = nb_handle_register_uint8(ret, result);
+  NB_Bool register_ok = nb_handle_register_uint8(ret, result);
 [[    elif result_type.kind == TypeKind.SHORT:]]
-  bool register_ok = nb_handle_register_int16(ret, result);
+  NB_Bool register_ok = nb_handle_register_int16(ret, result);
 [[    elif result_type.kind == TypeKind.USHORT:]]
-  bool register_ok = nb_handle_register_uint16(ret, result);
+  NB_Bool register_ok = nb_handle_register_uint16(ret, result);
 [[    elif result_type.kind == TypeKind.INT:]]
-  bool register_ok = nb_handle_register_int32(ret, result);
+  NB_Bool register_ok = nb_handle_register_int32(ret, result);
 [[    elif result_type.kind == TypeKind.UINT:]]
-  bool register_ok = nb_handle_register_uint32(ret, result);
+  NB_Bool register_ok = nb_handle_register_uint32(ret, result);
 [[    elif result_type.kind == TypeKind.LONG:]]
-  bool register_ok = nb_handle_register_int32(ret, (int32_t)result);
+  NB_Bool register_ok = nb_handle_register_int32(ret, (int32_t)result);
 [[    elif result_type.kind == TypeKind.ULONG:]]
-  bool register_ok = nb_handle_register_uint32(ret, (uint32_t)result);
+  NB_Bool register_ok = nb_handle_register_uint32(ret, (uint32_t)result);
 [[    elif result_type.kind == TypeKind.LONGLONG:]]
-  bool register_ok = nb_handle_register_int64(ret, result);
+  NB_Bool register_ok = nb_handle_register_int64(ret, result);
 [[    elif result_type.kind == TypeKind.ULONGLONG:]]
-  bool register_ok = nb_handle_register_uint64(ret, result);
+  NB_Bool register_ok = nb_handle_register_uint64(ret, result);
 [[    elif result_type.kind == TypeKind.FLOAT:]]
-  bool register_ok = nb_handle_register_float(ret, result);
+  NB_Bool register_ok = nb_handle_register_float(ret, result);
 [[    elif result_type.kind == TypeKind.DOUBLE:]]
-  bool register_ok = nb_handle_register_double(ret, result);
+  NB_Bool register_ok = nb_handle_register_double(ret, result);
 [[    elif result_type.kind == TypeKind.POINTER:]]
-  bool register_ok = nb_handle_register_voidp(ret, (void*) result);
+  NB_Bool register_ok = nb_handle_register_voidp(ret, (void*) result);
 [[    elif result_type.kind == TypeKind.RECORD and result_type.c_spelling == 'struct PP_Var':]]
-  bool register_ok = nb_handle_register_var(ret, result);
+  NB_Bool register_ok = nb_handle_register_var(ret, result);
 [[    else:]]
   // UNSUPPORTED: {{result_type.kind}} {{result_type.c_spelling}}
   (void)result;
-  bool register_ok = FALSE;
+  NB_Bool register_ok = NB_FALSE;
 [[    ]]
   if (!register_ok) {
-    VERROR("Failed to register handle %d of type {{result_type.c_spelling}}.", ret);
-    return FALSE;
+    NB_VERROR("Failed to register handle %d of type {{result_type.c_spelling}}.", ret);
+    return NB_FALSE;
   }
-  return TRUE;
+  return NB_TRUE;
 [[  else:]]
   {{fn.spelling}}({{', '.join('arg%d' % i for i in range(len(arguments)))}});
-  return TRUE;
+  return NB_TRUE;
 [[  ]]
 }
 
@@ -319,7 +319,7 @@ enum {
   NUM_FUNCTIONS = {{len(collector.functions)}}
 };
 
-typedef bool (*nb_command_func_t)(struct Message*, int);
+typedef NB_Bool (*nb_command_func_t)(struct NB_Message*, int);
 static nb_command_func_t s_functions[] = {
   NULL,  /* TODO(binji): This should be errorif */
 [[for fn in collector.functions:]]
@@ -327,11 +327,11 @@ static nb_command_func_t s_functions[] = {
 [[]]
 };
 
-bool nb_message_command_run(struct Message* message, int command_idx) {
+NB_Bool nb_message_command_run(struct NB_Message* message, int command_idx) {
   int function_idx = nb_message_command_function(message, command_idx);
   if (function_idx < 0 || function_idx > NUM_FUNCTIONS) {
-    VERROR("Function id %d is out of range [0, %d].", function_idx, NUM_FUNCTIONS);
-    return FALSE;
+    NB_VERROR("Function id %d is out of range [0, %d].", function_idx, NUM_FUNCTIONS);
+    return NB_FALSE;
   }
 
   return s_functions[function_idx](message, command_idx);

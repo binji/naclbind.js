@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef HANDLE_H_
-#define HANDLE_H_
+#ifndef NB_HANDLE_H_
+#define NB_HANDLE_H_
 
 #include <stdint.h>
 #include <ppapi/c/pp_var.h>
@@ -28,52 +28,54 @@
 extern "C" {
 #endif
 
-typedef int32_t Handle;
+typedef int32_t NB_Handle;
 
 /* Size to use for default promotion (i.e. when passing to variadic functions */
 #ifdef __x86_64__
-typedef uint64_t nb_vararg_int_t;
-typedef double nb_vararg_dbl_t;
+typedef uint64_t NB_VarArgInt;
+typedef double NB_VarArgDbl;
 #else
-typedef uint32_t nb_vararg_int_t;
-typedef double nb_vararg_dbl_t;
+typedef uint32_t NB_VarArgInt;
+typedef double NB_VarArgDbl;
 #endif
 
 int32_t nb_handle_count(void);
-bool nb_handle_register_int8(Handle, int8_t);
-bool nb_handle_register_uint8(Handle, uint8_t);
-bool nb_handle_register_int16(Handle, int16_t);
-bool nb_handle_register_uint16(Handle, uint16_t);
-bool nb_handle_register_int32(Handle, int32_t);
-bool nb_handle_register_uint32(Handle, uint32_t);
-bool nb_handle_register_int64(Handle, int64_t);
-bool nb_handle_register_uint64(Handle, uint64_t);
-bool nb_handle_register_float(Handle, float);
-bool nb_handle_register_double(Handle, double);
-bool nb_handle_register_voidp(Handle, void*);
-bool nb_handle_register_var(Handle, struct PP_Var);
-bool nb_handle_get_int8(Handle, int8_t*);
-bool nb_handle_get_uint8(Handle, uint8_t*);
-bool nb_handle_get_int16(Handle, int16_t*);
-bool nb_handle_get_uint16(Handle, uint16_t*);
-bool nb_handle_get_int32(Handle, int32_t*);
-bool nb_handle_get_uint32(Handle, uint32_t*);
-bool nb_handle_get_int64(Handle, int64_t*);
-bool nb_handle_get_uint64(Handle, uint64_t*);
-bool nb_handle_get_float(Handle, float*);
-bool nb_handle_get_double(Handle, double*);
-bool nb_handle_get_voidp(Handle, void**);
-bool nb_handle_get_charp(Handle, char**);
-bool nb_handle_get_var(Handle, struct PP_Var*);
-bool nb_handle_get_default(Handle,
-                           nb_vararg_int_t** iargs, nb_vararg_int_t* max_iargs,
-                           nb_vararg_dbl_t** dargs, nb_vararg_dbl_t* max_dargs);
-void nb_handle_destroy(Handle);
-void nb_handle_destroy_many(Handle*, uint32_t handles_count);
-bool nb_handle_convert_to_var(Handle, struct PP_Var*);
+NB_Bool nb_handle_register_int8(NB_Handle, int8_t);
+NB_Bool nb_handle_register_uint8(NB_Handle, uint8_t);
+NB_Bool nb_handle_register_int16(NB_Handle, int16_t);
+NB_Bool nb_handle_register_uint16(NB_Handle, uint16_t);
+NB_Bool nb_handle_register_int32(NB_Handle, int32_t);
+NB_Bool nb_handle_register_uint32(NB_Handle, uint32_t);
+NB_Bool nb_handle_register_int64(NB_Handle, int64_t);
+NB_Bool nb_handle_register_uint64(NB_Handle, uint64_t);
+NB_Bool nb_handle_register_float(NB_Handle, float);
+NB_Bool nb_handle_register_double(NB_Handle, double);
+NB_Bool nb_handle_register_voidp(NB_Handle, void*);
+NB_Bool nb_handle_register_var(NB_Handle, struct PP_Var);
+NB_Bool nb_handle_get_int8(NB_Handle, int8_t*);
+NB_Bool nb_handle_get_uint8(NB_Handle, uint8_t*);
+NB_Bool nb_handle_get_int16(NB_Handle, int16_t*);
+NB_Bool nb_handle_get_uint16(NB_Handle, uint16_t*);
+NB_Bool nb_handle_get_int32(NB_Handle, int32_t*);
+NB_Bool nb_handle_get_uint32(NB_Handle, uint32_t*);
+NB_Bool nb_handle_get_int64(NB_Handle, int64_t*);
+NB_Bool nb_handle_get_uint64(NB_Handle, uint64_t*);
+NB_Bool nb_handle_get_float(NB_Handle, float*);
+NB_Bool nb_handle_get_double(NB_Handle, double*);
+NB_Bool nb_handle_get_voidp(NB_Handle, void**);
+NB_Bool nb_handle_get_charp(NB_Handle, char**);
+NB_Bool nb_handle_get_var(NB_Handle, struct PP_Var*);
+NB_Bool nb_handle_get_default(NB_Handle,
+                              NB_VarArgInt** iargs,
+                              NB_VarArgInt* max_iargs,
+                              NB_VarArgDbl** dargs,
+                              NB_VarArgDbl* max_dargs);
+void nb_handle_destroy(NB_Handle);
+void nb_handle_destroy_many(NB_Handle*, uint32_t handles_count);
+NB_Bool nb_handle_convert_to_var(NB_Handle, struct PP_Var*);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* HANDLE_H_ */
+#endif /* NB_HANDLE_H_ */

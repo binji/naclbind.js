@@ -13,11 +13,12 @@
  * limitations under the License.
  */
 
-#ifndef MACROS_H_
-#define MACROS_H_
+#ifndef NB_MACROS_H_
+#define NB_MACROS_H_
 
-#define ASSERT_SYM(line) static_assert_ ## line
-#define ASSERT_SYM_X(line) ASSERT_SYM(line)
-#define COMPILE_ASSERT(x) typedef char ASSERT_SYM_X(__LINE__)[(x) ? 1 : -1];
+#define NB_ASSERT_SYM(line) nb_static_assert_##line
+#define NB_ASSERT_SYM_X(line) NB_ASSERT_SYM(line)
+#define NB_COMPILE_ASSERT(x) \
+  typedef char NB_ASSERT_SYM_X(__LINE__)[(x) ? 1 : -1];
 
-#endif  /* MACROS_H_ */
+#endif /* NB_MACROS_H_ */

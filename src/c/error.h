@@ -13,33 +13,31 @@
  * limitations under the License.
  */
 
-#ifndef ERROR_H_
-#define ERROR_H_
+#ifndef NB_ERROR_H_
+#define NB_ERROR_H_
 
 #include <stdio.h>
 
 #ifndef NDEBUG
-#define LOG(msg) ERROR(msg)
-#define VLOG(msg, ...) VERROR(msg, __VA_ARGS__)
+#define NB_LOG(msg) NB_ERROR(msg)
+#define NB_VLOG(msg, ...) NB_VERROR(msg, __VA_ARGS__)
 #else
-#define LOG(msg)
-#define VLOG(msg, ...)
+#define NB_LOG(msg)
+#define NB_VLOG(msg, ...)
 #endif
 
-#define TRACE LOG("enter")
-#define VTRACE(fmt, ...) VLOG("enter" fmt, __VA_ARGS__)
+#define NB_TRACE LOG("enter")
+#define NB_VTRACE(fmt, ...) VLOG("enter" fmt, __VA_ARGS__)
 
-#define ERROR(msg) \
+#define NB_ERROR(msg) \
   fprintf(stderr, "%s:%d:(%s): " msg "\n", __FILE__, __LINE__, __FUNCTION__)
 
-#define VERROR(msg, ...) \
-  fprintf(stderr, "%s:%d:(%s): " msg "\n", __FILE__, __LINE__, __FUNCTION__, \
+#define NB_VERROR(msg, ...)        \
+  fprintf(stderr,                  \
+          "%s:%d:(%s): " msg "\n", \
+          __FILE__,                \
+          __LINE__,                \
+          __FUNCTION__,            \
           __VA_ARGS__)
 
-#define ERROR_IF(cond, msg) \
-  if (!(cond)) { ERROR(msg); return; }
-
-#define VERROR_IF(cond, msg, ...) \
-  if (!(cond)) { VERROR(msg, __VA_ARGS__); return; }
-
-#endif  /* ERROR_H_ */
+#endif /* NB_ERROR_H_ */

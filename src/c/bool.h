@@ -13,13 +13,11 @@
  * limitations under the License.
  */
 
-#ifndef BOOL_H_
-#define BOOL_H_
+#ifndef NB_BOOL_H_
+#define NB_BOOL_H_
 
-#define FALSE 0
-#define TRUE 1
-#ifndef __cplusplus
-typedef int bool;
-#endif
+#define NB_FALSE 0
+#define NB_TRUE 1
+typedef int NB_Bool;
 
-#endif  /* BOOL_H_ */
+#endif /* NB_BOOL_H_ */

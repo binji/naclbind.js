@@ -29,47 +29,52 @@
 #include "var.h"
 #endif
 
-struct Message;
-struct Command;
+struct NB_Message;
+struct NB_Command;
 
-static void* calloc_list(uint32_t len, size_t element_size);
-static bool expect_key(struct PP_Var var, const char* key,
-                       struct PP_Var* out_value);
-static bool optional_key(struct PP_Var var, const char* key,
-                         struct PP_Var* out_value);
-static bool parse_message(struct Message* message, struct PP_Var var);
-static bool parse_id(struct Message* message, struct PP_Var var);
-static bool parse_gethandles(struct Message* message, struct PP_Var var);
-static bool parse_sethandles(struct Message* message, struct PP_Var var);
-static bool parse_destroyhandles(struct Message* message, struct PP_Var var);
-static bool parse_commands(struct Message* message, struct PP_Var var);
-static bool parse_command(struct Command* command, struct PP_Var var);
+static void* nb_calloc_list(uint32_t len, size_t element_size);
+static NB_Bool nb_expect_key(struct PP_Var var,
+                             const char* key,
+                             struct PP_Var* out_value);
+static NB_Bool nb_optional_key(struct PP_Var var,
+                               const char* key,
+                               struct PP_Var* out_value);
+static NB_Bool nb_parse_message(struct NB_Message* message, struct PP_Var var);
+static NB_Bool nb_parse_id(struct NB_Message* message, struct PP_Var var);
+static NB_Bool nb_parse_gethandles(struct NB_Message* message,
+                                   struct PP_Var var);
+static NB_Bool nb_parse_sethandles(struct NB_Message* message,
+                                   struct PP_Var var);
+static NB_Bool nb_parse_destroyhandles(struct NB_Message* message,
+                                       struct PP_Var var);
+static NB_Bool nb_parse_commands(struct NB_Message* message, struct PP_Var var);
+static NB_Bool nb_parse_command(struct NB_Command* command, struct PP_Var var);
 
-struct Command {
+struct NB_Command {
   int id;
-  Handle* args;
+  NB_Handle* args;
   uint32_t args_count;
-  Handle ret;
+  NB_Handle ret;
 };
 
-struct HandleVarPair {
-  Handle id;
+struct NB_HandleVarPair {
+  NB_Handle id;
   struct PP_Var var;
 };
 
-struct Message {
+struct NB_Message {
   int id;
-  Handle* gethandles;
+  NB_Handle* gethandles;
   uint32_t gethandles_count;
-  struct HandleVarPair* sethandles;
+  struct NB_HandleVarPair* sethandles;
   uint32_t sethandles_count;
-  Handle* destroyhandles;
+  NB_Handle* destroyhandles;
   uint32_t destroyhandles_count;
-  struct Command* commands;
+  struct NB_Command* commands;
   uint32_t commands_count;
 };
 
-static bool string_to_long(const char* s, uint32_t len, long* out_value) {
+static NB_Bool nb_string_to_long(const char* s, uint32_t len, long* out_value) {
   enum { kBufferSize = 32 };
   char buffer[kBufferSize + 1];
   char* endptr;
@@ -80,32 +85,32 @@ static bool string_to_long(const char* s, uint32_t len, long* out_value) {
 
   errno = 0;
   *out_value = strtol(buffer, &endptr, 10);
-  return (errno == 0 && endptr == buffer + len) ? TRUE : FALSE;
+  return (errno == 0 && endptr == buffer + len) ? NB_TRUE : NB_FALSE;
 }
 
-static bool var_string_to_long(struct PP_Var var, long* out_value) {
+static NB_Bool nb_var_string_to_long(struct PP_Var var, long* out_value) {
   const char* str;
   uint32_t len;
 
   if (!nb_var_check_type_with_error(var, PP_VARTYPE_STRING)) {
-    return FALSE;
+    return NB_FALSE;
   }
 
   if (!nb_var_string(var, &str, &len)) {
-    return FALSE;
+    return NB_FALSE;
   }
 
-  if (!string_to_long(str, len, out_value)) {
-    VERROR("Expected string to be int. Got \"%.*s\".", len, str);
-    return FALSE;
+  if (!nb_string_to_long(str, len, out_value)) {
+    NB_VERROR("Expected string to be int. Got \"%.*s\".", len, str);
+    return NB_FALSE;
   }
 
-  return TRUE;
+  return NB_TRUE;
 }
 
-struct Message* nb_message_create(struct PP_Var var) {
-  struct Message* message = calloc(1, sizeof(struct Message));
-  if (!parse_message(message, var)) {
+struct NB_Message* nb_message_create(struct PP_Var var) {
+  struct NB_Message* message = calloc(1, sizeof(struct NB_Message));
+  if (!nb_parse_message(message, var)) {
     nb_message_destroy(message);
     return NULL;
   }
@@ -113,7 +118,7 @@ struct Message* nb_message_create(struct PP_Var var) {
   return message;
 }
 
-void nb_message_destroy(struct Message* message) {
+void nb_message_destroy(struct NB_Message* message) {
   uint32_t i;
   assert(message != NULL);
 
@@ -131,43 +136,45 @@ void nb_message_destroy(struct Message* message) {
   free(message);
 }
 
-void* calloc_list(uint32_t len, size_t element_size) {
+void* nb_calloc_list(uint32_t len, size_t element_size) {
   return len ? calloc(len, element_size) : NULL;
 }
 
-bool expect_key(struct PP_Var var, const char* key, struct PP_Var* out_value) {
-  bool result = optional_key(var, key, out_value);
+NB_Bool nb_expect_key(struct PP_Var var,
+                      const char* key,
+                      struct PP_Var* out_value) {
+  NB_Bool result = nb_optional_key(var, key, out_value);
   if (!result) {
-    VERROR("Expected message to have key: %s", key);
+    NB_VERROR("Expected message to have key: %s", key);
   }
 
   return result;
 }
 
-bool optional_key(struct PP_Var var, const char* key,
-                  struct PP_Var* out_value) {
+NB_Bool nb_optional_key(struct PP_Var var,
+                        const char* key,
+                        struct PP_Var* out_value) {
   if (!nb_var_dict_has_key(var, key)) {
-    return FALSE;
+    return NB_FALSE;
   }
 
   *out_value = nb_var_dict_get(var, key);
-  return TRUE;
+  return NB_TRUE;
 }
 
-bool parse_message(struct Message* message, struct PP_Var var) {
+NB_Bool nb_parse_message(struct NB_Message* message, struct PP_Var var) {
   return nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY) &&
-         parse_id(message, var) &&
-         parse_gethandles(message, var) &&
-         parse_sethandles(message, var) &&
-         parse_destroyhandles(message, var) &&
-         parse_commands(message, var);
+         nb_parse_id(message, var) && nb_parse_gethandles(message, var) &&
+         nb_parse_sethandles(message, var) &&
+         nb_parse_destroyhandles(message, var) &&
+         nb_parse_commands(message, var);
 }
 
-bool parse_id(struct Message* message, struct PP_Var var) {
-  bool result = FALSE;
+NB_Bool nb_parse_id(struct NB_Message* message, struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
   struct PP_Var id = PP_MakeUndefined();
 
-  if (!expect_key(var, "id", &id)) {
+  if (!nb_expect_key(var, "id", &id)) {
     goto cleanup;
   }
 
@@ -176,25 +183,25 @@ bool parse_id(struct Message* message, struct PP_Var var) {
   }
 
   if (id.value.as_int <= 0) {
-    VERROR("Expected message id to be > 0. Got %d", id.value.as_int);
+    NB_VERROR("Expected message id to be > 0. Got %d", id.value.as_int);
     goto cleanup;
   }
 
   message->id = id.value.as_int;
-  result = TRUE;
+  result = NB_TRUE;
 cleanup:
   nb_var_release(id);
   return result;
 }
 
-bool parse_gethandles(struct Message* message, struct PP_Var var) {
-  bool result = FALSE;
+NB_Bool nb_parse_gethandles(struct NB_Message* message, struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
   struct PP_Var gethandles_var = PP_MakeUndefined();
-  Handle* gethandles = NULL;
+  NB_Handle* gethandles = NULL;
   uint32_t i, len;
 
-  if (!optional_key(var, "get", &gethandles_var)) {
-    result = TRUE;
+  if (!nb_optional_key(var, "get", &gethandles_var)) {
+    result = NB_TRUE;
     goto cleanup;
   }
 
@@ -203,7 +210,7 @@ bool parse_gethandles(struct Message* message, struct PP_Var var) {
   }
 
   len = nb_var_array_length(gethandles_var);
-  gethandles = calloc_list(len, sizeof(Handle));
+  gethandles = nb_calloc_list(len, sizeof(NB_Handle));
   for (i = 0; i < len; ++i) {
     struct PP_Var handle = nb_var_array_get(gethandles_var, i);
     if (!nb_var_check_type_with_error(handle, PP_VARTYPE_INT32)) {
@@ -218,24 +225,24 @@ bool parse_gethandles(struct Message* message, struct PP_Var var) {
   message->gethandles = gethandles;
   message->gethandles_count = len;
 
-  result = TRUE;
-  gethandles = NULL;  /* Pass ownership to the message. */
+  result = NB_TRUE;
+  gethandles = NULL; /* Pass ownership to the message. */
 cleanup:
   free(gethandles);
   nb_var_release(gethandles_var);
   return result;
 }
 
-bool parse_sethandles(struct Message* message, struct PP_Var var) {
-  bool result = FALSE;
+NB_Bool nb_parse_sethandles(struct NB_Message* message, struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
   struct PP_Var sethandles_var = PP_MakeUndefined();
   struct PP_Var keys = PP_MakeUndefined();
-  struct HandleVarPair* sethandles = NULL;
+  struct NB_HandleVarPair* sethandles = NULL;
   uint32_t i, len;
   struct PP_Var value;
 
-  if (!optional_key(var, "set", &sethandles_var)) {
-    result = TRUE;
+  if (!nb_optional_key(var, "set", &sethandles_var)) {
+    result = NB_TRUE;
     goto cleanup;
   }
 
@@ -245,12 +252,12 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
 
   keys = nb_var_dict_get_keys(sethandles_var);
   len = nb_var_array_length(keys);
-  sethandles = calloc_list(len, sizeof(struct HandleVarPair));
+  sethandles = nb_calloc_list(len, sizeof(struct NB_HandleVarPair));
   for (i = 0; i < len; ++i) {
     struct PP_Var key = nb_var_array_get(keys, i);
     long key_long;
 
-    if (!var_string_to_long(key, &key_long)) {
+    if (!nb_var_string_to_long(key, &key_long)) {
       nb_var_release(key);
       goto cleanup;
     }
@@ -272,8 +279,8 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
         uint32_t len = nb_var_array_length(value);
         uint32_t i;
         if (len != 2) {
-          VERROR("Expected set handle value array to be of length 2, not %u",
-                 len);
+          NB_VERROR("Expected set handle value array to be of length 2, not %u",
+                    len);
           goto cleanup;
         }
 
@@ -281,9 +288,11 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
           struct PP_Var element = nb_var_array_get(value, i);
           if (element.type != PP_VARTYPE_INT32) {
             nb_var_release(element);
-            VERROR("Expected set handle value array to have elements of type "
-                   "%s, not %s.", nb_var_type_to_string(PP_VARTYPE_INT32),
-                   nb_var_type_to_string(element.type));
+            NB_VERROR(
+                "Expected set handle value array to have elements of type "
+                "%s, not %s.",
+                nb_var_type_to_string(PP_VARTYPE_INT32),
+                nb_var_type_to_string(element.type));
             goto cleanup;
           }
         }
@@ -291,8 +300,8 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
       }
 
       default:
-        VERROR("Unexpected set handle value type: %s.",
-               nb_var_type_to_string(value.type));
+        NB_VERROR("Unexpected set handle value type: %s.",
+                  nb_var_type_to_string(value.type));
         goto cleanup;
     }
 
@@ -300,13 +309,13 @@ bool parse_sethandles(struct Message* message, struct PP_Var var) {
     /* NOTE: this passes the reference from nb_var_dict_get_var above to
        sethandles[i].var. */
     sethandles[i].var = value;
-    value = PP_MakeUndefined();  /* Don't release below in cleanup */
+    value = PP_MakeUndefined(); /* Don't release below in cleanup */
   }
 
   message->sethandles = sethandles;
   message->sethandles_count = len;
-  result = TRUE;
-  sethandles = NULL;  /* Pass ownership to the message. */
+  result = NB_TRUE;
+  sethandles = NULL; /* Pass ownership to the message. */
 cleanup:
   nb_var_release(value);
   free(sethandles);
@@ -315,14 +324,14 @@ cleanup:
   return result;
 }
 
-bool parse_destroyhandles(struct Message* message, struct PP_Var var) {
-  bool result = FALSE;
+NB_Bool nb_parse_destroyhandles(struct NB_Message* message, struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
   struct PP_Var destroyhandles_var = PP_MakeUndefined();
-  Handle* destroyhandles = NULL;
+  NB_Handle* destroyhandles = NULL;
   uint32_t i, len;
 
-  if (!optional_key(var, "destroy", &destroyhandles_var)) {
-    result = TRUE;
+  if (!nb_optional_key(var, "destroy", &destroyhandles_var)) {
+    result = NB_TRUE;
     goto cleanup;
   }
 
@@ -331,7 +340,7 @@ bool parse_destroyhandles(struct Message* message, struct PP_Var var) {
   }
 
   len = nb_var_array_length(destroyhandles_var);
-  destroyhandles = calloc_list(len, sizeof(Handle));
+  destroyhandles = nb_calloc_list(len, sizeof(NB_Handle));
   for (i = 0; i < len; ++i) {
     struct PP_Var handle = nb_var_array_get(destroyhandles_var, i);
     if (!nb_var_check_type_with_error(handle, PP_VARTYPE_INT32)) {
@@ -345,22 +354,22 @@ bool parse_destroyhandles(struct Message* message, struct PP_Var var) {
 
   message->destroyhandles = destroyhandles;
   message->destroyhandles_count = len;
-  result = TRUE;
-  destroyhandles = NULL;  /* Pass ownership to the message. */
+  result = NB_TRUE;
+  destroyhandles = NULL; /* Pass ownership to the message. */
 cleanup:
   free(destroyhandles);
   nb_var_release(destroyhandles_var);
   return result;
 }
 
-bool parse_commands(struct Message* message, struct PP_Var var) {
-  bool result = FALSE;
+NB_Bool nb_parse_commands(struct NB_Message* message, struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
   struct PP_Var commands_var = PP_MakeUndefined();
-  struct Command* commands = NULL;
+  struct NB_Command* commands = NULL;
   uint32_t i, len;
 
-  if (!optional_key(var, "commands", &commands_var)) {
-    result = TRUE;
+  if (!nb_optional_key(var, "commands", &commands_var)) {
+    result = NB_TRUE;
     goto cleanup;
   }
 
@@ -369,10 +378,10 @@ bool parse_commands(struct Message* message, struct PP_Var var) {
   }
 
   len = nb_var_array_length(commands_var);
-  commands = calloc_list(len, sizeof(struct Command));
+  commands = nb_calloc_list(len, sizeof(struct NB_Command));
   for (i = 0; i < len; ++i) {
     struct PP_Var command_var = nb_var_array_get(commands_var, i);
-    if (!parse_command(&commands[i], command_var)) {
+    if (!nb_parse_command(&commands[i], command_var)) {
       nb_var_release(command_var);
       goto cleanup;
     }
@@ -382,27 +391,28 @@ bool parse_commands(struct Message* message, struct PP_Var var) {
 
   message->commands = commands;
   message->commands_count = len;
-  result = TRUE;
-  commands = NULL;  /* Pass ownership to the message. */
+  result = NB_TRUE;
+  commands = NULL; /* Pass ownership to the message. */
 cleanup:
   free(commands);
   nb_var_release(commands_var);
   return result;
 }
 
-bool parse_command(struct Command* command, struct PP_Var var) {
-  bool result = FALSE;
+NB_Bool nb_parse_command(struct NB_Command* command, struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
   struct PP_Var id_var = PP_MakeUndefined();
   struct PP_Var args_var = PP_MakeUndefined();
   struct PP_Var ret_var = PP_MakeUndefined();
-  Handle* args = NULL;
+  NB_Handle* args = NULL;
   uint32_t i, len;
 
   if (!nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY)) {
     goto cleanup;
   }
 
-  if (!expect_key(var, "id", &id_var) || !expect_key(var, "args", &args_var)) {
+  if (!nb_expect_key(var, "id", &id_var) ||
+      !nb_expect_key(var, "args", &args_var)) {
     goto cleanup;
   }
 
@@ -417,14 +427,14 @@ bool parse_command(struct Command* command, struct PP_Var var) {
   ret_var = nb_var_dict_get(var, "ret");
   if (ret_var.type != PP_VARTYPE_INT32 &&
       ret_var.type != PP_VARTYPE_UNDEFINED) {
-    VERROR("Expected ret field to be int32 or undefined, not %s.",
-           nb_var_type_to_string(ret_var.type));
+    NB_VERROR("Expected ret field to be int32 or undefined, not %s.",
+              nb_var_type_to_string(ret_var.type));
     goto cleanup;
   }
 
   /* Check that args_var is an array of ints. */
   len = nb_var_array_length(args_var);
-  args = calloc_list(len, sizeof(Handle));
+  args = nb_calloc_list(len, sizeof(NB_Handle));
   for (i = 0; i < len; ++i) {
     struct PP_Var arg = nb_var_array_get(args_var, i);
     if (!nb_var_check_type_with_error(arg, PP_VARTYPE_INT32)) {
@@ -442,8 +452,8 @@ bool parse_command(struct Command* command, struct PP_Var var) {
   if (ret_var.type != PP_VARTYPE_UNDEFINED) {
     command->ret = ret_var.value.as_int;
   }
-  result = TRUE;
-  args = NULL;  /* Pass ownership to the message. */
+  result = NB_TRUE;
+  args = NULL; /* Pass ownership to the message. */
 cleanup:
   free(args);
   nb_var_release(ret_var);
@@ -452,18 +462,20 @@ cleanup:
   return result;
 }
 
-int nb_message_id(struct Message* message) {
+int nb_message_id(struct NB_Message* message) {
   assert(message != NULL);
   return message->id;
 }
 
-int nb_message_sethandles_count(struct Message* message) {
+int nb_message_sethandles_count(struct NB_Message* message) {
   assert(message != NULL);
   return message->sethandles_count;
 }
 
-void nb_message_sethandle(struct Message* message, int index,
-                          Handle* out_handle, struct PP_Var* out_value) {
+void nb_message_sethandle(struct NB_Message* message,
+                          int index,
+                          NB_Handle* out_handle,
+                          struct PP_Var* out_value) {
   assert(message != NULL);
   assert(index >= 0 && index < message->sethandles_count);
   assert(out_handle != NULL);
@@ -473,60 +485,62 @@ void nb_message_sethandle(struct Message* message, int index,
   nb_var_addref(*out_value);
 }
 
-int nb_message_gethandles_count(struct Message* message) {
+int nb_message_gethandles_count(struct NB_Message* message) {
   assert(message != NULL);
   return message->gethandles_count;
 }
 
-Handle nb_message_gethandle(struct Message* message, int index) {
+NB_Handle nb_message_gethandle(struct NB_Message* message, int index) {
   assert(message != NULL);
   assert(index >= 0 && index < message->gethandles_count);
   return message->gethandles[index];
 }
 
-int nb_message_destroyhandles_count(struct Message* message) {
+int nb_message_destroyhandles_count(struct NB_Message* message) {
   assert(message != NULL);
   return message->destroyhandles_count;
 }
 
-Handle nb_message_destroyhandle(struct Message* message, int index) {
+NB_Handle nb_message_destroyhandle(struct NB_Message* message, int index) {
   assert(message != NULL);
   assert(index >= 0 && index < message->destroyhandles_count);
   return message->destroyhandles[index];
 }
 
-int nb_message_commands_count(struct Message* message) {
+int nb_message_commands_count(struct NB_Message* message) {
   assert(message != NULL);
   return message->commands_count;
 }
 
-int nb_message_command_function(struct Message* message, int command_idx) {
+int nb_message_command_function(struct NB_Message* message, int command_idx) {
   assert(message != NULL);
   assert(command_idx >= 0 && command_idx < message->commands_count);
   return message->commands[command_idx].id;
 }
 
-int nb_message_command_arg_count(struct Message* message, int command_idx) {
+int nb_message_command_arg_count(struct NB_Message* message, int command_idx) {
   assert(message != NULL);
   assert(command_idx >= 0 && command_idx < message->commands_count);
   return message->commands[command_idx].args_count;
 }
 
-Handle nb_message_command_arg(struct Message* message, int command_idx,
-                              int arg_idx) {
+NB_Handle nb_message_command_arg(struct NB_Message* message,
+                                 int command_idx,
+                                 int arg_idx) {
   assert(message != NULL);
   assert(command_idx >= 0 && command_idx < message->commands_count);
   assert(arg_idx >= 0 && arg_idx < message->commands[command_idx].args_count);
   return message->commands[command_idx].args[arg_idx];
 }
 
-bool nb_message_command_has_ret(struct Message* message, int command_idx) {
+NB_Bool nb_message_command_has_ret(struct NB_Message* message,
+                                   int command_idx) {
   assert(message != NULL);
   assert(command_idx >= 0 && command_idx < message->commands_count);
-  return message->commands[command_idx].ret != 0 ? TRUE : FALSE;
+  return message->commands[command_idx].ret != 0 ? NB_TRUE : NB_FALSE;
 }
 
-Handle nb_message_command_ret(struct Message* message, int command_idx) {
+NB_Handle nb_message_command_ret(struct NB_Message* message, int command_idx) {
   assert(message != NULL);
   assert(command_idx >= 0 && command_idx < message->commands_count);
   return message->commands[command_idx].ret;

@@ -99,8 +99,10 @@ static void* buffer_map(struct PP_Var);
 static void buffer_unmap(struct PP_Var);
 
 static struct PP_Var dict_create(void);
-static PP_Bool dict_find(struct PP_Var var, struct PP_Var key,
-                         struct VarData** out_var_data, uint32_t* out_index);
+static PP_Bool dict_find(struct PP_Var var,
+                         struct PP_Var key,
+                         struct VarData** out_var_data,
+                         uint32_t* out_index);
 static struct PP_Var dict_get(struct PP_Var, struct PP_Var key);
 static PP_Bool dict_set(struct PP_Var, struct PP_Var key, struct PP_Var value);
 static void dict_delete(struct PP_Var, struct PP_Var key);
@@ -108,34 +110,34 @@ static PP_Bool dict_has_key(struct PP_Var, struct PP_Var key);
 static struct PP_Var dict_get_keys(struct PP_Var);
 
 static struct PPB_Var_1_1 s_ppb_var = {
-  &var_add_ref,
-  &var_release,
-  &var_from_utf8,
-  &var_to_utf8,
+    &var_add_ref,
+    &var_release,
+    &var_from_utf8,
+    &var_to_utf8,
 };
 
 static struct PPB_VarArray_1_0 s_ppb_var_array = {
-  &array_create,
-  &array_get,
-  &array_set,
-  &array_get_length,
-  &array_set_length,
+    &array_create,
+    &array_get,
+    &array_set,
+    &array_get_length,
+    &array_set_length,
 };
 
 static struct PPB_VarArrayBuffer_1_0 s_ppb_var_array_buffer = {
-  &buffer_create,
-  &buffer_byte_length,
-  &buffer_map,
-  &buffer_unmap,
+    &buffer_create,
+    &buffer_byte_length,
+    &buffer_map,
+    &buffer_unmap,
 };
 
 static struct PPB_VarDictionary_1_0 s_ppb_var_dict = {
-  &dict_create,
-  &dict_get,
-  &dict_set,
-  &dict_delete,
-  &dict_has_key,
-  &dict_get_keys,
+    &dict_create,
+    &dict_get,
+    &dict_set,
+    &dict_delete,
+    &dict_has_key,
+    &dict_get_keys,
 };
 
 void fake_var_init(void) {
@@ -147,8 +149,8 @@ void fake_var_destroy(void) {
   var_data_destroy_all();
 }
 
-bool fake_var_check_no_references(void) {
-  bool result = TRUE;
+NB_Bool fake_var_check_no_references(void) {
+  NB_Bool result = NB_TRUE;
   int i;
   for (i = 0; i < kDataCap; ++i) {
     struct PP_Var var;
@@ -162,12 +164,12 @@ bool fake_var_check_no_references(void) {
     var.value.as_id = i;
     json = var_to_json(var);
 
-    VERROR("VarData with id=%d, type=\"%s\" has non-zero refcount %d:\n%s",
-           i,
-           nb_var_type_to_string(s_data[i].type),
-           s_data[i].ref_count,
-           json);
-    result = FALSE;
+    NB_VERROR("VarData with id=%d, type=\"%s\" has non-zero refcount %d:\n%s",
+              i,
+              nb_var_type_to_string(s_data[i].type),
+              s_data[i].ref_count,
+              json);
+    result = NB_FALSE;
   }
 
   return result;
@@ -220,7 +222,7 @@ struct VarData* var_data_get_type(struct PP_Var var, PP_VarType type) {
 
   var_data = var_data_get(var.value.as_id);
   if (var_data == NULL) {
-    VERROR("var_data_get_type(%lld) called with bad id.", var.value.as_id);
+    NB_VERROR("var_data_get_type(%lld) called with bad id.", var.value.as_id);
     return NULL;
   }
 
@@ -230,7 +232,7 @@ struct VarData* var_data_get_type(struct PP_Var var, PP_VarType type) {
 struct VarData* var_data_alloc(void) {
   struct VarData* var_data;
   if (s_data_first_free == -1) {
-    ERROR("var_data_alloc() failed.");
+    NB_ERROR("var_data_alloc() failed.");
     return NULL;
   }
 
@@ -277,7 +279,7 @@ void var_data_destroy(struct VarData* var_data) {
 void var_data_free(int64_t id) {
   struct VarData* var_data;
   if (id < 0 || id >= kDataCap) {
-    VERROR("var_data_free(%lld) called with bad id.", id);
+    NB_VERROR("var_data_free(%lld) called with bad id.", id);
     return;
   }
 
@@ -304,7 +306,7 @@ void var_add_ref(struct PP_Var var) {
 
   var_data = var_data_get(var.value.as_id);
   if (var_data == NULL) {
-    VERROR("var_add_ref(%lld) called with bad id.", var.value.as_id);
+    NB_VERROR("var_add_ref(%lld) called with bad id.", var.value.as_id);
     return;
   }
 
@@ -326,7 +328,7 @@ void var_release(struct PP_Var var) {
 
   var_data = var_data_get(var.value.as_id);
   if (var_data == NULL) {
-    VERROR("var_release(%lld) called with bad id.", var.value.as_id);
+    NB_VERROR("var_release(%lld) called with bad id.", var.value.as_id);
     return;
   }
 
@@ -334,8 +336,9 @@ void var_release(struct PP_Var var) {
   if (ref_count == 0) {
     var_data_free(var.value.as_id);
   } else if (ref_count < 0) {
-    VERROR("var_release(%lld) called with <=0 ref_count: %d.",
-           var.value.as_id, ref_count + 1);
+    NB_VERROR("var_release(%lld) called with <=0 ref_count: %d.",
+              var.value.as_id,
+              ref_count + 1);
   }
 }
 
@@ -549,8 +552,10 @@ struct PP_Var dict_create(void) {
   return result;
 }
 
-PP_Bool dict_find(struct PP_Var var, struct PP_Var key,
-                  struct VarData** out_var_data, uint32_t* out_index) {
+PP_Bool dict_find(struct PP_Var var,
+                  struct PP_Var key,
+                  struct VarData** out_var_data,
+                  uint32_t* out_index) {
   uint32_t i;
   struct VarData* var_data = var_data_get_type(var, PP_VARTYPE_DICTIONARY);
   *out_var_data = var_data;
@@ -635,9 +640,9 @@ void dict_delete(struct PP_Var var, struct PP_Var key) {
 
   // Move everything else down.
   size_to_move = (var_data->dict.len - i - 1) * sizeof(struct PP_Var);
-  memmove(&var_data->dict.keys[i], &var_data->dict.keys[i+1], size_to_move);
-  memmove(&var_data->dict.values[i], &var_data->dict.values[i+1],
-          size_to_move);
+  memmove(&var_data->dict.keys[i], &var_data->dict.keys[i + 1], size_to_move);
+  memmove(
+      &var_data->dict.values[i], &var_data->dict.values[i + 1], size_to_move);
 
   var_data->dict.len--;
 }

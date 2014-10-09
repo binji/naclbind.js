@@ -19,25 +19,25 @@
 
 #include <stdlib.h>
 
-static const char* kTypeString[] = {
-  "(invalid)",
-  "int8_t",
-  "uint8_t",
-  "int16_t",
-  "uint16_t",
-  "int32_t",
-  "uint32_t",
-  "int64_t",
-  "uint64_t",
-  "float",
-  "double",
-  "void*",
-  "struct PP_Var",
+static const char* s_nb_type_string[] = {
+    "(invalid)",
+    "int8_t",
+    "uint8_t",
+    "int16_t",
+    "uint16_t",
+    "int32_t",
+    "uint32_t",
+    "int64_t",
+    "uint64_t",
+    "float",
+    "double",
+    "void*",
+    "struct PP_Var",
 };
 
-const char* nb_type_to_string(Type id) {
-  if (id <= 0 || id >= NUM_BUILTIN_TYPES) {
+const char* nb_type_to_string(NB_Type id) {
+  if (id <= 0 || id >= NB_NUM_BUILTIN_TYPES) {
     return "<unknown>";
   }
-  return kTypeString[id];
+  return s_nb_type_string[id];
 }

@@ -28,7 +28,7 @@ void GeneratorTest::SetUp() {
 
 void GeneratorTest::TearDown() {
   CleanUp();
-  EXPECT_EQ(TRUE, fake_var_check_no_references());
+  EXPECT_EQ(NB_TRUE, fake_var_check_no_references());
 }
 
 void GeneratorTest::RunTest(const char* request_json,
@@ -39,7 +39,7 @@ void GeneratorTest::RunTest(const char* request_json,
   request_ = json_to_var(request_json);
   ASSERT_EQ(PP_VARTYPE_DICTIONARY, request_.type);
 
-  ASSERT_EQ(TRUE, nb_request_run(request_, &response_));
+  ASSERT_EQ(NB_TRUE, nb_request_run(request_, &response_));
 
   response_json_ = var_to_json_flat(response_);
   EXPECT_STREQ(expected_response_json, response_json_);

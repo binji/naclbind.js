@@ -153,7 +153,7 @@ static Value var_to_value(struct PP_Var var) {
     }
 
     default:
-      VERROR("Unexpected type %s", nb_var_type_to_string(var.type));
+      NB_VERROR("Unexpected type %s", nb_var_type_to_string(var.type));
       return Value();
   }
 }
@@ -162,8 +162,8 @@ struct PP_Var json_to_var(const char* string) {
   Reader reader;
   Value value;
   if (!reader.parse(string, value, false)) {
-    VERROR("Error parsing json:\n%s",
-           reader.getFormattedErrorMessages().c_str());
+    NB_VERROR("Error parsing json:\n%s",
+              reader.getFormattedErrorMessages().c_str());
     return PP_MakeUndefined();
   }
 

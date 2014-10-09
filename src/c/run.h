@@ -26,10 +26,10 @@
 extern "C" {
 #endif
 
-bool nb_request_run(struct PP_Var request, struct PP_Var* response);
+NB_Bool nb_request_run(struct PP_Var request, struct PP_Var* response);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* RUN_H_ */
+#endif /* RUN_H_ */

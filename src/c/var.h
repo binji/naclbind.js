@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef VAR_H_
-#define VAR_H_
+#ifndef NB_VAR_H_
+#define NB_VAR_H_
 
 #include <stdint.h>
 #include <ppapi/c/pp_var.h>
@@ -31,23 +31,23 @@ void nb_var_addref(struct PP_Var);
 void nb_var_release(struct PP_Var);
 
 const char* nb_var_type_to_string(PP_VarType);
-bool nb_var_check_type(struct PP_Var, PP_VarType);
-bool nb_var_check_type_with_error(struct PP_Var, PP_VarType);
+NB_Bool nb_var_check_type(struct PP_Var, PP_VarType);
+NB_Bool nb_var_check_type_with_error(struct PP_Var, PP_VarType);
 
 struct PP_Var nb_var_string_create(const char*, uint32_t len);
 
 struct PP_Var nb_var_array_create(void);
 uint32_t nb_var_array_length(struct PP_Var);
 struct PP_Var nb_var_array_get(struct PP_Var, uint32_t index);
-bool nb_var_array_set(struct PP_Var, uint32_t index, struct PP_Var);
+NB_Bool nb_var_array_set(struct PP_Var, uint32_t index, struct PP_Var);
 
 struct PP_Var nb_var_dict_create(void);
 struct PP_Var nb_var_dict_get(struct PP_Var, const char* key);
 struct PP_Var nb_var_dict_get_var(struct PP_Var, struct PP_Var key);
-bool nb_var_dict_set(struct PP_Var, const char* key, struct PP_Var);
-bool nb_var_dict_set_var(struct PP_Var, struct PP_Var key, struct PP_Var);
+NB_Bool nb_var_dict_set(struct PP_Var, const char* key, struct PP_Var);
+NB_Bool nb_var_dict_set_var(struct PP_Var, struct PP_Var key, struct PP_Var);
 struct PP_Var nb_var_dict_get_keys(struct PP_Var);
-bool nb_var_dict_has_key(struct PP_Var, const char* key);
+NB_Bool nb_var_dict_has_key(struct PP_Var, const char* key);
 
 struct PP_Var nb_var_buffer_create(uint32_t);
 uint32_t nb_var_buffer_byte_length(struct PP_Var);
@@ -56,20 +56,20 @@ void nb_var_buffer_unmap(struct PP_Var);
 
 struct PP_Var nb_var_int64_create(int64_t);
 
-bool nb_var_int8(struct PP_Var, int8_t*);
-bool nb_var_uint8(struct PP_Var, uint8_t*);
-bool nb_var_int16(struct PP_Var, int16_t*);
-bool nb_var_uint16(struct PP_Var, uint16_t*);
-bool nb_var_int32(struct PP_Var, int32_t*);
-bool nb_var_uint32(struct PP_Var, uint32_t*);
-bool nb_var_int64(struct PP_Var, int64_t*);
-bool nb_var_uint64(struct PP_Var, uint64_t*);
-bool nb_var_float(struct PP_Var, float*);
-bool nb_var_double(struct PP_Var, double*);
-bool nb_var_string(struct PP_Var, const char**, uint32_t* out_length);
+NB_Bool nb_var_int8(struct PP_Var, int8_t*);
+NB_Bool nb_var_uint8(struct PP_Var, uint8_t*);
+NB_Bool nb_var_int16(struct PP_Var, int16_t*);
+NB_Bool nb_var_uint16(struct PP_Var, uint16_t*);
+NB_Bool nb_var_int32(struct PP_Var, int32_t*);
+NB_Bool nb_var_uint32(struct PP_Var, uint32_t*);
+NB_Bool nb_var_int64(struct PP_Var, int64_t*);
+NB_Bool nb_var_uint64(struct PP_Var, uint64_t*);
+NB_Bool nb_var_float(struct PP_Var, float*);
+NB_Bool nb_var_double(struct PP_Var, double*);
+NB_Bool nb_var_string(struct PP_Var, const char**, uint32_t* out_length);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* VAR_H_ */
+#endif /* NB_VAR_H_ */
