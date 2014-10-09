@@ -260,14 +260,16 @@ def UnparseClangArgs(args):
 
 
 def ExtendOptionsFromTranslationUnit(tu, options):
-  comment_re = re.compile(r'/[/*]*\s*naclbind-gen:\s*(.*)?(?:[*/]*/)?',
-                          re.DOTALL)
+  comment_c_re = re.compile(r'/\*\s*naclbind-gen:\s*(.*)\*/', re.DOTALL)
+  comment_cpp_re = re.compile(r'//\s*naclbind-gen:\s*(.*)', re.DOTALL)
   for t in tu.cursor.get_tokens():
     if t.kind != TokenKind.COMMENT:
       continue
-    m = comment_re.match(t.spelling)
+    m = comment_c_re.match(t.spelling)
     if not m:
-      continue
+      m = comment_cpp_re.match(t.spelling)
+      if not m:
+        continue
 
     text = m.group(1).replace('\r', '').replace('\n', '')
     logging.info('Got naclbind-gen args: %r' % text)
