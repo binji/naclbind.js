@@ -2057,13 +2057,21 @@ var mod = (function(Long, type, utils) {
       var argHandles = argsToHandles(self.$context, arguments),
           argTypes = argHandles.map(getType),
           bestFnIdx = type.getBestViableFunction(fnTypes, argTypes),
+          s,
+          i,
           fn,
           retHandle;
 
       if (bestFnIdx < 0) {
-        // TODO(binji): print nice error here.
-        throw new Error('Call to "' + name + '" failed. ArgTypes: ' +
-                        argTypes.map(type.getSpelling).join(', '));
+        s = 'Call to "' + name + '" failed.\n';
+        s += 'Got:\n  ' +
+             name + '(' + argTypes.map(type.getSpelling).join(', ') + ')';
+        s += '\nBut expected:\n';
+        for (i = 0; i < fnTypes.length; ++i) {
+          s += '  ' + type.getSpelling(fnTypes[i], name);
+        }
+
+        throw new Error(s);
       }
 
       fn = functions[bestFnIdx];
