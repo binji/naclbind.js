@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import easy_template
+import copy
 import logging
 import optparse
 import os
@@ -22,12 +22,14 @@ import re
 import subprocess
 import sys
 
+import easy_template
 import gen_types
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 PYTHON_BINDINGS_DIR = os.path.join(ROOT_DIR, 'third_party', 'clang', 'bindings',
                                    'python')
+BUILTINS_H = os.path.join(ROOT_DIR, 'src', 'c', 'builtins.h')
 NACL_SDK_ROOT = os.getenv('NACL_SDK_ROOT')
 
 if not NACL_SDK_ROOT:
@@ -83,6 +85,7 @@ class OptionParser(optparse.OptionParser):
     self.add_option('-r', '--remap', action='callback', metavar='FROM=TO',
                     callback=ParseRemapOption, type='string', nargs=1,
                     default={})
+    self.add_option('--builtins', action='store_true')
     self.add_option('--max-int-varargs', metavar='NUM', type='int', default=6)
     self.add_option('--max-double-varargs', metavar='NUM', type='int',
                     default=2)
@@ -366,10 +369,7 @@ class Acceptor(object):
 
 
 class Collector(object):
-  def __init__(self, acceptor, tu, remap):
-    self.acceptor = acceptor
-    self.tu = tu
-    self.remap = remap
+  def __init__(self):
     self.types = set()
     self.types_topo = []
     self.functions = []
@@ -377,30 +377,21 @@ class Collector(object):
     self.function_types = {}
     self.next_id = 1
 
-  def Collect(self):
-    for fn in gen_types.IterFunctions(self.tu.cursor):
-      if self.acceptor.Accept(fn.file_name, fn.spelling):
+  def Collect(self, tu, acceptor, remap):
+    for fn in gen_types.IterFunctions(tu.cursor):
+      if acceptor.Accept(fn.file_name, fn.spelling):
         logging.debug('ACCEPTED %s' % fn.spelling)
-        self._VisitFunction(fn)
+        self._VisitFunction(fn, remap)
       else:
         logging.debug('REJECTED %s' % fn.spelling)
 
-  def SortedFunctionTypes(self):
-    key = lambda f: f.mangled
-    for fn_type in sorted(self.function_types.keys(), key=key):
-      yield fn_type, self.function_types[fn_type]
-
-  def SortedRemappedFunctions(self):
-    for fn_name in sorted(self.functions_remapped.keys()):
-      yield fn_name, self.functions_remapped[fn_name]
-
-  def _VisitFunction(self, fn):
+  def _VisitFunction(self, fn, remap):
     fn.VisitTypes(self)
 
     fn.fn_id = self.next_id
     self.next_id += 1
 
-    remapped_name = self.remap.get(fn.spelling, fn.spelling)
+    remapped_name = remap.get(fn.spelling, fn.spelling)
     fn_type = fn.type.canonical
 
     self.functions.append(fn)
@@ -416,6 +407,15 @@ class Collector(object):
 
   def ExitType(self, t):
     self.types_topo.append(t.Unqualified())
+
+  def SortedFunctionTypes(self):
+    key = lambda f: f.mangled
+    for fn_type in sorted(self.function_types.keys(), key=key):
+      yield fn_type, self.function_types[fn_type]
+
+  def SortedRemappedFunctions(self):
+    for fn_name in sorted(self.functions_remapped.keys()):
+      yield fn_name, self.functions_remapped[fn_name]
 
 
 def StripCopyright(text):
@@ -469,23 +469,10 @@ def IncludeFile(name):
     f.close()
 
 
-def main(args):
-  logging.basicConfig(format='%(levelname)s: %(message)s')
-  parser = OptionParser()
-  options, args = parser.parse_args(args)
-  if options.verbose >= 2:
-    logging.getLogger().setLevel(logging.DEBUG)
-  elif options.verbose >= 1:
-    logging.getLogger().setLevel(logging.INFO)
-
-  if not options.template:
-    parser.error('--template argument required')
-
-  tu, filename = CreateTranslationUnit(args)
+def CollectFromHeader(collector, compile_args, options):
+  tu, filename = CreateTranslationUnit(compile_args)
   if not tu:
-    return 1
-
-  ExtendOptionsFromTranslationUnit(tu, options)
+    raise Error('Creating translation unit failed.')
 
   # By default, accept everything. If there is an explicit whitelist, default
   # to accepting nothing.
@@ -499,8 +486,28 @@ def main(args):
                       options.blacklist_file, options.blacklist_symbol,
                       accept_default)
 
-  collector = Collector(acceptor, tu, options.remap)
-  collector.Collect()
+  options = copy.copy(options)
+  ExtendOptionsFromTranslationUnit(tu, options)
+  collector.Collect(tu, acceptor, options.remap)
+  return filename
+
+
+def main(args):
+  logging.basicConfig(format='%(levelname)s: %(message)s')
+  parser = OptionParser()
+  options, args = parser.parse_args(args)
+  if options.verbose >= 2:
+    logging.getLogger().setLevel(logging.DEBUG)
+  elif options.verbose >= 1:
+    logging.getLogger().setLevel(logging.INFO)
+
+  if not options.template:
+    parser.error('--template argument required')
+
+  collector = Collector()
+  if options.builtins:
+    CollectFromHeader(collector, [BUILTINS_H], options)
+  filename = CollectFromHeader(collector, args, options)
 
   with open(options.template) as f:
     template = f.read()

@@ -30,14 +30,24 @@ function assertFieldsEqual(f, name, type, offset) {
   assert.strictEqual(offset, f.offset);
 }
 
-function genFile(infile, callback) {
-  var basename = path.basename(infile);
+function genFile(infile, extraOpts, callback) {
+  var basename = path.basename(infile),
       outdir = path.resolve(__dirname, '../../out/test/js', basename),
       outfile = path.join(outdir, 'gen.js'),
       inpath = path.join(__dirname, infile),
       opts = {
         template: 'glue.js'
-      };
+      },
+      opt;
+
+  if (arguments.length === 2) {
+    callback = extraOpts;
+    extraOpts = {};
+  }
+
+  for (opt in extraOpts) {
+    opts[opt] = extraOpts[opt];
+  }
 
   gen.file(inpath, outfile, opts, function(error, outfile) {
     if (error) {
@@ -436,7 +446,7 @@ describe('Generate JS', function() {
       }
 
       var s1 = type.Record('s1', 0, type.STRUCT),
-          s2 = type.Record('s2', 4, type.STRUCT);
+          s2 = type.Record('s2', 4, type.STRUCT),
           u1 = type.Record('u1', 0, type.UNION),
           voidp = type.Pointer(type.void),
           s1p = type.Pointer(s1),
@@ -668,6 +678,50 @@ describe('Generate JS', function() {
       assertTypesEqual(type.Function(type.void, [type.float]), m.foo.types[1]);
       assertTypesEqual(type.Function(type.void, [type.Pointer(type.void)]),
                        m.foo.types[2]);
+
+      done();
+    });
+  });
+
+  it('should have builtin functions', function(done) {
+    var opts = {
+      genArgs: ['--builtins']
+    };
+
+    genFile('data/builtins.h', opts, function(error, m, type) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(11, m.$functionsCount);
+      assert.strictEqual(0, m.$typesCount);
+      assert.strictEqual(0, m.$tagsCount);
+
+      assert.ok(m.get);
+      assert.ok(m.set);
+      assert.ok(m.lt);
+      assert.ok(m.le);
+      assert.ok(m.gt);
+      assert.ok(m.ge);
+      assert.ok(m.eq);
+      assert.ok(m.ne);
+      assert.ok(m.add);
+      assert.ok(m.sub);
+
+      // Make sure non-builtins are added too.
+      assert.ok(m.foo);
+
+      assert.strictEqual(m.get.types.length, 14);
+      assert.strictEqual(m.set.types.length, 14);
+      assert.strictEqual(m.lt.types.length, 14);
+      assert.strictEqual(m.le.types.length, 14);
+      assert.strictEqual(m.gt.types.length, 14);
+      assert.strictEqual(m.ge.types.length, 14);
+      assert.strictEqual(m.eq.types.length, 14);
+      assert.strictEqual(m.ne.types.length, 14);
+      assert.strictEqual(m.add.types.length, 7);
+      assert.strictEqual(m.sub.types.length, 7);
+      assert.strictEqual(m.foo.types.length, 1);
 
       done();
     });
