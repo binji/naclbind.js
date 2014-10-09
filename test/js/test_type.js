@@ -291,6 +291,7 @@ describe('Type', function() {
       assert.strictEqual(spell(type.ulonglong), 'unsigned long long');
       assert.strictEqual(spell(type.float), 'float');
       assert.strictEqual(spell(type.double), 'double');
+      assert.strictEqual(spell(type.longdouble), 'long double');
       assert.strictEqual(spell(type.wchar), 'wchar_t');
     });
 
@@ -537,6 +538,8 @@ describe('Type', function() {
         assertCast(type.uint, type.ulong, type.CAST_OK_PROMOTION);
         assertCast(type.ulong, type.ulonglong, type.CAST_OK_PROMOTION);
         assertCast(type.float, type.double, type.CAST_OK_PROMOTION);
+        assertCast(type.double, type.longdouble, type.CAST_OK_PROMOTION);
+        assertCast(type.float, type.longdouble, type.CAST_OK_PROMOTION);
       });
 
       it('should allow cast of unsigned -> larger signed', function() {
@@ -571,6 +574,8 @@ describe('Type', function() {
         assertCast(type.ulong, type.uint, type.CAST_TRUNCATE);
         assertCast(type.ulonglong, type.ulong, type.CAST_TRUNCATE);
         assertCast(type.double, type.float, type.CAST_TRUNCATE);
+        assertCast(type.longdouble, type.float, type.CAST_TRUNCATE);
+        assertCast(type.longdouble, type.double, type.CAST_TRUNCATE);
       });
 
       it('should warn on cast of integral -> pointer-like', function() {
@@ -602,6 +607,7 @@ describe('Type', function() {
         [p, a, ia].forEach(function(x) {
           assertCast(type.float, x, type.CAST_ERROR);
           assertCast(type.double, x, type.CAST_ERROR);
+          assertCast(type.longdouble, x, type.CAST_ERROR);
         });
       });
 
@@ -623,6 +629,7 @@ describe('Type', function() {
         var e = type.Enum('e');
         assertCast(type.float, e, type.CAST_ERROR);
         assertCast(type.double, e, type.CAST_ERROR);
+        assertCast(type.longdouble, e, type.CAST_ERROR);
       });
 
       it('should fail to cast numeric -> record, void, function', function() {
@@ -644,6 +651,7 @@ describe('Type', function() {
           assertCast(type.ulonglong, x, type.CAST_ERROR);
           assertCast(type.float, x, type.CAST_ERROR);
           assertCast(type.double, x, type.CAST_ERROR);
+          assertCast(type.longdouble, x, type.CAST_ERROR);
         });
       });
     });
@@ -845,11 +853,14 @@ describe('Type', function() {
           var p = type.Pointer(x);
           assertCast(p, type.float, type.CAST_ERROR);
           assertCast(p, type.double, type.CAST_ERROR);
+          assertCast(p, type.longdouble, type.CAST_ERROR);
           if (x.kind !== type.VOID) {
             assertCast(type.Array(x, 2), type.float, type.CAST_ERROR);
             assertCast(type.Array(x, 2), type.double, type.CAST_ERROR);
+            assertCast(type.Array(x, 2), type.longdouble, type.CAST_ERROR);
             assertCast(type.IncompleteArray(x), type.float, type.CAST_ERROR);
             assertCast(type.IncompleteArray(x), type.double, type.CAST_ERROR);
+            assertCast(type.IncompleteArray(x), type.longdouble, type.CAST_ERROR);
           }
         });
       });
@@ -933,6 +944,7 @@ describe('Type', function() {
       it('should fail on cast of enum -> float', function() {
         assertCast(e, type.float, type.CAST_ERROR);
         assertCast(e, type.double, type.CAST_ERROR);
+        assertCast(e, type.longdouble, type.CAST_ERROR);
       });
 
       it('should fail on cast of enum -> anything else', function() {

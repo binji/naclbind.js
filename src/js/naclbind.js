@@ -936,14 +936,15 @@ var type = (function(utils) {
       LONGLONG = 16,
       FLOAT = 17,
       DOUBLE = 18,
-      POINTER = 19,
-      RECORD = 20,
-      ENUM = 21,
-      TYPEDEF = 22,
-      FUNCTIONPROTO = 23,
-      FUNCTIONNOPROTO = 24,
-      CONSTANTARRAY = 25,
-      INCOMPLETEARRAY = 26,
+      LONGDOUBLE = 19,
+      POINTER = 20,
+      RECORD = 21,
+      ENUM = 22,
+      TYPEDEF = 23,
+      FUNCTIONPROTO = 24,
+      FUNCTIONNOPROTO = 25,
+      CONSTANTARRAY = 26,
+      INCOMPLETEARRAY = 27,
 
       KIND_NAME = {
         0: 'INVALID',
@@ -965,14 +966,15 @@ var type = (function(utils) {
         16: 'LONGLONG',
         17: 'FLOAT',
         18: 'DOUBLE',
-        19: 'POINTER',
-        20: 'RECORD',
-        21: 'ENUM',
-        22: 'TYPEDEF',
-        23: 'FUNCTIONPROTO',
-        24: 'FUNCTIONNOPROTO',
-        25: 'CONSTANTARRAY',
-        26: 'INCOMPLETEARRAY'
+        19: 'LONGDOUBLE',
+        20: 'POINTER',
+        21: 'RECORD',
+        22: 'ENUM',
+        23: 'TYPEDEF',
+        24: 'FUNCTIONPROTO',
+        25: 'FUNCTIONNOPROTO',
+        26: 'CONSTANTARRAY',
+        27: 'INCOMPLETEARRAY'
       },
 
       PRIMITIVE_SPELLING = {
@@ -993,6 +995,7 @@ var type = (function(utils) {
         16: 'long long',
         17: 'float',
         18: 'double',
+        19: 'long double',
       },
 
       PRIMITIVE_RANK = {
@@ -1012,6 +1015,7 @@ var type = (function(utils) {
         16: 6,  // long long
         17: 7,  // float
         18: 8,  // double
+        19: 9,  // long double
       },
 
       PRIMITIVE_SIGNED = {
@@ -1100,7 +1104,7 @@ var type = (function(utils) {
   }
 
   function isNumeric(type) {
-    return type.kind >= BOOL && type.kind <= DOUBLE;
+    return type.kind >= BOOL && type.kind <= LONGDOUBLE;
   }
 
   function isPointerlike(type) {
@@ -1836,6 +1840,7 @@ var type = (function(utils) {
     longlong: Numeric(LONGLONG),
     float: Numeric(FLOAT),
     double: Numeric(DOUBLE),
+    longdouble: Numeric(LONGDOUBLE),
 
     // Type constructors
     Void: Void,
@@ -1880,6 +1885,7 @@ var type = (function(utils) {
     LONGLONG: LONGLONG,
     FLOAT: FLOAT,
     DOUBLE: DOUBLE,
+    LONGDOUBLE: LONGDOUBLE,
     POINTER: POINTER,
     RECORD: RECORD,
     ENUM: ENUM,
