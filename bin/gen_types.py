@@ -360,19 +360,18 @@ class Type(object):
       name = '*' + spelling + name
       spelling = self.pointee.GetCSpelling(name, self.kind)
     elif self.kind == TypeKind.ENUM:
-      spelling += 'enum ' + self.c_tag
+      if not self.is_anonymous:
+        spelling += 'enum '
+      spelling += self.c_tag
       if name:
         spelling += ' ' + name
     elif self.kind == TypeKind.RECORD:
-      if self.is_anonymous:
-        # This name is actually a typedef; we need to use this because the
-        # record name is anonymous.
-        spelling += self.c_tag
-      else:
+      if not self.is_anonymous:
         if self.is_union:
-          spelling += 'union ' + self.c_tag
+          spelling += 'union '
         else:
-          spelling += 'struct ' + self.c_tag
+          spelling += 'struct '
+      spelling += self.c_tag
       if name:
         spelling += ' ' + name
     elif self.kind == TypeKind.CONSTANTARRAY:

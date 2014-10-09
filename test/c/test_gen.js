@@ -123,4 +123,8 @@ describe('C Generator Tests', function() {
   it('should succeed for test_const', function(done) {
     genAndRun('const.h', 'const.c', 'test_const.cc', done);
   });
+
+  it('should succeed for test_typedef', function(done) {
+    genAndRun('typedef.h', 'typedef.c', 'test_typedef.cc', done);
+  });
 });
