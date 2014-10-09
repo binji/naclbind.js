@@ -46,6 +46,20 @@ FILTER_ARGS = ('-cc1', '-main-file-name', '-v', '-mrelocation-model',
 
 SEVERITY_MAP = {2: 'warning', 3: 'error', 4: 'fatal'}
 
+
+def ParseRemapOption(option, opt_str, value, parser):
+  try:
+    sym_from, sym_to = value.split('=')
+  except:
+    raise optparse.OptionValueError('%s requires format FROM=TO.' % opt_str)
+
+  if sym_from in parser.values.remap:
+    raise optparse.OptionValueError('Symbol %r already remapped to %r.' % (
+        sym_from, parser.values.remap[sym_from]))
+
+  parser.values.remap[sym_from] = sym_to
+
+
 class OptionParser(optparse.OptionParser):
   def __init__(self, *args, **kwargs):
     self.ignore_error = False
@@ -55,15 +69,23 @@ class OptionParser(optparse.OptionParser):
     optparse.OptionParser.__init__(self, *args, **kwargs)
 
     self.add_option('-v', '--verbose', action='count')
-    self.add_option('-w', '--whitelist-file', action='append', default=[])
-    self.add_option('-W', '--whitelist-symbol', action='append', default=[])
-    self.add_option('-b', '--blacklist-file', action='append', default=[])
-    self.add_option('-B', '--blacklist-symbol', action='append', default=[])
+    self.add_option('-w', '--whitelist-file', metavar='RE', action='append',
+                    default=[])
+    self.add_option('-W', '--whitelist-symbol', metavar='RE',
+                    action='append', default=[])
+    self.add_option('-b', '--blacklist-file', metavar='RE', action='append',
+                    default=[])
+    self.add_option('-B', '--blacklist-symbol', metavar='RE',
+                    action='append', default=[])
     self.add_option('-t', '--template')
     self.add_option('-m', '--module-name', default='naclbind_gen')
-    self.add_option('-o', '--output')
-    self.add_option('--max-int-varargs', default=6)
-    self.add_option('--max-double-varargs', default=2)
+    self.add_option('-o', '--output', metavar='FILE')
+    self.add_option('-r', '--remap', action='callback', metavar='FROM=TO',
+                    callback=ParseRemapOption, type='string', nargs=1,
+                    default={})
+    self.add_option('--max-int-varargs', metavar='NUM', type='int', default=6)
+    self.add_option('--max-double-varargs', metavar='NUM', type='int',
+                    default=2)
 
   def error(self, msg):
     if self.ignore_error:
@@ -276,13 +298,24 @@ def ExtendOptionsFromTranslationUnit(tu, options):
     parser = OptionParser(add_help_option=False, ignore_error=True)
     new_options, _ = parser.parse_args(text.split(' '))
 
-    for key in dir(new_options):
-      old_value = getattr(options, key)
-      if type(old_value) is not list:
-        continue
-      new_value = getattr(new_options, key)
-      logging.info('Extending %s with %r' % (key, new_value))
-      old_value.extend(new_value)
+    for opt_str in dir(new_options):
+      old_value = getattr(options, opt_str)
+      if type(old_value) is list:
+        old_list = old_value
+        new_list = getattr(new_options, opt_str)
+        logging.info('Extending flag %r with %r' % (opt_str, new_list))
+        old_list.extend(new_list)
+      elif type(old_value) is dict:
+        old_dict = old_value
+        new_dict = getattr(new_options, opt_str)
+        logging.info('Extending flag %r with %r' % (opt_str, new_dict))
+        for key in new_dict.iterkeys():
+          if key in old_dict:
+            logging.warning(
+                'While extending flag %r from comments:\n'
+                '  Overwriting key %r with %r (old value %r)' % (
+                opt_str, key, new_dict[key], old_dict[key]))
+          old_dict[key] = new_dict[key]
 
 
 def CollectCursors(root, fn):
@@ -333,13 +366,16 @@ class Acceptor(object):
 
 
 class Collector(object):
-  def __init__(self, acceptor, tu):
+  def __init__(self, acceptor, tu, remap):
     self.acceptor = acceptor
     self.tu = tu
+    self.remap = remap
     self.types = set()
     self.types_topo = []
     self.functions = []
+    self.functions_remapped = {}
     self.function_types = {}
+    self.next_id = 1
 
   def Collect(self):
     for fn in gen_types.IterFunctions(self.tu.cursor):
@@ -354,14 +390,22 @@ class Collector(object):
     for fn_type in sorted(self.function_types.keys(), key=key):
       yield fn_type, self.function_types[fn_type]
 
+  def SortedRemappedFunctions(self):
+    for fn_name in sorted(self.functions_remapped.keys()):
+      yield fn_name, self.functions_remapped[fn_name]
+
   def _VisitFunction(self, fn):
     fn.VisitTypes(self)
 
-    self.functions.append(fn)
+    fn.fn_id = self.next_id
+    self.next_id += 1
+
+    remapped_name = self.remap.get(fn.spelling, fn.spelling)
     fn_type = fn.type.canonical
-    if fn_type not in self.function_types:
-      self.function_types[fn_type] = []
-    self.function_types[fn_type].append(fn)
+
+    self.functions.append(fn)
+    self.functions_remapped.setdefault(remapped_name, []).append(fn)
+    self.function_types.setdefault(fn_type, []).append(fn)
 
   def EnterType(self, t):
     t = t.Unqualified()
@@ -455,7 +499,7 @@ def main(args):
                       options.blacklist_file, options.blacklist_symbol,
                       accept_default)
 
-  collector = Collector(acceptor, tu)
+  collector = Collector(acceptor, tu, options.remap)
   collector.Collect()
 
   with open(options.template) as f:

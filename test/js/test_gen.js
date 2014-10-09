@@ -651,6 +651,25 @@ describe('Generate JS', function() {
 
       done();
     });
+  });
 
+  it('should allow remapping names to one symbol', function(done) {
+    genFile('data/remap_names.h', function(error, m, type) {
+      if (error) {
+        assert.ok(false, 'Error generating JS.\n' + error);
+      }
+
+      assert.strictEqual(1, m.$functionsCount);
+      assert.strictEqual(0, m.$typesCount);
+      assert.strictEqual(0, m.$tagsCount);
+
+      assert.strictEqual(m.foo.types.length, 3);
+      assertTypesEqual(type.Function(type.void, [type.int]), m.foo.types[0]);
+      assertTypesEqual(type.Function(type.void, [type.float]), m.foo.types[1]);
+      assertTypesEqual(type.Function(type.void, [type.Pointer(type.void)]),
+                       m.foo.types[2]);
+
+      done();
+    });
   });
 });

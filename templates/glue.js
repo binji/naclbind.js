@@ -101,8 +101,15 @@ function createModule(nmf, mimeType) {
 
   m = mod.Module(embed);
 
-[[for i, fn in enumerate(collector.functions):]]
-  m.$defineFunction('{{fn.spelling}}', [mod.Function({{i+1}}, funcType_{{fn.type.canonical.mangled}})]);
+[[for fn_name, fns in collector.SortedRemappedFunctions():]]
+[[  if len(fns) == 1:]]
+  m.$defineFunction('{{fn_name}}', [mod.Function({{fns[0].fn_id}}, funcType_{{fns[0].type.canonical.mangled}})]);
+[[  else:]]
+  m.$defineFunction('{{fn_name}}', [
+[[    for fn in fns:]]
+    mod.Function({{fn.fn_id}}, funcType_{{fn.type.canonical.mangled}}),
+[[    ]]
+  ]);
 [[]]
 
   m.$types = types;

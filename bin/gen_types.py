@@ -798,6 +798,7 @@ class Function(object):
     self.spelling = cindex_cursor.spelling
     self.displayname = cindex_cursor.displayname
     self.file_name = cindex_cursor.location.file.name
+    self.fn_id = None
 
   @staticmethod
   def FromCindexCursor(cindex_cursor):

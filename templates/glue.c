@@ -322,8 +322,8 @@ enum {
 typedef bool (*nb_command_func_t)(struct Message*, int);
 static nb_command_func_t s_functions[] = {
   NULL,  /* TODO(binji): This should be errorif */
-[[for i, fn in enumerate(collector.functions):]]
-  nb_command_run_{{fn.spelling}},  /* {{i+1}} */
+[[for fn in collector.functions:]]
+  nb_command_run_{{fn.spelling}},  /* {{fn.fn_id}} */
 [[]]
 };
 
