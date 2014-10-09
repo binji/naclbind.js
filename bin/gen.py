@@ -30,6 +30,12 @@ PYTHON_BINDINGS_DIR = os.path.join(ROOT_DIR, 'third_party', 'clang', 'bindings',
                                    'python')
 NACL_SDK_ROOT = os.getenv('NACL_SDK_ROOT')
 
+if not NACL_SDK_ROOT:
+  sys.stderr.write(
+      'NACL_SDK_ROOT environment variable is not set.\n' +
+      'Please set NACL_SDK_ROOT to the location of your Native Client SDK.\n')
+  sys.exit(1)
+
 RENAME_ARGS = {'-triple': '-target'}
 
 FILTER_ARGS = ('-cc1', '-main-file-name', '-v', '-mrelocation-model',
