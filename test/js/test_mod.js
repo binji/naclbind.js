@@ -227,6 +227,69 @@ describe('Module', function() {
         done();
       });
     });
+
+    it('should return errors to the caller', function(done) {
+      var ne = NaClEmbed(),
+          e = Embed(ne),
+          m = mod.Module(e),
+          getIntType = type.Function(type.int, []),
+          h;
+
+      m.$defineFunction('getInt', [mod.Function(1, getIntType)]);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        assert.deepEqual(msg, {
+          id: 1,
+          set: {1: 1},
+          get: [2],
+          commands: [
+            {id: 0, args: [1]},
+            {id: 1, args: [], ret: 2}
+          ]
+        });
+
+        ne.message({id: 1, values: [undefined], error: 0});
+      });
+
+      m.$errorIf(1);
+      h = m.getInt();
+      m.$commit([h], function(error, hVal) {
+        assert.strictEqual(error.failedAt, 0);
+        assert.ok(error.stack);
+        done();
+      });
+    });
+
+    it('should push undefined error when everything works', function(done) {
+      var ne = NaClEmbed(),
+          e = Embed(ne),
+          m = mod.Module(e),
+          getIntType = type.Function(type.int, []),
+          h;
+
+      m.$defineFunction('getInt', [mod.Function(1, getIntType)]);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        assert.deepEqual(msg, {
+          id: 1,
+          get: [1],
+          commands: [
+            {id: 1, args: [], ret: 1}
+          ]
+        });
+
+        ne.message({id: 1, values: [42]});
+      });
+
+      h = m.getInt();
+      m.$commit([h], function(error, hVal) {
+        assert.strictEqual(hVal, 42);
+        assert.strictEqual(error, undefined);
+        done();
+      });
+    });
   });
 
   describe('$destroyHandles', function() {

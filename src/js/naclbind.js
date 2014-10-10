@@ -2035,6 +2035,7 @@ var mod = (function(Long, type, utils) {
     if (!(this instanceof Module)) { return new Module(embed); }
     this.$embed_ = embed || null;
     this.$handles_ = new HandleList();
+    this.$errors_ = {};
     this.$functions_ = {};
     this.$context = this.$createContext();
     this.$types = {};
@@ -2149,6 +2150,9 @@ var mod = (function(Long, type, utils) {
     }
 
     this.$message_.commands.push(command);
+
+    // Return the index of the last added command.
+    return this.$message_.commands.length - 1;
   };
   Module.prototype.$processValues_ = function(handles, values) {
     var i;
@@ -2175,6 +2179,12 @@ var mod = (function(Long, type, utils) {
     var self = this,
         context = this.$context;
 
+    if (callback.length !== handles.length &&
+        callback.length !== handles.length + 1) {
+      throw new Error('Expected callback to have ' + handles.length + ' or ' +
+                      handles.length + 1 + ' arguments.');
+    }
+
     if (!this.$message_.get) {
       this.$message_.get = [];
     }
@@ -2183,9 +2193,27 @@ var mod = (function(Long, type, utils) {
     this.$embed_.postMessage(this.$message_, function(msg) {
       // Call the callback with the same context as was set when $commit() was
       // called, then reset to the previous value.
-      var oldContext = self.$context;
+      var oldContext = self.$context,
+          values = self.$processValues_(handles, msg.values),
+          expectedError = callback.length === handles.length + 1,
+          error;
+
       self.$context = context;
-      callback.apply(null, self.$processValues_(handles, msg.values));
+      if (typeof msg.error !== 'undefined') {
+        error = self.$getError_(msg.error);
+
+        if (expectedError) {
+          values.unshift(error);
+        } else {
+          // Nowhere to pass the error. Just log it.
+          console.error('Command at index ' + error.failedAt + ' failed:\n' +
+                        error.stack);
+        }
+      } else if (expectedError) {
+        values.unshift(undefined);
+      }
+      self.$clearErrors_();
+      callback.apply(null, values);
       self.$context = oldContext;
     });
     this.$initMessage_();
@@ -2211,14 +2239,28 @@ var mod = (function(Long, type, utils) {
   };
   Module.prototype.$errorIf = function(arg) {
     var handle = argToHandle(this.$context, arg),
-        hType = handle.type;
+        hType = handle.type,
+        commandIdx;
 
     if (hType.canCastTo(type.int) === type.CAST_ERROR) {
       throw new Error('$errorIf failed, invalid type: ' + hType.spelling);
     }
 
     this.$registerHandleWithValue_(handle);
-    this.$pushCommand_(ERROR_IF_ID, [handle]);
+    commandIdx = this.$pushCommand_(ERROR_IF_ID, [handle]);
+    this.$registerError_(commandIdx, (new Error()).stack);
+  };
+  Module.prototype.$registerError_ = function(commandIdx, stack) {
+    this.$errors_[commandIdx] = {
+      failedAt: commandIdx,
+      stack: stack
+    };
+  };
+  Module.prototype.$getError_ = function(commandIdx) {
+    return this.$errors_[commandIdx];
+  };
+  Module.prototype.$clearErrors_ = function() {
+    this.$errors_ = {};
   };
 
   function IdFunction(id, fnType) {
