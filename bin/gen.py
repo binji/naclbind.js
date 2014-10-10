@@ -526,6 +526,8 @@ def main(args):
   template_dict.module_name = options.module_name
   template_dict.IncludeFile = IncludeFile
   template_dict.Error = Error
+  template_dict.builtins = options.builtins
+  template_dict.BUILTINS_H = BUILTINS_H
   template_dict.MAX_INT_VARARGS = options.max_int_varargs
   template_dict.MAX_DBL_VARARGS = options.max_double_varargs
 

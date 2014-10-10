@@ -25,7 +25,7 @@ var chai = require('chai'),
 
 chai.config.includeStack = true;
 
-function genAndRun(header, source, testSource, callback) {
+function genAndRun(header, source, testSource, extraGenOpts, callback) {
   var basename = header.match(/([^.]*)\.h/)[1],
       outdir = path.resolve(__dirname, '../../out/test/c/test_gen', basename),
       glueC = path.join(outdir, 'glue.c'),
@@ -64,6 +64,15 @@ function genAndRun(header, source, testSource, callback) {
         template: 'glue.c',
         toolchain: toolchain
       }
+
+  if (arguments.length === 4) {
+    callback = extraGenOpts;
+    extraOpts = {};
+  }
+
+  for (opt in extraGenOpts) {
+    genOpts[opt] = extraGenOpts[opt];
+  }
 
   header = path.join(__dirname, 'data', header);
 
@@ -134,5 +143,10 @@ describe('C Generator Tests', function() {
 
   it('should succeed for test_enum', function(done) {
     genAndRun('enum.h', 'enum.c', 'test_enum.cc', done);
+  });
+
+  it('should succeed for test_builtins', function(done) {
+    var genOpts = {genArgs: '--builtins'};
+    genAndRun('builtins.h', 'builtins.c', 'test_builtins.cc', genOpts, done);
   });
 });

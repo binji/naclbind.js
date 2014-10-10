@@ -27,6 +27,9 @@
 {{IncludeFile('c/run.h')}}
 {{IncludeFile('c/type.h')}}
 {{IncludeFile('c/var.h')}}
+[[if builtins:]]
+{{IncludeFile('c/builtins.h')}}
+[[]]
 
 {{IncludeFile('c/handle.c')}}
 {{IncludeFile('c/interfaces.c')}}
