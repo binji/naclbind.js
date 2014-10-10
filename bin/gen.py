@@ -44,7 +44,7 @@ FILTER_ARGS = ('-cc1', '-main-file-name', '-v', '-mrelocation-model',
     '-mdisable-fp-elim', '-mconstructor-aliases', '-target-linker-version',
     '-coverage-file', '-nostdsysteminc', '-fdebug-compilation-dir',
     '-ferror-limit', '-fmessage-length', '-emit-llvm-bc', '-fdeprecated-macro',
-    '-E')
+    '-E', '-disable-free', '-fno-math-builtin')
 
 SEVERITY_MAP = {2: 'warning', 3: 'error', 4: 'fatal'}
 
