@@ -131,4 +131,8 @@ describe('C Generator Tests', function() {
   it('should succeed for test_error_if', function(done) {
     genAndRun('error_if.h', 'error_if.c', 'test_error_if.cc', done);
   });
+
+  it('should succeed for test_enum', function(done) {
+    genAndRun('enum.h', 'enum.c', 'test_enum.cc', done);
+  });
 });

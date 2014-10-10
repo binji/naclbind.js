@@ -282,9 +282,9 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
 [[    elif result_type.kind == TypeKind.UINT:]]
   NB_Bool register_ok = nb_handle_register_uint32(ret, result);
 [[    elif result_type.kind == TypeKind.LONG:]]
-  NB_Bool register_ok = nb_handle_register_int32(ret, (int32_t)result);
+  NB_Bool register_ok = nb_handle_register_int32(ret, (int32_t) result);
 [[    elif result_type.kind == TypeKind.ULONG:]]
-  NB_Bool register_ok = nb_handle_register_uint32(ret, (uint32_t)result);
+  NB_Bool register_ok = nb_handle_register_uint32(ret, (uint32_t) result);
 [[    elif result_type.kind == TypeKind.LONGLONG:]]
   NB_Bool register_ok = nb_handle_register_int64(ret, result);
 [[    elif result_type.kind == TypeKind.ULONGLONG:]]
@@ -297,6 +297,8 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
   NB_Bool register_ok = nb_handle_register_voidp(ret, (void*) result);
 [[    elif result_type.kind == TypeKind.RECORD and result_type.c_spelling == 'struct PP_Var':]]
   NB_Bool register_ok = nb_handle_register_var(ret, result);
+[[    elif result_type.kind == TypeKind.ENUM:]]
+  NB_Bool register_ok = nb_handle_register_int32(ret, (int32_t) result);
 [[    else:]]
   // UNSUPPORTED: {{result_type.kind}} {{result_type.c_spelling}}
   (void)result;
