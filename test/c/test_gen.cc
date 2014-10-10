@@ -23,7 +23,6 @@
 void GeneratorTest::SetUp() {
   request_ = PP_MakeUndefined();
   response_ = PP_MakeUndefined();
-  response_json_ = NULL;
 }
 
 void GeneratorTest::TearDown() {
@@ -41,12 +40,12 @@ void GeneratorTest::RunTest(const char* request_json,
 
   ASSERT_EQ(NB_TRUE, nb_request_run(request_, &response_));
 
-  response_json_ = var_to_json_flat(response_);
-  EXPECT_STREQ(expected_response_json, response_json_);
+  char* response_json = var_to_json_flat(response_);
+  EXPECT_STREQ(expected_response_json, response_json);
+  free(response_json);
 }
 
 void GeneratorTest::CleanUp() {
-  free(response_json_);
   nb_var_release(request_);
   nb_var_release(response_);
 }

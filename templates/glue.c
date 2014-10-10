@@ -315,13 +315,29 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
 
 [[]]
 
+// $errorIf()
+static NB_Bool nb_command_run_error_if(struct NB_Message* message, int command_idx) {
+  int arg_count = nb_message_command_arg_count(message, command_idx);
+  if (arg_count != 1) {
+    NB_VERROR("Expected %d arg, got %d.", 1, arg_count);
+    return NB_FALSE;
+  }
+  NB_Handle handle = nb_message_command_arg(message, command_idx, 0);
+  int32_t arg;
+  if (!nb_handle_get_int32(handle, &arg)) {
+    NB_VERROR("Unable to get handle %d as int32_t.", handle);
+    return NB_FALSE;
+  }
+  return arg != 0 ? NB_FALSE : NB_TRUE;
+}
+
 enum {
   NUM_FUNCTIONS = {{len(collector.functions)}}
 };
 
 typedef NB_Bool (*nb_command_func_t)(struct NB_Message*, int);
 static nb_command_func_t s_functions[] = {
-  NULL,  /* TODO(binji): This should be errorif */
+  nb_command_run_error_if,  /* 0 */
 [[for fn in collector.functions:]]
   nb_command_run_{{fn.spelling}},  /* {{fn.fn_id}} */
 [[]]

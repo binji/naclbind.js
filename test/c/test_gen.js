@@ -127,4 +127,8 @@ describe('C Generator Tests', function() {
   it('should succeed for test_typedef', function(done) {
     genAndRun('typedef.h', 'typedef.c', 'test_typedef.cc', done);
   });
+
+  it('should succeed for test_error_if', function(done) {
+    genAndRun('error_if.h', 'error_if.c', 'test_error_if.cc', done);
+  });
 });

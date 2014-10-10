@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <ppapi/c/pp_var.h>
+#include "bool.h"
 
 class GeneratorTest : public ::testing::Test {
  public:
@@ -22,8 +23,7 @@ class GeneratorTest : public ::testing::Test {
   void CleanUp();
   void RunTest(const char* request_json, const char* expected_response_json);
 
- private:
+ protected:
   struct PP_Var request_;
   struct PP_Var response_;
-  char* response_json_;
 };

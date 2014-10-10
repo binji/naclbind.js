@@ -27,19 +27,30 @@
 /* This function is defined by the generated code. */
 NB_Bool nb_message_command_run(struct NB_Message* message, int command_idx);
 
+static NB_Bool nb_request_init_response(struct NB_Message* message,
+                                        struct PP_Var* out_response);
 static NB_Bool nb_request_set_handles(struct NB_Message* message);
-static NB_Bool nb_request_run_commands(struct NB_Message* message);
+static NB_Bool nb_request_run_commands(struct NB_Message* message,
+                                       int* out_failed_command_idx);
 static NB_Bool nb_request_get_handles(struct NB_Message* message,
-                                      struct PP_Var* out_response);
+                                      struct PP_Var* response);
 static void nb_request_destroy_handles(struct NB_Message* message);
+static void nb_request_set_error(struct PP_Var response,
+                                 int failed_command_idx);
 
 NB_Bool nb_request_run(struct PP_Var request, struct PP_Var* out_response) {
   NB_Bool result = NB_FALSE;
   struct NB_Message* message = NULL;
+  int failed_command_idx = -1;
 
   message = nb_message_create(request);
   if (message == NULL) {
     NB_ERROR("nb_message_create() failed.");
+    goto cleanup;
+  }
+
+  if (!nb_request_init_response(message, out_response)) {
+    NB_ERROR("nb_request_init_response() failed.");
     goto cleanup;
   }
 
@@ -48,24 +59,54 @@ NB_Bool nb_request_run(struct PP_Var request, struct PP_Var* out_response) {
     goto cleanup;
   }
 
-  if (!nb_request_run_commands(message)) {
+  result = NB_TRUE;
+
+  if (!nb_request_run_commands(message, &failed_command_idx)) {
     NB_ERROR("nb_request_run_commands() failed.");
-    goto cleanup;
+    result = NB_FALSE;
   }
 
   if (!nb_request_get_handles(message, out_response)) {
     NB_ERROR("nb_request_get_handles() failed.");
-    goto cleanup;
+    result = NB_FALSE;
   }
 
   nb_request_destroy_handles(message);
-  result = NB_TRUE;
 
 cleanup:
   if (message != NULL) {
     nb_message_destroy(message);
   }
 
+  if (!result) {
+    nb_request_set_error(*out_response, failed_command_idx);
+  }
+
+  return result;
+}
+
+NB_Bool nb_request_init_response(struct NB_Message* message,
+                                 struct PP_Var* out_response) {
+  NB_Bool result = NB_FALSE;
+  int message_id = nb_message_id(message);
+  struct PP_Var response = PP_MakeUndefined();
+  struct PP_Var values = PP_MakeUndefined();
+
+  response = nb_var_dict_create();
+  if (!nb_var_dict_set(response, "id", PP_MakeInt32(message_id))) {
+    NB_VERROR("nb_var_dict_set(\"id\", %d) failed.", message_id);
+    goto cleanup;
+  }
+
+  *out_response = response;
+  result = NB_TRUE;
+
+  /* Clear the response so it isn't released twice. */
+  memset(&response, 0, sizeof(struct PP_Var));
+
+cleanup:
+  nb_var_release(values);
+  nb_var_release(response);
   return result;
 }
 
@@ -159,12 +200,14 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_request_run_commands(struct NB_Message* message) {
+NB_Bool nb_request_run_commands(struct NB_Message* message,
+                                int* out_failed_command_idx) {
   int commands_count = nb_message_commands_count(message);
   int i;
 
   for (i = 0; i < commands_count; ++i) {
     if (!nb_message_command_run(message, i)) {
+      *out_failed_command_idx = i;
       NB_VERROR("nb_message_command_run(%d) failed.", i);
       return NB_FALSE;
     }
@@ -177,18 +220,14 @@ NB_Bool nb_request_get_handles(struct NB_Message* message,
                                struct PP_Var* out_response) {
   NB_Bool result = NB_FALSE;
   int gethandles_count = nb_message_gethandles_count(message);
-  int message_id = nb_message_id(message);
-  struct PP_Var response = PP_MakeUndefined();
   struct PP_Var values = PP_MakeUndefined();
   int i;
 
-  response = nb_var_dict_create();
-  if (!nb_var_dict_set(response, "id", PP_MakeInt32(message_id))) {
-    NB_VERROR("nb_var_dict_set(\"id\", %d) failed.", message_id);
+  values = nb_var_array_create();
+  if (!nb_var_dict_set(*out_response, "values", values)) {
+    NB_ERROR("nb_var_dict_set(\"values\", ...) failed.");
     goto cleanup;
   }
-
-  values = nb_var_array_create();
 
   for (i = 0; i < gethandles_count; ++i) {
     NB_Handle handle = nb_message_gethandle(message, i);
@@ -196,34 +235,26 @@ NB_Bool nb_request_get_handles(struct NB_Message* message,
 
     if (!nb_handle_convert_to_var(handle, &value)) {
       NB_VERROR("nb_handle_convert_to_var(%d, <value>) failed.", handle);
-      goto cleanup;
     }
 
     if (!nb_var_array_set(values, i, value)) {
       NB_VERROR("nb_var_array_set(values, %d, %s) failed.",
                 i,
                 nb_var_type_to_string(value.type));
-      nb_var_release(value);
-      goto cleanup;
     }
 
     nb_var_release(value);
   }
 
-  if (!nb_var_dict_set(response, "values", values)) {
+  if (!nb_var_dict_set(*out_response, "values", values)) {
     NB_ERROR("nb_var_dict_set(\"values\", ...) failed.");
     goto cleanup;
   }
 
-  *out_response = response;
   result = NB_TRUE;
-
-  /* Clear the response so it isn't released twice. */
-  memset(&response, 0, sizeof(struct PP_Var));
 
 cleanup:
   nb_var_release(values);
-  nb_var_release(response);
   return result;
 }
 
@@ -237,4 +268,10 @@ void nb_request_destroy_handles(struct NB_Message* message) {
   }
 
   nb_handle_destroy_many(handles, destroyhandles_count);
+}
+
+void nb_request_set_error(struct PP_Var response, int failed_command_idx) {
+  if (!nb_var_dict_set(response, "error", PP_MakeInt32(failed_command_idx))) {
+    NB_VERROR("nb_var_dict_set(\"error\", %d) failed.", failed_command_idx);
+  }
 }
