@@ -1034,6 +1034,26 @@ var type = (function(utils) {
         16: false,  // long long
       },
 
+      PRIMITIVE_SIZE = {
+        3: 1,  // bool
+        4: 1,  // char (unsigned)
+        5: 1,  // unsigned char
+        6: 2,  // unsigned short
+        7: 4,  // unsigned int
+        8: 4,  // unsigned long
+        9: 8,  // unsigned long long
+        10: 1,  // char (signed)
+        11: 1,  // signed char
+        12: 4,  // wchar_t
+        13: 2,  // short
+        14: 4,  // int
+        15: 4,  // long
+        16: 8,  // long long
+        17: 4,  // float
+        18: 8,  // double
+        19: 10,  // long double
+      },
+
       IS_CONST = 1,
       IS_VOLATILE = 2,
       IS_RESTRICT = 4,
@@ -1243,6 +1263,7 @@ var type = (function(utils) {
   }
   Void.prototype = Object.create(Type.prototype);
   Void.prototype.constructor = Void;
+  Void.prototype.size = 0;
   Void.prototype.qualify = function(cv) {
     return Void(this.cv | cv);
   };
@@ -1253,6 +1274,7 @@ var type = (function(utils) {
   function Numeric(kind, cv) {
     if (!(this instanceof Numeric)) { return new Numeric(kind, cv); }
     Type.call(this, kind, cv);
+    this.size = PRIMITIVE_SIZE[kind];
     this.spelling = getSpelling(this);
   }
   Numeric.prototype = Object.create(Type.prototype);
@@ -1275,6 +1297,7 @@ var type = (function(utils) {
   }
   Pointer.prototype = Object.create(Type.prototype);
   Pointer.prototype.constructor = Pointer;
+  Pointer.prototype.size = 4;
   Pointer.prototype.qualify = function(cv) {
     return Pointer(this.pointee, this.cv | cv);
   };
@@ -1341,6 +1364,7 @@ var type = (function(utils) {
   }
   Enum.prototype = Object.create(Type.prototype);
   Enum.prototype.constructor = Enum;
+  Enum.prototype.size = 4;
   Enum.prototype.qualify = function(cv) {
     return Enum(this.tag, this.cv | cv);
   };
@@ -1363,6 +1387,9 @@ var type = (function(utils) {
   Typedef.prototype.unqualified = function() {
     return Typedef(this.tag, this.alias);
   };
+  Object.defineProperty(Typedef.prototype, 'size', {
+    get: function() { return this.alias.size; }
+  });
 
   function FunctionProto(resultType, argTypes, variadic) {
     if (!(this instanceof FunctionProto)) {
@@ -1393,6 +1420,7 @@ var type = (function(utils) {
     this.spelling = getSpelling(this);
   }
   FunctionProto.prototype = Object.create(Type.prototype);
+  FunctionProto.prototype.size = -1;
   FunctionProto.prototype.constructor = FunctionProto;
   FunctionProto.prototype.qualify = function(cv) {
     return this;
@@ -1423,6 +1451,7 @@ var type = (function(utils) {
   }
   FunctionNoProto.prototype = Object.create(Type.prototype);
   FunctionNoProto.prototype.constructor = FunctionNoProto;
+  FunctionNoProto.prototype.size = -1;
   FunctionNoProto.prototype.qualify = function(cv) {
     return this;
   };
@@ -1448,6 +1477,7 @@ var type = (function(utils) {
     Type.call(this, CONSTANTARRAY, 0);
     this.elementType = elementType;
     this.arraySize = arraySize;
+    this.size = this.elementType.size * this.arraySize;
     this.spelling = getSpelling(this);
   }
   ConstantArray.prototype = Object.create(Type.prototype);
@@ -1476,6 +1506,7 @@ var type = (function(utils) {
   }
   IncompleteArray.prototype = Object.create(Type.prototype);
   IncompleteArray.prototype.constructor = IncompleteArray;
+  IncompleteArray.prototype.size = 4;
   IncompleteArray.prototype.qualify = function(cv) {
     return this;
   };

@@ -275,6 +275,79 @@ describe('Type', function() {
     });
   });
 
+  describe('Size', function() {
+    it('should have the correct size for primitives', function() {
+      assert.strictEqual(type.void.size, 0);
+      assert.strictEqual(type.bool.size, 1);
+      assert.strictEqual(type.char.size, 1);
+      assert.strictEqual(type.uchar.size, 1);
+      assert.strictEqual(type.ushort.size, 2);
+      assert.strictEqual(type.uint.size, 4);
+      assert.strictEqual(type.ulong.size, 4);
+      assert.strictEqual(type.ulonglong.size, 8);
+      assert.strictEqual(type.schar.size, 1);
+      assert.strictEqual(type.wchar.size, 4);
+      assert.strictEqual(type.short.size, 2);
+      assert.strictEqual(type.int.size, 4);
+      assert.strictEqual(type.long.size, 4);
+      assert.strictEqual(type.longlong.size, 8);
+      assert.strictEqual(type.float.size, 4);
+      assert.strictEqual(type.double.size, 8);
+      assert.strictEqual(type.longdouble.size, 10);
+    });
+
+    it('should have the correct size for pointers', function() {
+      assert.strictEqual(type.Pointer(type.void).size, 4);
+      assert.strictEqual(type.Pointer(type.int).size, 4);
+      assert.strictEqual(type.Pointer(type.longlong).size, 4);
+      assert.strictEqual(type.Pointer(type.Function(type.void, [])).size, 4);
+    });
+
+    it('should have the correct size for records', function() {
+      var s1 = type.Record('s1', 12, type.STRUCT),
+          s2 = type.Record('s2', 4, type.UNION);
+
+      assert.strictEqual(s1.size, 12);
+      assert.strictEqual(s2.size, 4);
+    });
+
+    it('should have the correct size for enums', function() {
+      var e1 = type.Enum('e1');
+
+      assert.strictEqual(e1.size, 4);
+    });
+
+    it('should have the correct size for typedefs', function() {
+      assert.strictEqual(type.Typedef('t1', type.void).size, 0);
+      assert.strictEqual(type.Typedef('t2', type.short).size, 2);
+      assert.strictEqual(type.Typedef('t3', type.int).size, 4);
+      assert.strictEqual(type.Typedef('t4', type.long).size, 4);
+      assert.strictEqual(type.Typedef('t5', type.longlong).size, 8);
+      assert.strictEqual(type.Typedef('t6', type.Pointer(type.void)).size, 4);
+      assert.strictEqual(type.Typedef('t7', type.Enum('e1')).size, 4);
+      assert.strictEqual(type.Typedef('t8', type.Record('s1', 12)).size, 12);
+      assert.strictEqual(type.Typedef('t9', type.Typedef('t9', type.int)).size,
+                         4);
+    });
+
+    it('should have no size for a function', function() {
+      assert.strictEqual(type.Function(type.void, []).size, -1);
+      assert.strictEqual(type.FunctionNoProto(type.void).size, -1);
+    });
+
+    it('should have size for an array', function() {
+      assert.strictEqual(type.Array(type.int, 10).size, 40);
+      assert.strictEqual(type.Array(type.Pointer(type.void), 5).size, 20);
+      assert.strictEqual(type.Array(type.Typedef('t1', type.char), 5).size, 5);
+    });
+
+    it('should have size for an incomplete array', function() {
+      assert.strictEqual(type.IncompleteArray(type.int).size, 4);
+      assert.strictEqual(type.IncompleteArray(type.Pointer(type.void)).size, 4);
+    });
+  });
+
+
   describe('Spell', function() {
     it('should correctly spell primitive types', function() {
       assert.strictEqual(spell(type.void), 'void');
