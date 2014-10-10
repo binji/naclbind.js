@@ -474,6 +474,9 @@ def CollectFromHeader(collector, compile_args, options):
   if not tu:
     raise Error('Creating translation unit failed.')
 
+  options = copy.copy(options)
+  ExtendOptionsFromTranslationUnit(tu, options)
+
   # By default, accept everything. If there is an explicit whitelist, default
   # to accepting nothing.
   if options.whitelist_file or options.whitelist_symbol:
@@ -486,8 +489,6 @@ def CollectFromHeader(collector, compile_args, options):
                       options.blacklist_file, options.blacklist_symbol,
                       accept_default)
 
-  options = copy.copy(options)
-  ExtendOptionsFromTranslationUnit(tu, options)
   collector.Collect(tu, acceptor, options.remap)
   return filename
 
