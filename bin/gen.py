@@ -79,9 +79,10 @@ class OptionParser(optparse.OptionParser):
                     default=[])
     self.add_option('-B', '--blacklist-symbol', metavar='RE',
                     action='append', default=[])
-    self.add_option('-t', '--template')
+    self.add_option('-t', '--template', action='append', default=[])
     self.add_option('-m', '--module-name', default='naclbind_gen')
-    self.add_option('-o', '--output', metavar='FILE')
+    self.add_option('-o', '--output', metavar='FILE', action='append',
+                    default=[])
     self.add_option('-r', '--remap', action='callback', metavar='FROM=TO',
                     callback=ParseRemapOption, type='string', nargs=1,
                     default={})
@@ -302,6 +303,11 @@ def ExtendOptionsFromTranslationUnit(tu, options):
     new_options, _ = parser.parse_args(text.split(' '))
 
     for opt_str in dir(new_options):
+      # TODO(binji): maybe this should be opt-in instead of opt-out?
+      # Don't allow extending output or templates.
+      if opt_str in ('output', 'template'):
+        continue
+
       old_value = getattr(options, opt_str)
       if type(old_value) is list:
         old_list = old_value
@@ -493,6 +499,41 @@ def CollectFromHeader(collector, compile_args, options):
   return filename
 
 
+# See http://stackoverflow.com/a/14620633
+class AttrDict(dict):
+  def __init__(self, *args, **kwargs):
+    super(AttrDict, self).__init__(*args, **kwargs)
+    self.__dict__ = self
+
+
+def OutputForTemplate(template, output, collector, tu_filename, options):
+  with open(template) as f:
+    template = f.read()
+
+  template_dict = AttrDict()
+  template_dict.TypeKind = gen_types.TypeKind
+  template_dict.collector = collector
+  template_dict.filename = tu_filename
+  template_dict.module_name = options.module_name
+  template_dict.IncludeFile = IncludeFile
+  template_dict.Error = Error
+  template_dict.builtins = options.builtins
+  template_dict.BUILTINS_H = BUILTINS_H
+  template_dict.MAX_INT_VARARGS = options.max_int_varargs
+  template_dict.MAX_DBL_VARARGS = options.max_double_varargs
+
+  out_text = easy_template.RunTemplateString(template, template_dict)
+
+  if output:
+    outdir = os.path.abspath(os.path.dirname(output))
+    if not os.path.exists(outdir):
+      os.makedirs(outdir)
+    with open(output, 'w') as outf:
+      outf.write(out_text)
+  else:
+    sys.stdout.write(out_text)
+
+
 def main(args):
   logging.basicConfig(format='%(levelname)s: %(message)s')
   parser = OptionParser()
@@ -505,42 +546,16 @@ def main(args):
   if not options.template:
     parser.error('--template argument required')
 
+  if len(options.template) != len(options.output):
+    parser.error('Need to have same number of --template and --output')
+
   collector = Collector()
   if options.builtins:
     CollectFromHeader(collector, [BUILTINS_H], options)
   filename = CollectFromHeader(collector, args, options)
 
-  with open(options.template) as f:
-    template = f.read()
-
-  # See http://stackoverflow.com/a/14620633
-  class AttrDict(dict):
-    def __init__(self, *args, **kwargs):
-      super(AttrDict, self).__init__(*args, **kwargs)
-      self.__dict__ = self
-
-  template_dict = AttrDict()
-  template_dict.TypeKind = gen_types.TypeKind
-  template_dict.collector = collector
-  template_dict.filename = filename
-  template_dict.module_name = options.module_name
-  template_dict.IncludeFile = IncludeFile
-  template_dict.Error = Error
-  template_dict.builtins = options.builtins
-  template_dict.BUILTINS_H = BUILTINS_H
-  template_dict.MAX_INT_VARARGS = options.max_int_varargs
-  template_dict.MAX_DBL_VARARGS = options.max_double_varargs
-
-  out_text = easy_template.RunTemplateString(template, template_dict)
-
-  if options.output:
-    outdir = os.path.abspath(os.path.dirname(options.output))
-    if not os.path.exists(outdir):
-      os.makedirs(outdir)
-    with open(options.output, 'w') as outf:
-      outf.write(out_text)
-  else:
-    sys.stdout.write(out_text)
+  for template, output in zip(options.template, options.output):
+    OutputForTemplate(template, output, collector, filename, options)
 
   return 0
 
