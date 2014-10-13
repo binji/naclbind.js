@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <stdlib.h>
+#include <vector>
 #include <gtest/gtest.h>
 #include <ppapi/c/pp_var.h>
 #include "fake_interfaces.h"
@@ -110,8 +112,8 @@ class HandleTest : public ::testing::Test {
   EXPECT_FAIL(type, suffix, handle)
 
 #define ROW(reg, val, i8, u8, i16, u16, i32, u32, i64, u64, f32, f64, vp, v) \
-  {                                                                          \
-    EXPECT_EQ(NB_TRUE, nb_handle_register_##reg(1, val));                    \
+  do {                                                                       \
+    ASSERT_EQ(NB_TRUE, nb_handle_register_##reg(1, val));                    \
     EXPECT_##i8(int8_t, int8, 1, val);                                       \
     EXPECT_##u8(uint8_t, uint8, 1, val);                                     \
     EXPECT_##i16(int16_t, int16, 1, val);                                    \
@@ -125,7 +127,14 @@ class HandleTest : public ::testing::Test {
     EXPECT_##vp(void*, voidp, 1, val);                                       \
     EXPECT_##v(struct PP_Var, var, 1, val);                                  \
     nb_handle_destroy(1);                                                    \
-  }
+  } while (0)
+
+TEST_F(HandleTest, CantRegisterTwice) {
+  EXPECT_EQ(NB_TRUE, nb_handle_register_int32(1, 42));
+  EXPECT_EQ(NB_FALSE, nb_handle_register_int8(1, 42));
+
+  nb_handle_destroy(1);
+}
 
 TEST_F(HandleTest, Basic) {
   struct PP_Var var;
@@ -431,6 +440,48 @@ TEST_F(HandleTest, ConvertToVar) {
     EXPECT_EQ(15, nb_var_array_get(var, 0).value.as_int);
     EXPECT_EQ(-0x10000000, nb_var_array_get(var, 1).value.as_int);
     nb_var_release(var);
+    nb_handle_destroy(1);
+  }
+}
+
+class HandleStressTest : public HandleTest {};
+
+TEST_F(HandleStressTest, Basic) {
+  const int cycles = 100;
+  const int create_per_cycle = 1000;
+  const int destroy_per_cycle = 800;
+  unsigned int seed = 0xface;
+  NB_Handle next_handle = 1;
+  std::vector<NB_Handle> to_destroy;
+  for (int i = 0; i < cycles; ++i) {
+    for (int j = 0; j < create_per_cycle; ++j) {
+      NB_Handle handle = next_handle++;
+      ASSERT_EQ(NB_TRUE, nb_handle_register_int32(handle, handle));
+      to_destroy.push_back(handle);
+    }
+
+    for(int j = 0; j < destroy_per_cycle; ++j) {
+      int index = rand_r(&seed) % to_destroy.size();
+      NB_Handle handle = to_destroy[index];
+      int32_t val;
+      ASSERT_EQ(NB_TRUE, nb_handle_get_int32(handle, &val));
+      ASSERT_EQ(handle, val);
+      nb_handle_destroy(handle);
+      std::swap(to_destroy[index], to_destroy.back());
+      to_destroy.pop_back();
+    }
+  }
+
+  nb_handle_destroy_many(to_destroy.data(), to_destroy.size());
+}
+
+TEST_F(HandleStressTest, OneHandle) {
+  const int cycles = 1000;
+  for (int i = 0; i < cycles; ++i) {
+    ASSERT_EQ(NB_TRUE, nb_handle_register_int32(1, 42));
+    int32_t val;
+    ASSERT_EQ(NB_TRUE, nb_handle_get_int32(1, &val));
+    ASSERT_EQ(42, val);
     nb_handle_destroy(1);
   }
 }

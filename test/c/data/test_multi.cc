@@ -27,7 +27,7 @@ TEST_F(GeneratorTest, MultipleCommands) {
     "                {\"id\": 6, \"args\": [5]},"              // var_release
     "                {\"id\": 3, \"args\": [4]}],"             // free
     " \"get\": [5],"
-    " \"destroy\": [1, 2, 3, 4, 5, 6]}";
+    " \"destroy\": [1, 2, 3, 4, 5]}";
   const char* response_json = "{\"id\":1,\"values\":[\"Uryyb\"]}\n";
   RunTest(request_json, response_json);
 }

@@ -31,6 +31,9 @@
 #endif
 
 #define NB_HANDLE_MAP_INITIAL_CAPACITY 16
+#define NB_INVALID_HANDLE 0
+
+typedef size_t NB_HashIndex;
 
 typedef union {
   int8_t int8;
@@ -47,39 +50,154 @@ typedef union {
   struct PP_Var var;
 } NB_HandleValue;
 
-typedef struct {
+typedef struct NB_HandleMapEntry {
+  NB_Handle handle;
   NB_Type type;
   NB_HandleValue value;
-  /* PP_Var strings are not guaranteed to be NULL-terminated, so if we want to
-   * use it as a C string, we have to allocate space for a NULL and remember to
-   * free it later.
-   *
-   * This field will be non-NULL when type == NB_TYPE_VAR and
-   * nb_handle_get_charp() has been called. The memory will be free'd in
-   * DestroyHandle.
-   */
-  char* string_value;
-} NB_HandleObject;
+  struct NB_HandleMapEntry* next;
+  union {
+    /* PP_Var strings are not guaranteed to be NULL-terminated, so if we want
+     * to use it as a C string, we have to allocate space for a NULL and
+     * remember to free it later.
+     *
+     * This field will be non-NULL when type == NB_TYPE_VAR and
+     * nb_handle_get_charp() has been called. The memory will be free'd in
+     * DestroyHandle.
+     */
+    char* string_value;
+    /* Only used when the entry is "free". This points to the previous entry in
+     * the free list. */
+    struct NB_HandleMapEntry* prev;
+  };
+} NB_HandleMapEntry;
 
-typedef struct {
-  NB_Handle handle;
-  NB_HandleObject object;
-} NB_HandleMapPair;
-
-/* TODO(binji): use hashmap instead of sorted array. */
-static NB_HandleMapPair* s_nb_handle_map = NULL;
+static NB_HandleMapEntry* s_nb_handle_map = NULL;
 static size_t s_nb_handle_map_size = 0;
 static size_t s_nb_handle_map_capacity = 0;
+static NB_HandleMapEntry* s_nb_handle_map_free_head = NULL;
 
-static NB_Bool nb_resize_handle_map(size_t new_capacity) {
+static inline NB_Bool nb_is_power_of_two(size_t n) {
+  return (n & (n - 1)) == 0;
+}
+
+static inline NB_HashIndex nb_hash_handle(NB_Handle handle) {
+  assert(nb_is_power_of_two(s_nb_handle_map_capacity));
+  return (NB_HashIndex) (handle & (s_nb_handle_map_capacity - 1));
+}
+
+static inline NB_HandleMapEntry* nb_handle_main_entry(NB_Handle handle) {
+  return &s_nb_handle_map[nb_hash_handle(handle)];
+}
+
+static inline NB_Bool nb_handle_entry_is_free(NB_HandleMapEntry* entry) {
+  return entry->handle == NB_INVALID_HANDLE;
+}
+
+static NB_HandleMapEntry* nb_handle_new_entry(NB_Handle handle) {
+  NB_HandleMapEntry* entry = nb_handle_main_entry(handle);
+  if (!nb_handle_entry_is_free(entry)) {
+    assert(s_nb_handle_map_free_head != NULL);
+    NB_HandleMapEntry* free_entry = s_nb_handle_map_free_head;
+    s_nb_handle_map_free_head = free_entry->next;
+    if (free_entry->next) {
+      free_entry->next->prev = NULL;
+    }
+
+    /* Our main position is already claimed. Check to see if the entry in that
+     * position is in its main position */
+    NB_HandleMapEntry* other_entry = nb_handle_main_entry(entry->handle);
+    if (other_entry == entry) {
+      /* Yes, so add this new entry to the chain, if it is not already there. */
+      NB_HandleMapEntry* search = entry;
+      while (search) {
+        if (search->handle == handle) {
+          NB_VERROR("handle %d is already registered.", handle);
+          return NULL;
+        }
+        search = search->next;
+      }
+
+      /* Add as the second entry in the chain */
+      free_entry->next = entry->next;
+      entry->next = free_entry;
+      entry = free_entry;
+    } else {
+      /* No, move the other entry to the free entry */
+      assert(!nb_handle_entry_is_free(other_entry));
+      while (other_entry->next != entry) {
+        other_entry = other_entry->next;
+      }
+
+      other_entry->next = free_entry;
+      memcpy(free_entry, entry, sizeof(NB_HandleMapEntry));
+
+      entry->next = NULL;
+    }
+  } else {
+    /* Remove from the free list */
+    if (entry->next) {
+      entry->next->prev = entry->prev;
+    }
+    if (entry->prev) {
+      entry->prev->next = entry->next;
+    } else {
+      s_nb_handle_map_free_head = entry->next;
+    }
+    entry->next = NULL;
+  }
+
+  entry->handle = handle;
+  return entry;
+}
+
+static NB_Bool nb_handle_map_resize(size_t new_capacity) {
+  NB_VLOG(
+      "Resizing handle map %u -> %u", s_nb_handle_map_capacity, new_capacity);
   assert(s_nb_handle_map_size <= new_capacity);
-  s_nb_handle_map =
-      realloc(s_nb_handle_map, sizeof(NB_HandleMapPair) * new_capacity);
-  s_nb_handle_map_capacity = new_capacity;
-  if (!s_nb_handle_map) {
-    NB_ERROR("Out of memory");
+
+  NB_HandleMapEntry* old_map = s_nb_handle_map;
+  size_t old_capacity = s_nb_handle_map_capacity;
+  NB_HashIndex i;
+
+  NB_HandleMapEntry* new_map = malloc(sizeof(NB_HandleMapEntry) * new_capacity);
+  if (!new_map) {
     return NB_FALSE;
   }
+
+  s_nb_handle_map = new_map;
+  s_nb_handle_map_capacity = new_capacity;
+
+  /* Update the free list */
+  s_nb_handle_map_free_head = NULL;
+  for (i = 0; i < s_nb_handle_map_capacity; ++i) {
+    NB_HandleMapEntry* entry = &s_nb_handle_map[i];
+    if (s_nb_handle_map_free_head) {
+      s_nb_handle_map_free_head->prev = entry;
+    }
+
+    entry->handle = NB_INVALID_HANDLE;
+    entry->next = s_nb_handle_map_free_head;
+    s_nb_handle_map_free_head = entry;
+  }
+  s_nb_handle_map_free_head->prev = NULL;
+
+  if (old_map) {
+    /* Copy from old map to new map */
+    for (i = 0; i < old_capacity; ++i) {
+      if (nb_handle_entry_is_free(&old_map[i])) {
+        continue;
+      }
+
+      NB_Handle handle = old_map[i].handle;
+      NB_HandleMapEntry* entry = nb_handle_new_entry(handle);
+      assert(entry != NULL);
+      entry->type = old_map[i].type;
+      entry->value = old_map[i].value;
+      entry->string_value = old_map[i].string_value;
+    }
+  }
+
+  free(old_map);
   return NB_TRUE;
 }
 
@@ -87,59 +205,26 @@ static NB_Bool nb_register_handle(NB_Handle handle,
                                   NB_Type type,
                                   NB_HandleValue value) {
   if (!s_nb_handle_map) {
-    if (!nb_resize_handle_map(NB_HANDLE_MAP_INITIAL_CAPACITY)) {
+    if (!nb_handle_map_resize(NB_HANDLE_MAP_INITIAL_CAPACITY)) {
       return NB_FALSE;
     }
   }
 
-  if (s_nb_handle_map_size == s_nb_handle_map_capacity) {
-    if (!nb_resize_handle_map(s_nb_handle_map_capacity * 2)) {
+  if (!s_nb_handle_map_free_head) {
+    /* No more free space, allocate more */
+    if (!nb_handle_map_resize(s_nb_handle_map_capacity * 2)) {
       return NB_FALSE;
     }
   }
 
-  NB_HandleMapPair* pair = NULL;
-
-  if (s_nb_handle_map_size == 0) {
-    assert(s_nb_handle_map_capacity > 0);
-    pair = &s_nb_handle_map[0];
-  } else {
-    /* Fast case, the new handle is larger than all other handles. */
-    if (handle > s_nb_handle_map[s_nb_handle_map_size - 1].handle) {
-      pair = &s_nb_handle_map[s_nb_handle_map_size];
-    } else {
-      /* Binary search to find the insertion point. */
-      size_t lo_ix = 0;                    /* Inclusive */
-      size_t hi_ix = s_nb_handle_map_size; /* Exclusive */
-      while (lo_ix < hi_ix) {
-        size_t mid_ix = (lo_ix + hi_ix) / 2;
-        NB_Handle mid_handle = s_nb_handle_map[mid_ix].handle;
-        if (handle > mid_handle) {
-          lo_ix = mid_ix + 1;
-        } else if (handle < mid_handle) {
-          hi_ix = mid_ix;
-        } else {
-          NB_VERROR("handle %d is already registered.", handle);
-          return NB_FALSE;
-        }
-      }
-
-      /* Move everything after the insertion point down. */
-      size_t insert_ix = lo_ix;
-      if (insert_ix < s_nb_handle_map_size) {
-        memmove(&s_nb_handle_map[insert_ix + 1],
-                &s_nb_handle_map[insert_ix],
-                sizeof(NB_HandleMapPair) * (s_nb_handle_map_size - insert_ix));
-      }
-
-      pair = &s_nb_handle_map[insert_ix];
-    }
+  NB_HandleMapEntry* entry = nb_handle_new_entry(handle);
+  if (!entry) {
+    return NB_FALSE;
   }
 
-  pair->handle = handle;
-  pair->object.type = type;
-  pair->object.value = value;
-  pair->object.string_value = NULL;
+  entry->type = type;
+  entry->value = value;
+  entry->string_value = NULL;
   s_nb_handle_map_size++;
   return NB_TRUE;
 }
@@ -230,23 +315,17 @@ NB_Bool nb_handle_register_var(NB_Handle handle, struct PP_Var value) {
   }
 }
 
-static NB_Bool nb_get_handle(NB_Handle handle,
-                             NB_HandleObject* out_handle_object) {
-  /* Binary search. */
-  size_t lo_ix = 0;                    /* Inclusive */
-  size_t hi_ix = s_nb_handle_map_size; /* Exclusive */
-  while (lo_ix < hi_ix) {
-    size_t mid_ix = (lo_ix + hi_ix) / 2;
-    NB_Handle mid_handle = s_nb_handle_map[mid_ix].handle;
-    if (handle > mid_handle) {
-      lo_ix = mid_ix + 1;
-    } else if (handle < mid_handle) {
-      hi_ix = mid_ix;
-    } else {
-      *out_handle_object = s_nb_handle_map[mid_ix].object;
+static NB_Bool nb_get_handle_entry(NB_Handle handle,
+                                   NB_HandleMapEntry** out_entry) {
+  NB_HandleMapEntry* entry = nb_handle_main_entry(handle);
+  do {
+    if (entry->handle == handle) {
+      *out_entry = entry;
       return NB_TRUE;
     }
-  }
+
+    entry = entry->next;
+  } while(!nb_handle_entry_is_free(entry));
 
   return NB_FALSE;
 }
@@ -294,10 +373,10 @@ static NB_Bool nb_get_handle(NB_Handle handle,
 #define NB_TYPE_FLOAT_FIELD float32
 #define NB_TYPE_DOUBLE_FIELD float64
 
-#define NB_HOBJ_FIELD(type) (hobj.value.type##_FIELD)
+#define NB_HENTRY_FIELD(type) (hentry->value.type##_FIELD)
 
 #define NB_TYPE_SWITCH(to_type, to)                 \
-  switch (hobj.type) {                              \
+  switch (hentry->type) {                           \
     NB_TYPE_CASE(to_type, NB_TYPE_INT8, to, I8);    \
     NB_TYPE_CASE(to_type, NB_TYPE_UINT8, to, U8);   \
     NB_TYPE_CASE(to_type, NB_TYPE_INT16, to, I16);  \
@@ -314,7 +393,7 @@ static NB_Bool nb_get_handle(NB_Handle handle,
 #define NB_TYPE_CASE(to_type, from_type, to, from) \
   case from_type:                                  \
     NB_CHECK_##to##_##from();                      \
-    *out_value = NB_HOBJ_FIELD(from_type);         \
+    *out_value = NB_HENTRY_FIELD(from_type);       \
     return NB_TRUE /* no semicolon */
 
 #define NB_CHECK_I8_I8()
@@ -434,99 +513,99 @@ static NB_Bool nb_get_handle(NB_Handle handle,
   default:                                             \
     NB_VERROR("handle %d is of type %s. Expected %s.", \
               handle,                                  \
-              nb_type_to_string(hobj.type),            \
+              nb_type_to_string(hentry->type),         \
               nb_type_to_string(to_type));             \
     return NB_FALSE /* no semicolon */
 
-#define NB_CHECK(to_type, from_type)              \
-  if (NB_HOBJ_FIELD(from_type) < to_type##_MIN || \
-      NB_HOBJ_FIELD(from_type) > to_type##_MAX) { \
-    NB_CHECK_ERROR(to_type, from_type);           \
-    return NB_FALSE;                              \
+#define NB_CHECK(to_type, from_type)                \
+  if (NB_HENTRY_FIELD(from_type) < to_type##_MIN || \
+      NB_HENTRY_FIELD(from_type) > to_type##_MAX) { \
+    NB_CHECK_ERROR(to_type, from_type);             \
+    return NB_FALSE;                                \
   }
 
-#define NB_CHECK_MAX(to_type, from_type)          \
-  if (NB_HOBJ_FIELD(from_type) > to_type##_MAX) { \
-    NB_CHECK_ERROR(to_type, from_type);           \
-    return NB_FALSE;                              \
+#define NB_CHECK_MAX(to_type, from_type)            \
+  if (NB_HENTRY_FIELD(from_type) > to_type##_MAX) { \
+    NB_CHECK_ERROR(to_type, from_type);             \
+    return NB_FALSE;                                \
   }
 
 #define NB_CHECK_GT_ZERO(to_type, from_type) \
-  if (NB_HOBJ_FIELD(from_type) < 0) {        \
+  if (NB_HENTRY_FIELD(from_type) < 0) {      \
     NB_CHECK_ERROR(to_type, from_type);      \
     return NB_FALSE;                         \
   }
 
-#define NB_CHECK_MAX_GT_ZERO(to_type, from_type)  \
-  if (NB_HOBJ_FIELD(from_type) < 0 ||             \
-      NB_HOBJ_FIELD(from_type) > to_type##_MAX) { \
-    NB_CHECK_ERROR(to_type, from_type);           \
-    return NB_FALSE;                              \
+#define NB_CHECK_MAX_GT_ZERO(to_type, from_type)    \
+  if (NB_HENTRY_FIELD(from_type) < 0 ||             \
+      NB_HENTRY_FIELD(from_type) > to_type##_MAX) { \
+    NB_CHECK_ERROR(to_type, from_type);             \
+    return NB_FALSE;                                \
   }
 
 #define NB_CHECK_SIGN(to_type, from_type) NB_CHECK(to_type, from_type)
 
-#define NB_CHECK_FLT_TO_INT(to_type, from_type)                      \
-  if (NB_HOBJ_FIELD(from_type) < to_type##_MIN ||                    \
-      NB_HOBJ_FIELD(from_type) > to_type##_MAX ||                    \
-      NB_HOBJ_FIELD(from_type) != rintf(NB_HOBJ_FIELD(from_type))) { \
-    NB_CHECK_ERROR(to_type, from_type);                              \
-    return NB_FALSE;                                                 \
+#define NB_CHECK_FLT_TO_INT(to_type, from_type)                          \
+  if (NB_HENTRY_FIELD(from_type) < to_type##_MIN ||                      \
+      NB_HENTRY_FIELD(from_type) > to_type##_MAX ||                      \
+      NB_HENTRY_FIELD(from_type) != rintf(NB_HENTRY_FIELD(from_type))) { \
+    NB_CHECK_ERROR(to_type, from_type);                                  \
+    return NB_FALSE;                                                     \
   }
 
-#define NB_CHECK_FLOAT_TO_INT64(to_type, from_type)                  \
-  if (NB_HOBJ_FIELD(from_type) < to_type##_MIN_FLOAT ||              \
-      NB_HOBJ_FIELD(from_type) > to_type##_MAX_FLOAT ||              \
-      NB_HOBJ_FIELD(from_type) != rintf(NB_HOBJ_FIELD(from_type))) { \
-    NB_CHECK_ERROR(to_type, from_type);                              \
-    return NB_FALSE;                                                 \
+#define NB_CHECK_FLOAT_TO_INT64(to_type, from_type)                      \
+  if (NB_HENTRY_FIELD(from_type) < to_type##_MIN_FLOAT ||                \
+      NB_HENTRY_FIELD(from_type) > to_type##_MAX_FLOAT ||                \
+      NB_HENTRY_FIELD(from_type) != rintf(NB_HENTRY_FIELD(from_type))) { \
+    NB_CHECK_ERROR(to_type, from_type);                                  \
+    return NB_FALSE;                                                     \
   }
 
-#define NB_CHECK_DBL_TO_INT(to_type, from_type)                     \
-  if (NB_HOBJ_FIELD(from_type) < to_type##_MIN ||                   \
-      NB_HOBJ_FIELD(from_type) > to_type##_MAX ||                   \
-      NB_HOBJ_FIELD(from_type) != rint(NB_HOBJ_FIELD(from_type))) { \
-    NB_CHECK_ERROR(to_type, from_type);                             \
-    return NB_FALSE;                                                \
+#define NB_CHECK_DBL_TO_INT(to_type, from_type)                         \
+  if (NB_HENTRY_FIELD(from_type) < to_type##_MIN ||                     \
+      NB_HENTRY_FIELD(from_type) > to_type##_MAX ||                     \
+      NB_HENTRY_FIELD(from_type) != rint(NB_HENTRY_FIELD(from_type))) { \
+    NB_CHECK_ERROR(to_type, from_type);                                 \
+    return NB_FALSE;                                                    \
   }
 
-#define NB_CHECK_INT_TO_FLT(to_type, from_type)          \
-  if (NB_HOBJ_FIELD(from_type) < NB_TYPE_FLOAT_MIN_24 || \
-      NB_HOBJ_FIELD(from_type) > NB_TYPE_FLOAT_MAX_24) { \
-    NB_CHECK_ERROR(to_type, from_type);                  \
-    return NB_FALSE;                                     \
+#define NB_CHECK_INT_TO_FLT(to_type, from_type)            \
+  if (NB_HENTRY_FIELD(from_type) < NB_TYPE_FLOAT_MIN_24 || \
+      NB_HENTRY_FIELD(from_type) > NB_TYPE_FLOAT_MAX_24) { \
+    NB_CHECK_ERROR(to_type, from_type);                    \
+    return NB_FALSE;                                       \
   }
 
-#define NB_CHECK_MAX_INT_TO_FLT(to_type, from_type)      \
-  if (NB_HOBJ_FIELD(from_type) > NB_TYPE_FLOAT_MAX_24) { \
-    NB_CHECK_ERROR(to_type, from_type);                  \
-    return NB_FALSE;                                     \
+#define NB_CHECK_MAX_INT_TO_FLT(to_type, from_type)        \
+  if (NB_HENTRY_FIELD(from_type) > NB_TYPE_FLOAT_MAX_24) { \
+    NB_CHECK_ERROR(to_type, from_type);                    \
+    return NB_FALSE;                                       \
   }
 
-#define NB_CHECK_INT_TO_DBL(to_type, from_type)           \
-  if (NB_HOBJ_FIELD(from_type) < NB_TYPE_DOUBLE_MIN_53 || \
-      NB_HOBJ_FIELD(from_type) > NB_TYPE_DOUBLE_MAX_53) { \
-    NB_CHECK_ERROR(to_type, from_type);                   \
-    return NB_FALSE;                                      \
+#define NB_CHECK_INT_TO_DBL(to_type, from_type)             \
+  if (NB_HENTRY_FIELD(from_type) < NB_TYPE_DOUBLE_MIN_53 || \
+      NB_HENTRY_FIELD(from_type) > NB_TYPE_DOUBLE_MAX_53) { \
+    NB_CHECK_ERROR(to_type, from_type);                     \
+    return NB_FALSE;                                        \
   }
 
-#define NB_CHECK_MAX_INT_TO_DBL(to_type, from_type)       \
-  if (NB_HOBJ_FIELD(from_type) > NB_TYPE_DOUBLE_MAX_53) { \
-    NB_CHECK_ERROR(to_type, from_type);                   \
-    return NB_FALSE;                                      \
+#define NB_CHECK_MAX_INT_TO_DBL(to_type, from_type)         \
+  if (NB_HENTRY_FIELD(from_type) > NB_TYPE_DOUBLE_MAX_53) { \
+    NB_CHECK_ERROR(to_type, from_type);                     \
+    return NB_FALSE;                                        \
   }
 
 #define NB_CHECK_ERROR(to_type, from_type)              \
   NB_VERROR("handle %d(%s) with value " from_type##_FMT \
             " cannot be represented as %s.",            \
             handle,                                     \
-            nb_type_to_string(hobj.type),               \
-            NB_HOBJ_FIELD(from_type),                   \
+            nb_type_to_string(hentry->type),            \
+            NB_HENTRY_FIELD(from_type),                 \
             nb_type_to_string(to_type))
 
 NB_Bool nb_handle_get_int8(NB_Handle handle, int8_t* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -534,8 +613,8 @@ NB_Bool nb_handle_get_int8(NB_Handle handle, int8_t* out_value) {
 }
 
 NB_Bool nb_handle_get_uint8(NB_Handle handle, uint8_t* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -543,8 +622,8 @@ NB_Bool nb_handle_get_uint8(NB_Handle handle, uint8_t* out_value) {
 }
 
 NB_Bool nb_handle_get_int16(NB_Handle handle, int16_t* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -552,8 +631,8 @@ NB_Bool nb_handle_get_int16(NB_Handle handle, int16_t* out_value) {
 }
 
 NB_Bool nb_handle_get_uint16(NB_Handle handle, uint16_t* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -561,8 +640,8 @@ NB_Bool nb_handle_get_uint16(NB_Handle handle, uint16_t* out_value) {
 }
 
 NB_Bool nb_handle_get_int32(NB_Handle handle, int32_t* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -570,8 +649,8 @@ NB_Bool nb_handle_get_int32(NB_Handle handle, int32_t* out_value) {
 }
 
 NB_Bool nb_handle_get_uint32(NB_Handle handle, uint32_t* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -579,8 +658,8 @@ NB_Bool nb_handle_get_uint32(NB_Handle handle, uint32_t* out_value) {
 }
 
 NB_Bool nb_handle_get_int64(NB_Handle handle, int64_t* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -588,8 +667,8 @@ NB_Bool nb_handle_get_int64(NB_Handle handle, int64_t* out_value) {
 }
 
 NB_Bool nb_handle_get_uint64(NB_Handle handle, uint64_t* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -597,8 +676,8 @@ NB_Bool nb_handle_get_uint64(NB_Handle handle, uint64_t* out_value) {
 }
 
 NB_Bool nb_handle_get_float(NB_Handle handle, float* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -606,8 +685,8 @@ NB_Bool nb_handle_get_float(NB_Handle handle, float* out_value) {
 }
 
 NB_Bool nb_handle_get_double(NB_Handle handle, double* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -654,7 +733,7 @@ NB_Bool nb_handle_get_double(NB_Handle handle, double* out_value) {
 #undef NB_TYPE_UINT64_FIELD
 #undef NB_TYPE_FLOAT_FIELD
 #undef NB_TYPE_DOUBLE_FIELD
-#undef NB_HOBJ_FIELD
+#undef NB_HENTRY_FIELD
 #undef NB_TYPE_SWITCH
 #undef NB_TYPE_CASE
 #undef NB_CHECK_TYPE_INT8_TYPE_INT8
@@ -772,40 +851,41 @@ NB_Bool nb_handle_get_double(NB_Handle handle, double* out_value) {
 #undef NB_CHECK_MAX_INT_TO_DBL
 #undef NB_CHECK_ERROR
 
-static NB_Bool nb_hobj_string_value(NB_HandleObject* hobj, char** out_value) {
-  if (hobj->string_value == NULL) {
+static NB_Bool nb_hentry_string_value(NB_HandleMapEntry* hentry,
+                                      char** out_value) {
+  if (hentry->string_value == NULL) {
     uint32_t len;
     const char* str;
-    if (!nb_var_string(hobj->value.var, &str, &len)) {
+    if (!nb_var_string(hentry->value.var, &str, &len)) {
       return NB_FALSE;
     }
 
-    hobj->string_value = strndup(str, len);
+    hentry->string_value = strndup(str, len);
   }
 
-  *out_value = hobj->string_value;
+  *out_value = hentry->string_value;
   return NB_TRUE;
 }
 
 NB_Bool nb_handle_get_voidp(NB_Handle handle, void** out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
-  if (hobj.type == NB_TYPE_VAR) {
+  if (hentry->type == NB_TYPE_VAR) {
     char* string_value;
-    if (!nb_hobj_string_value(&hobj, &string_value)) {
+    if (!nb_hentry_string_value(hentry, &string_value)) {
       NB_VERROR("unable to get string for handle %d", handle);
       return NB_FALSE;
     }
     *out_value = string_value;
-  } else if (hobj.type == NB_TYPE_VOID_P) {
-    *out_value = hobj.value.voidp;
+  } else if (hentry->type == NB_TYPE_VOID_P) {
+    *out_value = hentry->value.voidp;
   } else {
     NB_VERROR("handle %d is of type %s. Expected %s.",
               handle,
-              nb_type_to_string(hobj.type),
+              nb_type_to_string(hentry->type),
               nb_type_to_string(NB_TYPE_VOID_P));
     return NB_FALSE;
   }
@@ -814,24 +894,24 @@ NB_Bool nb_handle_get_voidp(NB_Handle handle, void** out_value) {
 }
 
 NB_Bool nb_handle_get_charp(NB_Handle handle, char** out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
-  if (hobj.type == NB_TYPE_VAR) {
+  if (hentry->type == NB_TYPE_VAR) {
     char* string_value;
-    if (!nb_hobj_string_value(&hobj, &string_value)) {
+    if (!nb_hentry_string_value(hentry, &string_value)) {
       NB_VERROR("unable to get string for handle %d", handle);
       return NB_FALSE;
     }
     *out_value = string_value;
-  } else if (hobj.type == NB_TYPE_VOID_P) {
-    *out_value = (char*)hobj.value.voidp;
+  } else if (hentry->type == NB_TYPE_VOID_P) {
+    *out_value = (char*)hentry->value.voidp;
   } else {
     NB_VERROR("handle %d is of type %s. Expected %s.",
               handle,
-              nb_type_to_string(hobj.type),
+              nb_type_to_string(hentry->type),
               nb_type_to_string(NB_TYPE_VOID_P));
     return NB_FALSE;
   }
@@ -840,20 +920,20 @@ NB_Bool nb_handle_get_charp(NB_Handle handle, char** out_value) {
 }
 
 NB_Bool nb_handle_get_var(NB_Handle handle, struct PP_Var* out_value) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
-  if (hobj.type != NB_TYPE_VAR) {
+  if (hentry->type != NB_TYPE_VAR) {
     NB_VERROR("handle %d is of type %s. Expected %s.",
               handle,
-              nb_type_to_string(hobj.type),
+              nb_type_to_string(hentry->type),
               nb_type_to_string(NB_TYPE_VAR));
     return NB_FALSE;
   }
 
-  *out_value = hobj.value.var;
+  *out_value = hentry->value.var;
   return NB_TRUE;
 }
 
@@ -862,8 +942,8 @@ NB_Bool nb_handle_get_default(NB_Handle handle,
                               NB_VarArgInt* max_iargs,
                               NB_VarArgDbl** dargs,
                               NB_VarArgDbl* max_dargs) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
@@ -874,23 +954,24 @@ NB_Bool nb_handle_get_default(NB_Handle handle,
   }
 
 #ifdef __x86_64__
-#define NB_PUSH_INT(field)                                  \
-  NB_CHECK(*iargs, max_iargs, 1, "non-float ")*(*iargs)++ = \
-      (uint64_t)(int64_t)hobj.value.field
+#define NB_PUSH_INT(field)                     \
+  NB_CHECK(*iargs, max_iargs, 1, "non-float ") \
+  *(*iargs)++ = (uint64_t)(int64_t)hentry->value.field
 
-#define NB_PUSH_UINT(field)                                 \
-  NB_CHECK(*iargs, max_iargs, 1, "non-float ")*(*iargs)++ = \
-      (uint64_t)hobj.value.field
+#define NB_PUSH_UINT(field)                    \
+  NB_CHECK(*iargs, max_iargs, 1, "non-float ") \
+  *(*iargs)++ = (uint64_t)hentry->value.field
 
 #define NB_PUSH_INT64(field) NB_PUSH_INT(field)
 #define NB_PUSH_UINT64(field) NB_PUSH_UINT(field)
 
-#define NB_PUSH_DOUBLE(field) \
-  NB_CHECK(*dargs, max_dargs, 1, "float ")*(*dargs)++ = (double)hobj.value.field
+#define NB_PUSH_DOUBLE(field)              \
+  NB_CHECK(*dargs, max_dargs, 1, "float ") \
+  *(*dargs)++ = (double)hentry->value.field
 
-#define NB_PUSH_VOIDP(field)                                \
-  NB_CHECK(*iargs, max_iargs, 1, "non-float ")*(*iargs)++ = \
-      (uint64_t)(uint32_t)hobj.value.field
+#define NB_PUSH_VOIDP(field)                   \
+  NB_CHECK(*iargs, max_iargs, 1, "non-float ") \
+  *(*iargs)++ = (uint64_t)(uint32_t)hentry->value.field
 
 #else
 
@@ -906,34 +987,35 @@ NB_Bool nb_handle_get_default(NB_Handle handle,
     double float64;
   } x;
 
-#define NB_PUSH_INT(field)                                       \
-  NB_CHECK(*iargs, max_iargs, 1, "") x.int32 = hobj.value.field; \
+#define NB_PUSH_INT(field)                                          \
+  NB_CHECK(*iargs, max_iargs, 1, "") x.int32 = hentry->value.field; \
   *(*iargs)++ = x.lo
 
-#define NB_PUSH_UINT(field)                                       \
-  NB_CHECK(*iargs, max_iargs, 1, "") x.uint32 = hobj.value.field; \
+#define NB_PUSH_UINT(field)                                          \
+  NB_CHECK(*iargs, max_iargs, 1, "") x.uint32 = hentry->value.field; \
   *(*iargs)++ = x.lo
 
-#define NB_PUSH_INT64(field)                                     \
-  NB_CHECK(*iargs, max_iargs, 2, "") x.int64 = hobj.value.field; \
-  *(*iargs)++ = x.lo;                                            \
+#define NB_PUSH_INT64(field)                                        \
+  NB_CHECK(*iargs, max_iargs, 2, "") x.int64 = hentry->value.field; \
+  *(*iargs)++ = x.lo;                                               \
   *(*iargs)++ = x.hi
 
-#define NB_PUSH_UINT64(field)                                     \
-  NB_CHECK(*iargs, max_iargs, 2, "") x.uint64 = hobj.value.field; \
-  *(*iargs)++ = x.lo;                                             \
+#define NB_PUSH_UINT64(field)                                        \
+  NB_CHECK(*iargs, max_iargs, 2, "") x.uint64 = hentry->value.field; \
+  *(*iargs)++ = x.lo;                                                \
   *(*iargs)++ = x.hi
 
-#define NB_PUSH_DOUBLE(field)                                      \
-  NB_CHECK(*iargs, max_iargs, 2, "") x.float64 = hobj.value.field; \
-  *(*iargs)++ = x.lo;                                              \
+#define NB_PUSH_DOUBLE(field)                                         \
+  NB_CHECK(*iargs, max_iargs, 2, "") x.float64 = hentry->value.field; \
+  *(*iargs)++ = x.lo;                                                 \
   *(*iargs)++ = x.hi
 
-#define NB_PUSH_VOIDP(field) \
-  NB_CHECK(*iargs, max_iargs, 1, "")*(*iargs)++ = (uint32_t)hobj.value.field
+#define NB_PUSH_VOIDP(field)         \
+  NB_CHECK(*iargs, max_iargs, 1, "") \
+  *(*iargs)++ = (uint32_t)hentry->value.field
 #endif
 
-  switch (hobj.type) {
+  switch (hentry->type) {
     case NB_TYPE_INT8:
       NB_PUSH_INT(int8);
       return NB_TRUE;
@@ -970,7 +1052,7 @@ NB_Bool nb_handle_get_default(NB_Handle handle,
 
     default:
       NB_VERROR("Invalid type %s, can\'t make default promotion.",
-                nb_type_to_string(hobj.type));
+                nb_type_to_string(hentry->type));
       return NB_FALSE;
   }
 }
@@ -984,44 +1066,47 @@ NB_Bool nb_handle_get_default(NB_Handle handle,
 #undef NB_PUSH_VOIDP
 
 void nb_handle_destroy(NB_Handle handle) {
-  NB_HandleMapPair* pair = NULL;
-
-  /* Binary search. */
-  size_t lo_ix = 0;                    /* Inclusive */
-  size_t hi_ix = s_nb_handle_map_size; /* Exclusive */
-  size_t mid_ix;
-
-  while (lo_ix < hi_ix) {
-    mid_ix = (lo_ix + hi_ix) / 2;
-    NB_Handle mid_handle = s_nb_handle_map[mid_ix].handle;
-    if (handle > mid_handle) {
-      lo_ix = mid_ix + 1;
-    } else if (handle < mid_handle) {
-      hi_ix = mid_ix;
-    } else {
-      pair = &s_nb_handle_map[mid_ix];
-      break;
-    }
-  }
-
-  if (pair == NULL) {
+  NB_HandleMapEntry* entry;
+  if (!nb_get_handle_entry(handle, &entry)) {
     NB_VERROR("Destroying handle %d, but it doesn't exist.", handle);
     return;
   }
 
-  if (pair->object.type == NB_TYPE_VAR) {
-    nb_var_release(pair->object.value.var);
+  /* Destroy resources associated with this handle */
+  if (entry->type == NB_TYPE_VAR) {
+    nb_var_release(entry->value.var);
+  }
+  free(entry->string_value);
+  entry->string_value = NULL;
+
+  /* Remove from chain */
+  NB_HandleMapEntry* search = nb_handle_main_entry(handle);
+  assert(search != NULL);
+  if (search != entry) {
+    while (search->next != entry) {
+      search = search->next;
+    }
+    search->next = entry->next;
+  } else {
+    /* Removing the top of the chain; move the next element up, if one exists */
+    NB_HandleMapEntry* next_entry = search->next;
+    if (next_entry != NULL) {
+      memcpy(entry, next_entry, sizeof(NB_HandleMapEntry));
+      entry = next_entry;
+    }
   }
 
-  free(pair->object.string_value);
-
-  size_t remove_ix = mid_ix;
-  if (remove_ix + 1 < s_nb_handle_map_size) {
-    memmove(
-        &s_nb_handle_map[remove_ix],
-        &s_nb_handle_map[remove_ix + 1],
-        sizeof(NB_HandleMapPair) * (s_nb_handle_map_size - (remove_ix + 1)));
+  if (entry) {
+    /* Add to free list */
+    if (s_nb_handle_map_free_head != NULL) {
+      s_nb_handle_map_free_head->prev = entry;
+    }
+    entry->handle = NB_INVALID_HANDLE;
+    entry->next = s_nb_handle_map_free_head;
+    entry->prev = NULL;
+    s_nb_handle_map_free_head = entry;
   }
+
   s_nb_handle_map_size--;
 }
 
@@ -1035,56 +1120,56 @@ void nb_handle_destroy_many(NB_Handle* handles, uint32_t handles_count) {
 }
 
 NB_Bool nb_handle_convert_to_var(NB_Handle handle, struct PP_Var* var) {
-  NB_HandleObject hobj;
-  if (!nb_get_handle(handle, &hobj)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
   }
 
-  switch (hobj.type) {
+  switch (hentry->type) {
     case NB_TYPE_INT8:
       var->type = PP_VARTYPE_INT32;
-      var->value.as_int = hobj.value.int8;
+      var->value.as_int = hentry->value.int8;
       break;
     case NB_TYPE_UINT8:
       var->type = PP_VARTYPE_INT32;
-      var->value.as_int = hobj.value.uint8;
+      var->value.as_int = hentry->value.uint8;
       break;
     case NB_TYPE_INT16:
       var->type = PP_VARTYPE_INT32;
-      var->value.as_int = hobj.value.int16;
+      var->value.as_int = hentry->value.int16;
       break;
     case NB_TYPE_UINT16:
       var->type = PP_VARTYPE_INT32;
-      var->value.as_int = hobj.value.uint16;
+      var->value.as_int = hentry->value.uint16;
       break;
     case NB_TYPE_INT32:
       var->type = PP_VARTYPE_INT32;
-      var->value.as_int = hobj.value.int32;
+      var->value.as_int = hentry->value.int32;
       break;
     case NB_TYPE_UINT32:
       var->type = PP_VARTYPE_INT32;
-      var->value.as_int = hobj.value.uint32;
+      var->value.as_int = hentry->value.uint32;
       break;
     case NB_TYPE_INT64:
-      *var = nb_var_int64_create(hobj.value.int64);
+      *var = nb_var_int64_create(hentry->value.int64);
       break;
     case NB_TYPE_UINT64:
-      *var = nb_var_int64_create((int64_t)hobj.value.uint64);
+      *var = nb_var_int64_create((int64_t)hentry->value.uint64);
       break;
     case NB_TYPE_FLOAT:
       var->type = PP_VARTYPE_DOUBLE;
-      var->value.as_double = hobj.value.float32;
+      var->value.as_double = hentry->value.float32;
       break;
     case NB_TYPE_DOUBLE:
       var->type = PP_VARTYPE_DOUBLE;
-      var->value.as_double = hobj.value.float64;
+      var->value.as_double = hentry->value.float64;
       break;
     case NB_TYPE_VAR:
-      *var = hobj.value.var;
+      *var = hentry->value.var;
       nb_var_addref(*var);
       break;
     case NB_TYPE_VOID_P:
-      if (hobj.value.voidp) {
+      if (hentry->value.voidp) {
         var->type = PP_VARTYPE_INT32;
         var->value.as_int = handle;
       } else {
@@ -1094,7 +1179,7 @@ NB_Bool nb_handle_convert_to_var(NB_Handle handle, struct PP_Var* var) {
     default:
       NB_VERROR("Don't know how to convert handle %d with type %s to var",
                 handle,
-                nb_type_to_string(hobj.type));
+                nb_type_to_string(hentry->type));
       return NB_FALSE;
   }
 
