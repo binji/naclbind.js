@@ -449,6 +449,7 @@ describe('Generate JS', function() {
           s2 = type.Record('s2', 4, type.STRUCT),
           u1 = type.Record('u1', 0, type.UNION),
           voidp = type.Pointer(type.void),
+          constvoidp = type.Pointer(type.void.qualify(type.CONST)),
           s1p = type.Pointer(s1),
           u1p = type.Pointer(u1),
           PFviE = type.Pointer(type.Function(type.void, [type.int])),
@@ -459,7 +460,7 @@ describe('Generate JS', function() {
 
       s2.addField('f', type.int, 0);
 
-      assert.strictEqual(14, m.$functionsCount);
+      assert.strictEqual(15, m.$functionsCount);
       assert.strictEqual(1, m.$typesCount);
       assert.strictEqual(3, m.$tagsCount);
 
@@ -475,6 +476,11 @@ describe('Generate JS', function() {
       assert.ok(m.f3);
       assert.strictEqual(m.f3.types.length, 1);
       assertTypesEqual(type.Function(type.void, [u1p]), m.f3.types[0]);
+
+      assert.ok(m.f15);
+      assert.strictEqual(m.f15.types.length, 1);
+      assertTypesEqual(type.Function(type.void, [constvoidp]), m.f15.types[0]);
+
 
       // Multiple params
       assert.ok(m.f4);

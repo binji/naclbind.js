@@ -458,7 +458,7 @@ class PrimitiveType(Type):
     return 'type.%s' % js_name
 
   def GetMangled(self):
-    return MANGLED_PRIMITIVE[self.kind]
+    return '%s%s' % (Type.GetMangled(self), MANGLED_PRIMITIVE[self.kind])
 
 
 class VoidType(PrimitiveType):

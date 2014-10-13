@@ -7,6 +7,7 @@ typedef char t1;
 void f1(void*);
 void f2(struct s1*);
 void f3(union u1*);
+void f15(const void*);
 
 // Multiple params
 void f4(int, int, void*);
