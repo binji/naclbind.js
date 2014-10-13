@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 extern PP_Instance g_nb_pp_instance;
+extern PPB_GetInterface g_nb_ppb_get_interface;
 extern struct PPB_Var_1_1* g_nb_ppb_var;
 extern struct PPB_VarArray_1_0* g_nb_ppb_var_array;
 extern struct PPB_VarArrayBuffer_1_0* g_nb_ppb_var_array_buffer;

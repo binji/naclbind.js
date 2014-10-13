@@ -28,12 +28,14 @@
   X(messaging, Messaging, MESSAGING, 1_0)
 
 PP_Instance g_nb_pp_instance = 0;
+PPB_GetInterface g_nb_ppb_get_interface = NULL;
 #define X(var, s, d, v) struct PPB_##s##_##v* g_nb_ppb_##var = NULL;
 NB_INTERFACES
 #undef X
 
 void nb_interfaces_init(PP_Instance instance, PPB_GetInterface get_interface) {
   g_nb_pp_instance = instance;
+  g_nb_ppb_get_interface = get_interface;
 #define X(var, s, d, v) \
   g_nb_ppb_##var =      \
       (struct PPB_##s##_##v*)get_interface(PPB_##d##_INTERFACE_##v);
