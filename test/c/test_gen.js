@@ -29,6 +29,7 @@ function genAndRun(header, source, testSource, extraGenOpts, callback) {
   var basename = header.match(/([^.]*)\.h/)[1],
       outdir = path.resolve(__dirname, '../../out/test/c/test_gen', basename),
       glueC = path.join(outdir, 'glue.c'),
+      glueH = path.join(outdir, 'glue.h'),
       infiles = [
         path.join(__dirname, 'data', source),
         path.join(__dirname, 'data', testSource),
@@ -52,7 +53,8 @@ function genAndRun(header, source, testSource, extraGenOpts, callback) {
           includeDirs: [
             path.resolve(__dirname),
             path.resolve(__dirname, '..'),
-            path.resolve(__dirname, '../../src/c')
+            path.resolve(__dirname, '../../src/c'),
+            outdir
           ],
           libs: [
             'jsoncpp', 'ppapi_simple', 'gtest', 'nacl_io', 'ppapi_cpp', 'ppapi'
@@ -61,7 +63,7 @@ function genAndRun(header, source, testSource, extraGenOpts, callback) {
         translate: {}
       },
       genOpts = {
-        template: 'glue.c',
+        template: ['glue.c', 'glue.h'],
         toolchain: toolchain
       }
 
@@ -76,12 +78,12 @@ function genAndRun(header, source, testSource, extraGenOpts, callback) {
 
   header = path.join(__dirname, 'data', header);
 
-  gen.file(header, glueC, genOpts, function(error, outfile) {
+  gen.file(header, [glueC, glueH], genOpts, function(error, outfile) {
     if (error) {
       return callback(error);
     }
 
-    infiles.push(outfile);
+    infiles.push(glueC);
 
     nacl.build(infiles, basename, opts, function(error, nexe) {
       if (error) {
