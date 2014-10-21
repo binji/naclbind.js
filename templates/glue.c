@@ -327,6 +327,41 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
 
 [[]]
 
+// getFunc()
+static NB_Bool nb_command_run_get_func(struct NB_Message* message, int command_idx) {
+  int arg_count = nb_message_command_arg_count(message, command_idx);
+  if (arg_count != 1) {
+    NB_VERROR("Expected %d arg, got %d.", 1, arg_count);
+    return NB_FALSE;
+  }
+  NB_Handle handle = nb_message_command_arg(message, command_idx, 0);
+  int32_t arg;
+  if (!nb_handle_get_int32(handle, &arg)) {
+    NB_VERROR("Unable to get handle %d as int32_t.", handle);
+    return NB_FALSE;
+  }
+  if (!nb_message_command_has_ret(message, command_idx)) {
+    NB_ERROR("Return type is non-void, but no return handle given.");
+    return NB_FALSE;
+  }
+  NB_Handle ret = nb_message_command_ret(message, command_idx);
+
+  void (*result)(void);
+  switch (arg) {
+[[for fn in collector.functions:]]
+    case {{fn.fn_id}}: result = (void(*)(void)) &{{fn.spelling}}; break;
+[[]]
+    default: return NB_FALSE;
+  }
+
+  NB_Bool register_ok = nb_handle_register_funcp(ret, result);
+  if (!register_ok) {
+    NB_VERROR("Failed to register handle %d of type void(*)(void).", ret);
+    return NB_FALSE;
+  }
+  return NB_TRUE;
+}
+
 // $errorIf()
 static NB_Bool nb_command_run_error_if(struct NB_Message* message, int command_idx) {
   int arg_count = nb_message_command_arg_count(message, command_idx);
@@ -349,6 +384,7 @@ enum {
 
 typedef NB_Bool (*nb_command_func_t)(struct NB_Message*, int);
 static nb_command_func_t s_functions[] = {
+  nb_command_run_get_func,  /* -1 */
   nb_command_run_error_if,  /* 0 */
 [[for fn in collector.functions:]]
   nb_command_run_{{fn.spelling}},  /* {{fn.fn_id}} */
@@ -357,10 +393,10 @@ static nb_command_func_t s_functions[] = {
 
 NB_Bool nb_message_command_run(struct NB_Message* message, int command_idx) {
   int function_idx = nb_message_command_function(message, command_idx);
-  if (function_idx < 0 || function_idx > NUM_FUNCTIONS) {
-    NB_VERROR("Function id %d is out of range [0, %d].", function_idx, NUM_FUNCTIONS);
+  if (function_idx < -1 || function_idx > NUM_FUNCTIONS) {
+    NB_VERROR("Function id %d is out of range [-1, %d].", function_idx, NUM_FUNCTIONS);
     return NB_FALSE;
   }
 
-  return s_functions[function_idx](message, command_idx);
+  return s_functions[function_idx + 1](message, command_idx);
 }
