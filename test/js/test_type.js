@@ -1248,5 +1248,14 @@ describe('Type', function() {
       assertBestViable(fns, [f], 0);
       assertBestViable(fns, [vp], 0);
     });
+
+    it('should work with function pointers', function() {
+      var fn1 = type.Function(type.int, [type.int]),
+          pfn1 = type.Pointer(fn1),
+          fn2 = type.Function(type.void, [pfn1]),
+          fns = [fn2];
+
+      assertBestViable(fns, [pfn1], 0);
+    });
   });
 });

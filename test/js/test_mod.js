@@ -84,6 +84,27 @@ describe('Module', function() {
     });
   });
 
+  it('should allow passing function pointers', function() {
+    var pfunc = type.Pointer(type.Function(type.int, [type.int])),
+        getFuncType = type.Function(pfunc, []),
+        useFuncType = type.Function(type.void, [pfunc]),
+        m = mod.Module(),
+        h;
+
+    m.$defineFunction('getFunc', [mod.Function(1, getFuncType)]);
+    m.$defineFunction('useFunc', [mod.Function(2, useFuncType)]);
+
+    h = m.getFunc();
+    m.useFunc(h);
+
+    assert.deepEqual(m.$getMessage(), {
+      commands: [
+        {id: 1, args: [], ret: 1},
+        {id: 2, args: [1]}
+      ]
+    });
+  });
+
   it('should allow handle pipelining', function() {
     var voidp = type.Pointer(type.void),
         intp = type.Pointer(type.int),
