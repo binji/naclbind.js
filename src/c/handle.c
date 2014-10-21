@@ -47,6 +47,7 @@ typedef union {
   float float32;
   double float64;
   void* voidp;
+  void (*funcp)(void);
   struct PP_Var var;
 } NB_HandleValue;
 
@@ -297,6 +298,12 @@ NB_Bool nb_handle_register_voidp(NB_Handle handle, void* value) {
   NB_HandleValue hval;
   hval.voidp = value;
   return nb_register_handle(handle, NB_TYPE_VOID_P, hval);
+}
+
+NB_Bool nb_handle_register_funcp(NB_Handle handle, void (*value)(void)) {
+  NB_HandleValue hval;
+  hval.funcp = value;
+  return nb_register_handle(handle, NB_TYPE_FUNC_P, hval);
 }
 
 NB_Bool nb_handle_register_var(NB_Handle handle, struct PP_Var value) {
@@ -890,6 +897,24 @@ NB_Bool nb_handle_get_voidp(NB_Handle handle, void** out_value) {
     return NB_FALSE;
   }
 
+  return NB_TRUE;
+}
+
+NB_Bool nb_handle_get_funcp(NB_Handle handle, void (**out_value)(void)) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
+    return NB_FALSE;
+  }
+
+  if (hentry->type != NB_TYPE_FUNC_P) {
+    NB_VERROR("handle %d is of type %s. Expected %s.",
+              handle,
+              nb_type_to_string(hentry->type),
+              nb_type_to_string(NB_TYPE_FUNC_P));
+    return NB_FALSE;
+  }
+
+  *out_value = hentry->value.funcp;
   return NB_TRUE;
 }
 

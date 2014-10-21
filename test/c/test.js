@@ -28,7 +28,7 @@ function runTest(args, callback) {
   nacl.run(testNexe, args, callback);
 }
 
-describe('C Tests', function() {
+describe('C Unit Tests', function() {
   this.enableTimeouts(false);
 
   it('should build successfully', function(done) {
@@ -112,7 +112,7 @@ function parseTests(callback) {
 
     addSuite();
 
-    describe('C Tests', function() {
+    describe('C Unit Tests', function() {
       suites.forEach(function(suite) {
         describe(suite.name, function() {
           suite.cases.forEach(function(testCase) {

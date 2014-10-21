@@ -151,4 +151,9 @@ describe('C Generator Tests', function() {
     var genOpts = {genArgs: '--builtins'};
     genAndRun('builtins.h', 'builtins.c', 'test_builtins.cc', genOpts, done);
   });
+
+  it('should succeed for test_function_pointers', function(done) {
+    genAndRun('function_pointers.h', 'function_pointers.c',
+              'test_function_pointers.cc', done);
+  });
 });

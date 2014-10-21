@@ -136,9 +136,12 @@ TEST_F(HandleTest, CantRegisterTwice) {
   nb_handle_destroy(1);
 }
 
+static void dummy_func(void) {}
+
 TEST_F(HandleTest, Basic) {
   struct PP_Var var;
   void* voidp = &var;
+  void (*funcp)(void) = &dummy_func;
 
   var = nb_var_string_create("hello", 5);
 
@@ -153,7 +156,8 @@ TEST_F(HandleTest, Basic) {
   EXPECT_EQ(NB_TRUE, nb_handle_register_float(9, 3.25));
   EXPECT_EQ(NB_TRUE, nb_handle_register_double(10, 1e30));
   EXPECT_EQ(NB_TRUE, nb_handle_register_voidp(11, voidp));
-  EXPECT_EQ(NB_TRUE, nb_handle_register_var(12, var));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_funcp(12, funcp));
+  EXPECT_EQ(NB_TRUE, nb_handle_register_var(13, var));
 
   EXPECT_GET(int8_t, int8, 1, -42);
   EXPECT_GET(uint8_t, uint8, 2, 42);
@@ -167,15 +171,19 @@ TEST_F(HandleTest, Basic) {
   EXPECT_GET(double, double, 10, 1e30);
   EXPECT_GET(void*, voidp, 11, voidp);
 
+  void (*val_funcp)(void);
+  EXPECT_EQ(NB_TRUE, nb_handle_get_funcp(12, &val_funcp));
+  EXPECT_EQ(val_funcp, funcp);
+
   struct PP_Var val_var;
-  EXPECT_EQ(NB_TRUE, nb_handle_get_var(12, &val_var));
+  EXPECT_EQ(NB_TRUE, nb_handle_get_var(13, &val_var));
   EXPECT_EQ(PP_VARTYPE_STRING, val_var.type);
   EXPECT_EQ(val_var.value.as_id, var.value.as_id);
 
   nb_var_release(var);
 
-  NB_Handle to_destroy[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-  nb_handle_destroy_many(&to_destroy[0], 12);
+  NB_Handle to_destroy[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+  nb_handle_destroy_many(&to_destroy[0], 13);
 }
 
 TEST_F(HandleTest, Int8) {
@@ -299,6 +307,13 @@ TEST_F(HandleTest, Voidp) {
 
   //             i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 vp  v
   ROW(voidp, vp,  _, _, _,   _,  _,  _,  _,  _,  _,  _, O, _);
+}
+
+TEST_F(HandleTest, Funcp) {
+  void (*fp)(void) = &dummy_func;
+
+  //             i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 vp  v
+  ROW(funcp, fp,  _, _, _,   _,  _,  _,  _,  _,  _,  _, _, _);
 }
 
 TEST_F(HandleTest, Var) {

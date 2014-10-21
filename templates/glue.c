@@ -107,10 +107,12 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
     return NB_FALSE;
   }
 [[        elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}}
-  (void)handle{{i}};
-  void* arg{{i}} = NULL;
-  NB_ERROR("Function pointers are not currently supported.");
+  void (*arg{{i}}x)(void);
+  if (!nb_handle_get_funcp(handle{{i}}, &arg{{i}}x)) {
+    NB_VERROR("Unable to get handle %d as void(*)(void).", handle{{i}});
+    return NB_FALSE;
+  }
+  {{arg.GetCSpelling('arg%s' % i)}} = ({{arg.c_spelling}}) arg{{i}}x;
 [[        else:]]
   void* arg{{i}}x;
   if (!nb_handle_get_voidp(handle{{i}}, &arg{{i}}x)) {
@@ -240,7 +242,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
   }
   NB_Handle ret = nb_message_command_ret(message, command_idx);
 [[    if fn.type.kind == TypeKind.FUNCTIONPROTO and fn.type.is_variadic:]]
-  {{result_type.c_spelling}} result;
+  {{result_type.GetCSpelling('result')}};
 #ifdef __x86_64__
   /* This relies on the fact that the x86_64 calling convention for variadic
    * functions does not preserve ordering w.r.t. floating-point values. We can
@@ -270,7 +272,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
   }
 #endif
 [[    else:]]
-  {{result_type.c_spelling}} result = {{FuncCall(fn.spelling, len(arguments), 0, 0)}};
+  {{result_type.GetCSpelling('result')}} = {{FuncCall(fn.spelling, len(arguments), 0, 0)}};
 [[    ]]
 [[    if result_type.kind in (TypeKind.SCHAR, TypeKind.CHAR_S):]]
   NB_Bool register_ok = nb_handle_register_int8(ret, result);
@@ -297,7 +299,12 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
 [[    elif result_type.kind == TypeKind.DOUBLE:]]
   NB_Bool register_ok = nb_handle_register_double(ret, result);
 [[    elif result_type.kind == TypeKind.POINTER:]]
+[[      pointee = result_type.pointee]]
+[[      if pointee.kind == TypeKind.FUNCTIONPROTO:]]
+  NB_Bool register_ok = nb_handle_register_funcp(ret, (void(*)(void))result);
+[[      else:]]
   NB_Bool register_ok = nb_handle_register_voidp(ret, (void*) result);
+[[      ]]
 [[    elif result_type.kind == TypeKind.RECORD and result_type.c_spelling == 'struct PP_Var':]]
   NB_Bool register_ok = nb_handle_register_var(ret, result);
 [[    elif result_type.kind == TypeKind.ENUM:]]
