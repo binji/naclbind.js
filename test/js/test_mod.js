@@ -30,19 +30,18 @@ describe('Module', function() {
     assert.deepEqual(m.$getMessage(), {});
   });
 
-  it('should throw when defining a function with id ERROR_IF_ID', function() {
+  it('should throw when defining a function with id < 0', function() {
     var fnType = type.Function(type.void, []);
 
-    assert.throws(function() {
-      mod.Function(mod.ERROR_IF_ID, fnType);
-    }, /\$errorIf/);
+    assert.throws(function() { mod.Function(-1, fnType); });
+    assert.throws(function() { mod.Function(-10, fnType); });
   });
 
   it('should work for a simple function type', function() {
     var addType = type.Function(type.int, [type.int, type.int]),
         m = mod.Module();
 
-    m.$defineFunction('add', [mod.Function(1, addType)]);
+    m.$defineFunction('add', [mod.Function(0, addType)]);
 
     m.add(3, 4);
 
@@ -52,7 +51,7 @@ describe('Module', function() {
         2: 4
       },
       commands: [
-        {id: 1, args: [1, 2], ret: 3}
+        {id: 0, args: [1, 2], ret: 3}
       ]
     });
   });
@@ -63,8 +62,8 @@ describe('Module', function() {
         m = mod.Module();
 
     m.$defineFunction('add', [
-        mod.Function(1, addIntType),
-        mod.Function(2, addFloatType)
+        mod.Function(0, addIntType),
+        mod.Function(1, addFloatType)
     ]);
 
     m.add(3, 4);
@@ -78,8 +77,8 @@ describe('Module', function() {
         5: 4
       },
       commands: [
-        {id: 1, args: [1, 2], ret: 3},
-        {id: 2, args: [4, 5], ret: 6}
+        {id: 0, args: [1, 2], ret: 3},
+        {id: 1, args: [4, 5], ret: 6}
       ]
     });
   });
@@ -91,16 +90,16 @@ describe('Module', function() {
         m = mod.Module(),
         h;
 
-    m.$defineFunction('getFunc', [mod.Function(1, getFuncType)]);
-    m.$defineFunction('useFunc', [mod.Function(2, useFuncType)]);
+    m.$defineFunction('getFunc', [mod.Function(0, getFuncType)]);
+    m.$defineFunction('useFunc', [mod.Function(1, useFuncType)]);
 
     h = m.getFunc();
     m.useFunc(h);
 
     assert.deepEqual(m.$getMessage(), {
       commands: [
-        {id: 1, args: [], ret: 1},
-        {id: 2, args: [1]}
+        {id: 0, args: [], ret: 1},
+        {id: 1, args: [1]}
       ]
     });
   });
@@ -112,16 +111,16 @@ describe('Module', function() {
         getIntType = type.Function(type.int, [intp]),
         m = mod.Module();
 
-    m.$defineFunction('malloc', [mod.Function(1, mallocType)]);
-    m.$defineFunction('get', [mod.Function(2, getIntType)]);
+    m.$defineFunction('malloc', [mod.Function(0, mallocType)]);
+    m.$defineFunction('get', [mod.Function(1, getIntType)]);
 
     m.get(m.malloc(4).cast(intp));
 
     assert.deepEqual(m.$getMessage(), {
       set: { 1: 4 },
       commands: [
-        {id: 1, args: [1], ret: 2},
-        {id: 2, args: [2], ret: 3}
+        {id: 0, args: [1], ret: 2},
+        {id: 1, args: [2], ret: 3}
       ]
     });
   });
@@ -148,7 +147,7 @@ describe('Module', function() {
           addType = type.Function(type.int, [type.int, type.int]),
           h;
 
-      m.$defineFunction('add', [mod.Function(1, addType)]);
+      m.$defineFunction('add', [mod.Function(0, addType)]);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -156,7 +155,7 @@ describe('Module', function() {
           id: 1,
           get: [3],
           set: {1: 3, 2: 4},
-          commands: [ {id: 1, args: [1, 2], ret: 3} ]
+          commands: [ {id: 0, args: [1, 2], ret: 3} ]
         });
 
         ne.message({id: 1, values: [7]});
@@ -179,7 +178,7 @@ describe('Module', function() {
           h1,
           h2;
 
-      m.$defineFunction('add', [mod.Function(1, addType)]);
+      m.$defineFunction('add', [mod.Function(0, addType)]);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -228,14 +227,14 @@ describe('Module', function() {
           getLongLongType = type.Function(type.longlong, []),
           h;
 
-      m.$defineFunction('getLongLong', [mod.Function(1, getLongLongType)]);
+      m.$defineFunction('getLongLong', [mod.Function(0, getLongLongType)]);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
         assert.deepEqual(msg, {
           id: 1,
           get: [1],
-          commands: [ {id: 1, args: [], ret: 1} ]
+          commands: [ {id: 0, args: [], ret: 1} ]
         });
 
         ne.message({id: 1, values: [[0, 256]]});
@@ -256,7 +255,7 @@ describe('Module', function() {
           getIntType = type.Function(type.int, []),
           h;
 
-      m.$defineFunction('getInt', [mod.Function(1, getIntType)]);
+      m.$defineFunction('getInt', [mod.Function(0, getIntType)]);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -265,8 +264,8 @@ describe('Module', function() {
           set: {1: 1},
           get: [2],
           commands: [
-            {id: 0, args: [1]},
-            {id: 1, args: [], ret: 2}
+            {id: -1, args: [1]},
+            {id: 0, args: [], ret: 2}
           ]
         });
 
@@ -289,7 +288,7 @@ describe('Module', function() {
           getIntType = type.Function(type.int, []),
           h;
 
-      m.$defineFunction('getInt', [mod.Function(1, getIntType)]);
+      m.$defineFunction('getInt', [mod.Function(0, getIntType)]);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -297,7 +296,7 @@ describe('Module', function() {
           id: 1,
           get: [1],
           commands: [
-            {id: 1, args: [], ret: 1}
+            {id: 0, args: [], ret: 1}
           ]
         });
 
@@ -609,14 +608,14 @@ describe('Module', function() {
             m = mod.Module(),
             h;
 
-        m.$defineFunction('add', [mod.Function(1, addType)]);
+        m.$defineFunction('add', [mod.Function(0, addType)]);
         h = m.$handle(4);
         m.add(h, h);
 
         assert.deepEqual(m.$getMessage(), {
           set: { 1: 4 },
           commands: [
-            {id: 1, args: [1, 1], ret: 2}
+            {id: 0, args: [1, 1], ret: 2}
           ]
         });
       });
@@ -822,8 +821,8 @@ describe('Module', function() {
             m = mod.Module(),
             h;
 
-        m.$defineFunction('malloc', [mod.Function(1, mallocType)]);
-        m.$defineFunction('free', [mod.Function(2, freeType)]);
+        m.$defineFunction('malloc', [mod.Function(0, mallocType)]);
+        m.$defineFunction('free', [mod.Function(1, freeType)]);
 
         h = m.malloc(4);
         h.setFinalizer(function(x) { m.free(x); });
@@ -833,8 +832,8 @@ describe('Module', function() {
           set: { 1: 4 },
           destroy: [1, 2],
           commands: [
-            {id: 1, args: [1], ret: 2},
-            {id: 2, args: [2]}
+            {id: 0, args: [1], ret: 2},
+            {id: 1, args: [2]}
           ]
         });
       });

@@ -21,9 +21,9 @@ TEST_F(GeneratorTest, ErrorIf) {
   const char* request_json =
     "{\"id\": 1,"
     " \"commands\": ["
-    "     {\"id\": 1, \"args\": [], \"ret\": 1},"   // get_int
-    "     {\"id\": 0, \"args\": [1]},"              // error_if
-    "     {\"id\": 2, \"args\": [], \"ret\": 2}],"  // do_stuff
+    "     {\"id\": 0, \"args\": [], \"ret\": 1},"   // get_int
+    "     {\"id\": -1, \"args\": [1]},"             // error_if
+    "     {\"id\": 1, \"args\": [], \"ret\": 2}],"  // do_stuff
     " \"get\": [1, 2]}";
 
   request_ = json_to_var(request_json);

@@ -1969,7 +1969,7 @@ var type = (function(utils) {
 // mod /////////////////////////////////////////////////////////////////////////
 var mod = (function(Long, type, utils) {
 
-  var ERROR_IF_ID = 0;
+  var ERROR_IF_ID = -1;
 
   function numberToType(n) {
     if (!(isFinite(n) && (utils.isInteger(n) || utils.isUnsignedInteger(n)))) {
@@ -2299,8 +2299,8 @@ var mod = (function(Long, type, utils) {
     utils.checkNonnegativeNumber(id);
     type.checkType(fnType, 'type', [type.FUNCTIONPROTO, type.FUNCTIONNOPROTO]);
 
-    if (id === ERROR_IF_ID) {
-      throw new Error('Illegal id, reserved for $errorIf: ' + ERROR_IF_ID);
+    if (id < 0) {
+      throw new Error('Illegal id, reserved for built-in functions: ' + id);
     }
 
     this.id = id;

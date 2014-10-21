@@ -384,8 +384,8 @@ enum {
 
 typedef NB_Bool (*nb_command_func_t)(struct NB_Message*, int);
 static nb_command_func_t s_functions[] = {
-  nb_command_run_get_func,  /* -1 */
-  nb_command_run_error_if,  /* 0 */
+  nb_command_run_get_func,  /* -2 */
+  nb_command_run_error_if,  /* -1 */
 [[for fn in collector.functions:]]
   nb_command_run_{{fn.spelling}},  /* {{fn.fn_id}} */
 [[]]
@@ -393,10 +393,10 @@ static nb_command_func_t s_functions[] = {
 
 NB_Bool nb_message_command_run(struct NB_Message* message, int command_idx) {
   int function_idx = nb_message_command_function(message, command_idx);
-  if (function_idx < -1 || function_idx > NUM_FUNCTIONS) {
-    NB_VERROR("Function id %d is out of range [-1, %d].", function_idx, NUM_FUNCTIONS);
+  if (function_idx < -2 || function_idx >= NUM_FUNCTIONS) {
+    NB_VERROR("Function id %d is out of range [-2, %d).", function_idx, NUM_FUNCTIONS);
     return NB_FALSE;
   }
 
-  return s_functions[function_idx + 1](message, command_idx);
+  return s_functions[function_idx + 2](message, command_idx);
 }

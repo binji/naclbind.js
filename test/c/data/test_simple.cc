@@ -20,7 +20,7 @@ int g_foo_called = 0;
 
 TEST_F(GeneratorTest, Simple) {
   const char* request_json =
-      "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": []}]}";
+      "{\"id\": 1, \"commands\": [{\"id\": 0, \"args\": []}]}";
   const char* response_json = "{\"id\":1,\"values\":[]}\n";
   RunTest(request_json, response_json);
   EXPECT_EQ(1, g_foo_called);

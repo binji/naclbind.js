@@ -20,12 +20,12 @@ TEST_F(GeneratorTest, MultipleCommands) {
     " \"set\": {\"1\": \"Hello\","
     "           \"2\": 6,"
     "           \"3\": 5},"
-    " \"commands\": [{\"id\": 1, \"args\": [2], \"ret\": 4},"  // malloc
-    "                {\"id\": 2, \"args\": [4, 1, 2]},"        // memcpy
-    "                {\"id\": 4, \"args\": [4, 3]},"           // rot13
-    "                {\"id\": 5, \"args\": [4], \"ret\": 5},"  // char_to_var
-    "                {\"id\": 6, \"args\": [5]},"              // var_release
-    "                {\"id\": 3, \"args\": [4]}],"             // free
+    " \"commands\": [{\"id\": 0, \"args\": [2], \"ret\": 4},"  // malloc
+    "                {\"id\": 1, \"args\": [4, 1, 2]},"        // memcpy
+    "                {\"id\": 3, \"args\": [4, 3]},"           // rot13
+    "                {\"id\": 4, \"args\": [4], \"ret\": 5},"  // char_to_var
+    "                {\"id\": 5, \"args\": [5]},"              // var_release
+    "                {\"id\": 2, \"args\": [4]}],"             // free
     " \"get\": [5],"
     " \"destroy\": [1, 2, 3, 4, 5]}";
   const char* response_json = "{\"id\":1,\"values\":[\"Uryyb\"]}\n";

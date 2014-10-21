@@ -17,7 +17,7 @@
 TEST_F(GeneratorTest, NoPrototype) {
   const char* request_json =
     "{\"id\": 1,"
-    " \"commands\": [{\"id\": 1, \"args\": [], \"ret\": 2}],"
+    " \"commands\": [{\"id\": 0, \"args\": [], \"ret\": 2}],"
     " \"get\": [2],"
     " \"destroy\": [2]}";
   const char* response_json = "{\"id\":1,\"values\":[42]}\n";

@@ -19,8 +19,8 @@ TEST_F(GeneratorTest, Simple) {
       "{\"id\": 1,"
       " \"set\": {\"1\": 0},"
       " \"commands\": ["
-      "     {\"id\": 2, \"args\": [1], \"ret\": 2},"   // prev
-      "     {\"id\": 1, \"args\": [2], \"ret\": 3}],"  // next
+      "     {\"id\": 1, \"args\": [1], \"ret\": 2},"   // prev
+      "     {\"id\": 0, \"args\": [2], \"ret\": 3}],"  // next
       " \"get\": [2, 3],"
       " \"destroy\": [1, 2, 3]}";
   const char* response_json = "{\"id\":1,\"values\":[3,0]}\n";

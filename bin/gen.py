@@ -381,7 +381,7 @@ class Collector(object):
     self.functions = []
     self.functions_remapped = {}
     self.function_types = {}
-    self.next_id = 1
+    self.next_id = 0
 
   def Collect(self, tu, acceptor, remap):
     for fn in gen_types.IterFunctions(tu.cursor):

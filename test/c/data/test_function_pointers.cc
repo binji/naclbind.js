@@ -17,10 +17,10 @@
 TEST_F(GeneratorTest, FunctionPointers) {
   const char *request_json =
     "{\"id\": 1,"
-    " \"set\": {\"1\": 1},"
+    " \"set\": {\"1\": 0},"
     " \"commands\": ["
-    "     {\"id\": -1, \"args\": [1], \"ret\": 2},"  // get_func(twice)
-    "     {\"id\": 2, \"args\": [2], \"ret\": 3}],"  // do_42
+    "     {\"id\": -2, \"args\": [1], \"ret\": 2},"  // get_func(twice)
+    "     {\"id\": 1, \"args\": [2], \"ret\": 3}],"  // do_42
     " \"get\": [3],"
     " \"destroy\": [1, 2, 3]}";
   const char* response_json = "{\"id\":1,\"values\":[84]}\n";

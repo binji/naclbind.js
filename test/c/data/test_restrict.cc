@@ -18,7 +18,7 @@ TEST_F(GeneratorTest, Restrict) {
   const char* request_json =
       "{\"id\": 1,"
       " \"set\": {\"1\": null},"
-      " \"commands\": [{\"id\": 1, \"args\": [1]}]}";
+      " \"commands\": [{\"id\": 0, \"args\": [1]}]}";
   const char* response_json = "{\"id\":1,\"values\":[]}\n";
   RunTest(request_json, response_json);
 }

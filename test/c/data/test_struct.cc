@@ -20,13 +20,13 @@ TEST_F(GeneratorTest, Struct) {
     " \"set\": {\"1\": 100,"
     "           \"2\": 50},"
     " \"commands\": ["
-    "     {\"id\": 1, \"args\": [1], \"ret\": 3},"     // create_account
-    "     {\"id\": 5, \"args\": [3], \"ret\": 4},"     // get_balance
-    "     {\"id\": 4, \"args\": [3, 2]},"              // deposit
-    "     {\"id\": 5, \"args\": [3], \"ret\": 5},"     // get_balance
-    "     {\"id\": 3, \"args\": [3, 1], \"ret\": 6},"  // withdraw
-    "     {\"id\": 5, \"args\": [3], \"ret\": 7},"     // get_balance
-    "     {\"id\": 2, \"args\": [3]}],"                // destroy_account
+    "     {\"id\": 0, \"args\": [1], \"ret\": 3},"     // create_account
+    "     {\"id\": 4, \"args\": [3], \"ret\": 4},"     // get_balance
+    "     {\"id\": 3, \"args\": [3, 2]},"              // deposit
+    "     {\"id\": 4, \"args\": [3], \"ret\": 5},"     // get_balance
+    "     {\"id\": 2, \"args\": [3, 1], \"ret\": 6},"  // withdraw
+    "     {\"id\": 4, \"args\": [3], \"ret\": 7},"     // get_balance
+    "     {\"id\": 1, \"args\": [3]}],"                // destroy_account
     " \"get\": [4, 5, 7],"
     " \"destroy\": [1, 2, 3, 4, 5, 6, 7]}";
   const char* response_json = "{\"id\":1,\"values\":[100,150,50]}\n";
