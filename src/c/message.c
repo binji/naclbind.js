@@ -265,7 +265,6 @@ NB_Bool nb_parse_sethandles(struct NB_Message* message, struct PP_Var var) {
     value = nb_var_dict_get_var(sethandles_var, key);
     nb_var_release(key);
 
-    /* TODO(binji): for now, only support int/double/string/NULL. */
     switch (value.type) {
       case PP_VARTYPE_INT32:
       case PP_VARTYPE_DOUBLE:
@@ -274,28 +273,13 @@ NB_Bool nb_parse_sethandles(struct NB_Message* message, struct PP_Var var) {
         break;
 
       case PP_VARTYPE_ARRAY: {
-        /* An array is the representation of a Long type (i.e. 64-bit int).
-         * It should always have length 2 and both elements should be ints. */
-        uint32_t len = nb_var_array_length(value);
-        uint32_t i;
-        if (len != 2) {
-          NB_VERROR("Expected set handle value array to be of length 2, not %u",
-                    len);
+        /* For now, all arrays are longs. */
+        int64_t i64_value;
+        if (!nb_var_int64(value, &i64_value)) {
+          NB_ERROR("Unable to parse set handle value as \"long\".");
           goto cleanup;
         }
 
-        for (i = 0; i < len; ++i) {
-          struct PP_Var element = nb_var_array_get(value, i);
-          if (element.type != PP_VARTYPE_INT32) {
-            nb_var_release(element);
-            NB_VERROR(
-                "Expected set handle value array to have elements of type "
-                "%s, not %s.",
-                nb_var_type_to_string(PP_VARTYPE_INT32),
-                nb_var_type_to_string(element.type));
-            goto cleanup;
-          }
-        }
         break;
       }
 

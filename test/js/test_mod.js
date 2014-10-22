@@ -237,7 +237,7 @@ describe('Module', function() {
           commands: [ {id: 0, args: [], ret: 1} ]
         });
 
-        ne.message({id: 1, values: [[0, 256]]});
+        ne.message({id: 1, values: [['long', 0, 256]]});
       });
 
       h = m.getLongLong();
@@ -688,7 +688,7 @@ describe('Module', function() {
 
         assert.deepEqual(m.$getMessage(), {
           set: {
-            1: [0, 256],
+            1: ['long', 0, 256],
           },
         });
       });

@@ -62,13 +62,15 @@ TEST_F(GeneratorTest, Ulong) {
 }
 
 TEST_F(GeneratorTest, LongLong) {
-  RunTest(REQUEST_JSON(9, "-420000"), RESPONSE_JSON("[-420000,-1]"));
-  RunTest(REQUEST_JSON(9, "[0, 256]"), RESPONSE_JSON("[0,256]"));
+  RunTest(REQUEST_JSON(9, "-420000"), RESPONSE_JSON("[\"long\",-420000,-1]"));
+  RunTest(REQUEST_JSON(9, "[\"long\", 0, 256]"),
+          RESPONSE_JSON("[\"long\",0,256]"));
 }
 
 TEST_F(GeneratorTest, UlongLong) {
-  RunTest(REQUEST_JSON(10, "1420000"), RESPONSE_JSON("[1420000,0]"));
-  RunTest(REQUEST_JSON(10, "[0, 256]"), RESPONSE_JSON("[0,256]"));
+  RunTest(REQUEST_JSON(10, "1420000"), RESPONSE_JSON("[\"long\",1420000,0]"));
+  RunTest(REQUEST_JSON(10, "[\"long\", 0, 256]"),
+          RESPONSE_JSON("[\"long\",0,256]"));
 }
 
 TEST_F(GeneratorTest, Float) {

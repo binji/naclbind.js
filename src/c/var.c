@@ -173,8 +173,11 @@ void nb_var_buffer_unmap(struct PP_Var var) {
 
 struct PP_Var nb_var_int64_create(int64_t value) {
   struct PP_Var result = nb_var_array_create();
-  nb_var_array_set(result, 0, PP_MakeInt32((int32_t)(value & 0xFFFFFFFF)));
-  nb_var_array_set(result, 1, PP_MakeInt32((int32_t)(value >> 32)));
+  struct PP_Var tag = nb_var_string_create("long", 4);
+  nb_var_array_set(result, 0, tag);
+  nb_var_array_set(result, 1, PP_MakeInt32((int32_t)(value & 0xFFFFFFFF)));
+  nb_var_array_set(result, 2, PP_MakeInt32((int32_t)(value >> 32)));
+  nb_var_release(tag);
   return result;
 }
 
@@ -233,28 +236,20 @@ NB_Bool nb_var_uint32(struct PP_Var var, uint32_t* out_value) {
 }
 
 NB_Bool nb_var_int64(struct PP_Var var, int64_t* out_value) {
-  uint32_t len;
   struct PP_Var low_var;
   struct PP_Var high_var;
 
-  if (!nb_var_check_type_with_error(var, PP_VARTYPE_ARRAY)) {
+  if (!nb_var_tagged_array_check(var, "long", 3)) {
     return NB_FALSE;
   }
 
-  len = nb_var_array_length(var);
-
-  if (len != 2) {
-    NB_VERROR("Expected int64 var to be an array of length 2, not %u.", len);
-    return NB_FALSE;
-  }
-
-  low_var = nb_var_array_get(var, 0);
+  low_var = nb_var_array_get(var, 1);
   if (!nb_var_check_type_with_error(low_var, PP_VARTYPE_INT32)) {
     nb_var_release(low_var);
     return NB_FALSE;
   }
 
-  high_var = nb_var_array_get(var, 1);
+  high_var = nb_var_array_get(var, 2);
   if (!nb_var_check_type_with_error(high_var, PP_VARTYPE_INT32)) {
     nb_var_release(high_var);
     return NB_FALSE;
@@ -301,4 +296,65 @@ NB_Bool nb_var_string(struct PP_Var var,
 
   *out_str = g_nb_ppb_var->VarToUtf8(var, out_length);
   return *out_str != NULL;
+}
+
+NB_Bool nb_var_tagged_array(struct PP_Var var,
+                            const char** out_tag,
+                            uint32_t* out_tag_length,
+                            uint32_t* out_array_length) {
+  struct PP_Var tag;
+
+  if (!nb_var_check_type_with_error(var, PP_VARTYPE_ARRAY)) {
+    return NB_FALSE;
+  }
+
+  *out_array_length = nb_var_array_length(var);
+  if (*out_array_length < 1) {
+    NB_ERROR("Expected tagged array length to be at least 1.");
+    return NB_FALSE;
+  }
+
+  tag = nb_var_array_get(var, 0);
+  if (!nb_var_check_type_with_error(tag, PP_VARTYPE_STRING)) {
+    nb_var_release(tag);
+    return NB_FALSE;
+  }
+
+  if (!nb_var_string(tag, out_tag, out_tag_length)) {
+    nb_var_release(tag);
+    NB_ERROR("Unable to get tag string from tagged array.");
+    return NB_FALSE;
+  }
+
+  nb_var_release(tag);
+  return NB_TRUE;
+}
+
+NB_Bool nb_var_tagged_array_check(struct PP_Var var,
+                                  const char* expected_tag,
+                                  uint32_t expected_array_len) {
+  const char* tag;
+  uint32_t tag_len;
+  uint32_t array_len;
+  if (!nb_var_tagged_array(var, &tag, &tag_len, &array_len)) {
+    return NB_FALSE;
+  }
+
+  if (array_len != expected_array_len) {
+    NB_VERROR("Expected tagged array length to be %d, not %d.",
+              expected_array_len,
+              array_len);
+    return NB_FALSE;
+  }
+
+  uint32_t expected_tag_len = strlen(expected_tag);
+  if (tag_len != expected_tag_len || strncmp(tag, expected_tag, tag_len) != 0) {
+    NB_VERROR("Expected tagged array tag to be \"%s\", not \"%.*s\".",
+              expected_tag,
+              tag_len,
+              tag);
+    return NB_FALSE;
+  }
+
+  return NB_TRUE;
 }

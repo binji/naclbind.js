@@ -2151,7 +2151,7 @@ var mod = (function(Long, type, utils) {
     var value = handle.value;
 
     if (value instanceof Long) {
-      value = [value.getLowBits(), value.getHighBits()];
+      value = ['long', value.getLowBits(), value.getHighBits()];
     }
 
     if (!this.$message_.set) {
@@ -2196,11 +2196,17 @@ var mod = (function(Long, type, utils) {
                           utils.getClass(values[i]));
         }
 
-        if (values[i].length !== 2) {
+        if (values[i].length !== 3) {
           throw new Error('Expected longlong value to be Array of length 2, ' +
                           'not ' + values[i].length);
         }
-        values[i] = Long(values[i][0], values[i][1]);
+
+        if (values[i][0] !== 'long') {
+          throw new Error('Expected first element of longlong value Array to ' +
+                          'be the string "long", not ' + values[i][0]);
+        }
+
+        values[i] = Long(values[i][1], values[i][2]);
       }
     }
 

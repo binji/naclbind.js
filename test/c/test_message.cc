@@ -61,7 +61,7 @@ TEST_F(MessageTest, Valid) {
     "{\"id\": 1, \"set\": {\"1\": 3.5}}",
     "{\"id\": 1, \"set\": {\"1\": \"hi\"}}",
     "{\"id\": 1, \"set\": {\"1\": null}}",
-    "{\"id\": 1, \"set\": {\"1\": [0, 256]}}",
+    "{\"id\": 1, \"set\": {\"1\": [\"long\", 0, 256]}}",
     "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [2, 3]}]}",
     "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [2, 3], \"ret\": 4}]}",
     "{\"id\": 1, \"get\": [10], \"destroy\": []}",
@@ -79,21 +79,38 @@ TEST_F(MessageTest, Valid) {
 
 TEST_F(MessageTest, Invalid) {
   const char* invalid_messages[] = {
-    "{}",  // Missing "id"
-    "{\"id\": 0}",  // "id" can't be < 0
-    "{\"id\": \"foo\"}",  // "id" must be string
-    "{\"id\": 1, \"get\": {}}",  // "get" must be array
-    "{\"id\": 1, \"get\": [4.3]}",  // "get" must be array of ints
-    "{\"id\": 1, \"set\": [1, 2]}",  // "set" must be dictionary
-    "{\"id\": 1, \"set\": {\"hi\": 3}}",  // "set" keys must be ints
-    "{\"id\": 1, \"set\": {\"1\": {}}}",  // "set" values can't be object
-    "{\"id\": 1, \"set\": {\"1\": [1]}}",  // "set" values array must have len 2
-    "{\"id\": 1, \"set\": {\"1\": [null]}}",  // "set" values array must be ints
-    "{\"id\": 1, \"destroy\": {}}",  // "destroy" must be array
-    "{\"id\": 1, \"destroy\": [null]}",  // "destroy" must be array of ints
-    "{\"id\": 1, \"commands\": null}",  // "commands" must be array
-    "{\"id\": 1, \"commands\": [14]}",  // "commands" must be array of dicts
-    "{\"id\": 1, \"commands\": [{}]}",  // Missing \"id\" and \"args\"
+    // Missing "id"
+    "{}",
+    // "id" can't be < 0
+    "{\"id\": 0}",
+    // "id" must be string
+    "{\"id\": \"foo\"}",
+    // "get" must be array
+    "{\"id\": 1, \"get\": {}}",
+    // "get" must be array of ints
+    "{\"id\": 1, \"get\": [4.3]}",
+    // "set" must be dictionary
+    "{\"id\": 1, \"set\": [1, 2]}",
+    // "set" keys must be ints
+    "{\"id\": 1, \"set\": {\"hi\": 3}}",
+    // "set" values can't be object
+    "{\"id\": 1, \"set\": {\"1\": {}}}",
+    // "set" values array must start with string tag
+    "{\"id\": 1, \"set\": {\"1\": [1]}}",
+    // "set" values array string tag must be "long"
+    "{\"id\": 1, \"set\": {\"1\": [\"foo\", 1, 2]}}",
+    // "set" values array must have len 3
+    "{\"id\": 1, \"set\": {\"1\": [\"long\", 1]}}",
+    // "destroy" must be array
+    "{\"id\": 1, \"destroy\": {}}",
+    // "destroy" must be array of ints
+    "{\"id\": 1, \"destroy\": [null]}",
+    // "commands" must be array
+    "{\"id\": 1, \"commands\": null}",
+    // "commands" must be array of dicts
+    "{\"id\": 1, \"commands\": [14]}",
+    // Missing \"id\" and \"args\"
+    "{\"id\": 1, \"commands\": [{}]}",
     // "id" must be int
     "{\"id\": 1, \"commands\": [{\"id\": \"bye\", \"args\":[]}]}",
     // Missing "args"
@@ -187,7 +204,7 @@ TEST_F(MessageTest, SetHandles_Null) {
 }
 
 TEST_F(MessageTest, SetHandles_Long) {
-  const char* json = "{\"id\": 1, \"set\": {\"1\": [0, 1]}}";
+  const char* json = "{\"id\": 1, \"set\": {\"1\": [\"long\", 0, 1]}}";
   JsonToMessage(json);
   ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
 
@@ -196,15 +213,23 @@ TEST_F(MessageTest, SetHandles_Long) {
 
   NB_Handle handle;
   struct PP_Var value;
+  struct PP_Var tag;
+  const char* tag_str;
+  uint32_t tag_len;
 
   nb_message_sethandle(message, 0, &handle, &value);
   EXPECT_EQ(1, handle);
   EXPECT_EQ(PP_VARTYPE_ARRAY, value.type);
-  EXPECT_EQ(2, nb_var_array_length(value));
-  EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(value, 0).type);
-  EXPECT_EQ(0, nb_var_array_get(value, 0).value.as_int);
+  EXPECT_EQ(3, nb_var_array_length(value));
+  tag = nb_var_array_get(value, 0);
+  EXPECT_EQ(NB_TRUE, nb_var_string(tag, &tag_str, &tag_len));
+  EXPECT_EQ(4, tag_len);
+  EXPECT_EQ(0, strcmp(tag_str, "long"));
   EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(value, 1).type);
-  EXPECT_EQ(1, nb_var_array_get(value, 1).value.as_int);
+  EXPECT_EQ(0, nb_var_array_get(value, 1).value.as_int);
+  EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(value, 2).type);
+  EXPECT_EQ(1, nb_var_array_get(value, 2).value.as_int);
+  nb_var_release(tag);
   nb_var_release(value);
 }
 

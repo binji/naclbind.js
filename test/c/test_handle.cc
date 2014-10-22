@@ -53,17 +53,33 @@ bool operator==(struct PP_Var v1, struct PP_Var v2) {
   }
 }
 
+bool operator==(struct PP_Var v, const char* s1) {
+  if (v.type != PP_VARTYPE_STRING) {
+    return false;
+  }
+
+  const char* s2;
+  uint32_t len2;
+  if (!nb_var_string(v, &s2, &len2)) {
+    return false;
+  }
+
+  uint32_t len1 = strlen(s1);
+  if (len1 != len2) {
+    return false;
+  }
+
+  return strncmp(s1, s2, len1) == 0;
+}
+
+bool operator==(const char* s, struct PP_Var v) {
+  return v == s;
+}
+
 bool operator==(struct PP_Var v, void* p) {
   switch (v.type) {
-    case PP_VARTYPE_STRING: {
-      const char* s;
-      uint32_t len;
-      if (!nb_var_string(v, &s, &len)) {
-        return false;
-      }
-
-      return strcmp(s, (char*)p) == 0;
-    }
+    case PP_VARTYPE_STRING:
+      return v == (const char*)p;
 
     case PP_VARTYPE_NULL:
       return p == NULL;
@@ -432,28 +448,38 @@ TEST_F(HandleTest, ConvertToVar) {
   // int64
   {
     struct PP_Var var;
+    struct PP_Var tag;
     EXPECT_EQ(NB_TRUE, nb_handle_register_int64(1, 0x10000000000LL));
     EXPECT_EQ(NB_TRUE, nb_handle_convert_to_var(1, &var));
     EXPECT_EQ(PP_VARTYPE_ARRAY, var.type);
-    EXPECT_EQ(2, nb_var_array_length(var));
-    EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 0).type);
+    EXPECT_EQ(3, nb_var_array_length(var));
+    tag = nb_var_array_get(var, 0);
+    EXPECT_EQ(PP_VARTYPE_STRING, tag.type);
+    EXPECT_EQ("long", tag);
     EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 1).type);
-    EXPECT_EQ(0, nb_var_array_get(var, 0).value.as_int);
-    EXPECT_EQ(256, nb_var_array_get(var, 1).value.as_int);
+    EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 2).type);
+    EXPECT_EQ(0, nb_var_array_get(var, 1).value.as_int);
+    EXPECT_EQ(256, nb_var_array_get(var, 2).value.as_int);
+    nb_var_release(tag);
     nb_var_release(var);
     nb_handle_destroy(1);
   }
   // uint64
   {
     struct PP_Var var;
+    struct PP_Var tag;
     EXPECT_EQ(NB_TRUE, nb_handle_register_uint64(1, 0xf00000000000000fLL));
     EXPECT_EQ(NB_TRUE, nb_handle_convert_to_var(1, &var));
     EXPECT_EQ(PP_VARTYPE_ARRAY, var.type);
-    EXPECT_EQ(2, nb_var_array_length(var));
-    EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 0).type);
+    EXPECT_EQ(3, nb_var_array_length(var));
+    tag = nb_var_array_get(var, 0);
+    EXPECT_EQ(PP_VARTYPE_STRING, tag.type);
+    EXPECT_EQ("long", tag);
     EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 1).type);
-    EXPECT_EQ(15, nb_var_array_get(var, 0).value.as_int);
-    EXPECT_EQ(-0x10000000, nb_var_array_get(var, 1).value.as_int);
+    EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(var, 2).type);
+    EXPECT_EQ(15, nb_var_array_get(var, 1).value.as_int);
+    EXPECT_EQ(-0x10000000, nb_var_array_get(var, 2).value.as_int);
+    nb_var_release(tag);
     nb_var_release(var);
     nb_handle_destroy(1);
   }

@@ -120,7 +120,8 @@ function createModule(nmf, mimeType) {
 
 return {
   create: createModule,
-  type: type
+  type: type,
+  Long: Long
 };
 
 }));
