@@ -184,8 +184,8 @@ var Embed = (function(utils) {
   Embed.prototype.onLoad_ = function(e) {
     // Wait till the next time through the eventloop to allow other 'load'
     // listeners to be called.
-    var self = this,
-        nextTick = typeof process !== 'undefined' ?
+    var self = this;
+    var nextTick = typeof process !== 'undefined' ?
             process.nextTick :
             window.setTimeout;
 
@@ -195,10 +195,10 @@ var Embed = (function(utils) {
   };
 
   Embed.prototype.onMessage_ = function(e) {
-    var msg = e.data,
-        jsonMsg,
-        id,
-        callback;
+    var msg = e.data;
+    var jsonMsg;
+    var id;
+    var callback;
 
     if (typeof(msg) !== 'object') {
       jsonMsg = JSON.stringify(msg);
@@ -330,8 +330,8 @@ var Long = (function() {
    * @override
    */
   Long.prototype.toString = function(opt_radix) {
-    var radix = opt_radix || 10,
-        rem;
+    var radix = opt_radix || 10;
+    var rem;
 
     if (radix < 2 || 36 < radix) {
       throw Error('radix out of range: ' + radix);
@@ -654,8 +654,8 @@ var Long = (function() {
    * @return {!Long} This Long divided by the given one.
    */
   Long.prototype.div = function(other) {
-    var rem,
-        approx;
+    var rem;
+    var approx;
 
     if (other.isZero()) {
       throw Error('division by zero');
@@ -917,40 +917,40 @@ var NaClEmbed = (function() {
 var type = (function(utils) {
 
   // Matches LLVM TypeKind names (but not values).
-  var INVALID = 0,
-      UNEXPOSED = 1,
-      VOID = 2,
-      BOOL = 3,
-      CHAR_U = 4,
-      UCHAR = 5,
-      USHORT = 6,
-      UINT = 7,
-      ULONG = 8,
-      ULONGLONG = 9,
-      CHAR_S = 10,
-      SCHAR = 11,
-      WCHAR = 12,
-      SHORT = 13,
-      INT = 14,
-      LONG = 15,
-      LONGLONG = 16,
-      FLOAT = 17,
-      DOUBLE = 18,
-      LONGDOUBLE = 19,
-      POINTER = 20,
-      RECORD = 21,
-      ENUM = 22,
-      TYPEDEF = 23,
-      FUNCTIONPROTO = 24,
-      FUNCTIONNOPROTO = 25,
-      CONSTANTARRAY = 26,
-      INCOMPLETEARRAY = 27,
+  var INVALID = 0;
+  var UNEXPOSED = 1;
+  var VOID = 2;
+  var BOOL = 3;
+  var CHAR_U = 4;
+  var UCHAR = 5;
+  var USHORT = 6;
+  var UINT = 7;
+  var ULONG = 8;
+  var ULONGLONG = 9;
+  var CHAR_S = 10;
+  var SCHAR = 11;
+  var WCHAR = 12;
+  var SHORT = 13;
+  var INT = 14;
+  var LONG = 15;
+  var LONGLONG = 16;
+  var FLOAT = 17;
+  var DOUBLE = 18;
+  var LONGDOUBLE = 19;
+  var POINTER = 20;
+  var RECORD = 21;
+  var ENUM = 22;
+  var TYPEDEF = 23;
+  var FUNCTIONPROTO = 24;
+  var FUNCTIONNOPROTO = 25;
+  var CONSTANTARRAY = 26;
+  var INCOMPLETEARRAY = 27;
 
       // Not an LLVM C type. This is used to allow calling back to JavaScript
       // functions.
-      FUNCTIONUNTYPED = 28,
+  var FUNCTIONUNTYPED = 28;
 
-      KIND_NAME = {
+  var KIND_NAME = {
         0: 'INVALID',
         1: 'UNEXPOSED',
         2: 'VOID',
@@ -980,9 +980,9 @@ var type = (function(utils) {
         26: 'CONSTANTARRAY',
         27: 'INCOMPLETEARRAY',
         28: 'FUNCTIONUNTYPED',
-      },
+      };
 
-      PRIMITIVE_SPELLING = {
+  var PRIMITIVE_SPELLING = {
         2: 'void',
         3: 'bool',
         4: 'char',
@@ -1001,9 +1001,9 @@ var type = (function(utils) {
         17: 'float',
         18: 'double',
         19: 'long double',
-      },
+      };
 
-      PRIMITIVE_RANK = {
+  var PRIMITIVE_RANK = {
         3: 1,  // bool
         4: 2,  // char (unsigned)
         5: 2,  // unsigned char
@@ -1021,9 +1021,9 @@ var type = (function(utils) {
         17: 7,  // float
         18: 8,  // double
         19: 9,  // long double
-      },
+      };
 
-      PRIMITIVE_SIGNED = {
+  var PRIMITIVE_SIGNED = {
         4: true,  // char (unsigned)
         5: true,  // unsigned char
         6: true,  // unsigned short
@@ -1037,9 +1037,9 @@ var type = (function(utils) {
         14: false,  // int
         15: false,  // long
         16: false,  // long long
-      },
+      };
 
-      PRIMITIVE_SIZE = {
+  var PRIMITIVE_SIZE = {
         3: 1,  // bool
         4: 1,  // char (unsigned)
         5: 1,  // unsigned char
@@ -1057,42 +1057,42 @@ var type = (function(utils) {
         17: 4,  // float
         18: 8,  // double
         19: 10,  // long double
-      },
+      };
 
-      IS_CONST = 1,
-      IS_VOLATILE = 2,
-      IS_RESTRICT = 4,
+  var IS_CONST = 1;
+  var IS_VOLATILE = 2;
+  var IS_RESTRICT = 4;
 
-      VARIADIC = true,
-      NOT_VARIADIC = false,
+  var VARIADIC = true;
+  var NOT_VARIADIC = false;
 
-      STRUCT = false,
-      UNION = true,
+  var STRUCT = false;
+  var UNION = true;
 
       // Success
-      CAST_OK_EXACT = 3,
-      CAST_OK_PROMOTION = 2,
-      CAST_OK_CONVERSION = 1,
-      CAST_OK_DEFAULT_PROMOTION = 0,
+  var CAST_OK_EXACT = 3;
+  var CAST_OK_PROMOTION = 2;
+  var CAST_OK_CONVERSION = 1;
+  var CAST_OK_DEFAULT_PROMOTION = 0;
       // Warning
-      CAST_TRUNCATE = -1,
-      CAST_SIGNED_UNSIGNED = -2,
-      CAST_INT_TO_POINTER = -3,
-      CAST_POINTER_TO_INT = -4,
-      CAST_DISCARD_QUALIFIER = -5,
-      CAST_INT_TO_ENUM = -6,
-      CAST_DIFFERENT_ENUMS = -7,
-      CAST_INCOMPATIBLE_POINTERS = -8,
-      CAST_FUNCTION_POINTER_VOID_POINTER = -9,
-      CAST_FUNCTION_POINTER_NOPROTO = -10,
+  var CAST_TRUNCATE = -1;
+  var CAST_SIGNED_UNSIGNED = -2;
+  var CAST_INT_TO_POINTER = -3;
+  var CAST_POINTER_TO_INT = -4;
+  var CAST_DISCARD_QUALIFIER = -5;
+  var CAST_INT_TO_ENUM = -6;
+  var CAST_DIFFERENT_ENUMS = -7;
+  var CAST_INCOMPATIBLE_POINTERS = -8;
+  var CAST_FUNCTION_POINTER_VOID_POINTER = -9;
+  var CAST_FUNCTION_POINTER_NOPROTO = -10;
       // Failure
-      CAST_ERROR = -11,
+  var CAST_ERROR = -11;
 
-      CALL_OK = 0,
-      CALL_WARNING = -1,
-      CALL_ERROR = -2,
+  var CALL_OK = 0;
+  var CALL_WARNING = -1;
+  var CALL_ERROR = -2;
 
-      SPELLING_PRECEDENCE = {};
+  var SPELLING_PRECEDENCE = {};
 
   SPELLING_PRECEDENCE[POINTER] = 1;
   SPELLING_PRECEDENCE[CONSTANTARRAY] = 2;
@@ -1564,11 +1564,11 @@ var type = (function(utils) {
   }
 
   function getSpelling(type, opt_name, opt_lastKind) {
-    var prec,
-        lastPrec,
-        spelling,
-        argsSpelling,
-        name;
+    var prec;
+    var lastPrec;
+    var spelling;
+    var argsSpelling;
+    var name;
 
     spelling = getQualifier(type.cv);
     if (type.kind in PRIMITIVE_SPELLING) {
@@ -1705,10 +1705,10 @@ var type = (function(utils) {
       }
     }
 
-    var fromRank = PRIMITIVE_RANK[from.kind],
-        toRank = PRIMITIVE_RANK[to.kind],
-        fromSigned = PRIMITIVE_SIGNED[from.kind],
-        toSigned = PRIMITIVE_SIGNED[to.kind];
+    var fromRank = PRIMITIVE_RANK[from.kind];
+    var toRank = PRIMITIVE_RANK[to.kind];
+    var fromSigned = PRIMITIVE_SIGNED[from.kind];
+    var toSigned = PRIMITIVE_SIGNED[to.kind];
     if (fromRank > toRank) {
       return CAST_TRUNCATE;
     } else if (fromRank === toRank && fromSigned !== toSigned) {
@@ -1721,8 +1721,8 @@ var type = (function(utils) {
   }
 
   function canCastPointer(from, to) {
-    var fp = getPointerlikePointee(from),
-        tp;
+    var fp = getPointerlikePointee(from);
+    var tp;
     if (isPointerlike(to)) {
       tp = getPointerlikePointee(to);
       if (fp.kind === VOID && tp.kind === VOID) {
@@ -1817,9 +1817,9 @@ var type = (function(utils) {
   }
 
   function getFunctionCallRank(fnType, argTypes) {
-    var result = [],
-        castRank = null,
-        i;
+    var result = [];
+    var castRank = null;
+    var i;
 
     for (i = 0; i < argTypes.length; ++i) {
       if (fnType.kind === FUNCTIONUNTYPED) {
@@ -1840,8 +1840,8 @@ var type = (function(utils) {
   }
 
   function compareFunctionCallRanks(fnRank1, fnRank2) {
-    var result = 0,
-        i;
+    var result = 0;
+    var i;
     for (i = 0; i < fnRank1.length; ++i) {
       if (fnRank1[i] < fnRank2[i]) {
         if (result > 0) {
@@ -1860,13 +1860,13 @@ var type = (function(utils) {
   }
 
   function getBestViableFunction(fnTypes, argTypes) {
-    var bestFnIdx = -1,
-        bestRank,
-        isValid = false,
-        i;
+    var bestFnIdx = -1;
+    var bestRank;
+    var isValid = false;
+    var i;
     for (i = 0; i < fnTypes.length; ++i) {
-      var cmpResult,
-          rank;
+      var cmpResult;
+      var rank;
       if (!fnTypes[i].isViableForCall(argTypes)) {
         continue;
       }
@@ -2126,19 +2126,19 @@ var mod = (function(Long, type, utils) {
       throw new Error('Function named "' + name + '" is already defined.');
     }
 
-    var self = this,
-        getType = function(x) { return x.type; },
-        fnTypes = Array.prototype.map.call(functions, getType);
+    var self = this;
+    var getType = function(x) { return x.type; };
+    var fnTypes = Array.prototype.map.call(functions, getType);
 
     this.$functions_[name] = functions;
     this[name] = function() {
-      var argHandles = argsToHandles(self.$context, arguments),
-          argTypes = argHandles.map(getType),
-          bestFnIdx = type.getBestViableFunction(fnTypes, argTypes),
-          s,
-          i,
-          fn,
-          retHandle;
+      var argHandles = argsToHandles(self.$context, arguments);
+      var argTypes = argHandles.map(getType);
+      var bestFnIdx = type.getBestViableFunction(fnTypes, argTypes);
+      var s;
+      var i;
+      var fn;
+      var retHandle;
 
       if (bestFnIdx < 0) {
         s = 'Call to "' + name + '" failed.\n';
@@ -2261,8 +2261,8 @@ var mod = (function(Long, type, utils) {
     return values;
   };
   Module.prototype.$commit = function(handles, callback) {
-    var self = this,
-        context = this.$context;
+    var self = this;
+    var context = this.$context;
 
     if (callback.length !== handles.length &&
         callback.length !== handles.length + 1) {
@@ -2278,10 +2278,10 @@ var mod = (function(Long, type, utils) {
     this.$embed_.postMessage(this.$message_, function(msg) {
       // Call the callback with the same context as was set when $commit() was
       // called, then reset to the previous value.
-      var oldContext = self.$context,
-          values = self.$processValues_(handles, msg.values),
-          expectedError = callback.length === handles.length + 1,
-          error;
+      var oldContext = self.$context;
+      var values = self.$processValues_(handles, msg.values);
+      var expectedError = callback.length === handles.length + 1;
+      var error;
 
       self.$context = context;
       if (typeof msg.error !== 'undefined') {
@@ -2304,9 +2304,9 @@ var mod = (function(Long, type, utils) {
     this.$initMessage_();
   };
   Module.prototype.$destroyHandles = function(context) {
-    var c = context || this.$context,
-        handles = c.handles,
-        i;
+    var c = context || this.$context;
+    var handles = c.handles;
+    var i;
 
     if (!this.$message_.destroy) {
       this.$message_.destroy = [];
@@ -2323,9 +2323,9 @@ var mod = (function(Long, type, utils) {
     this.$commit(handles, callback);
   };
   Module.prototype.$errorIf = function(arg) {
-    var handle = argToHandle(this.$context, arg),
-        hType = handle.type,
-        commandIdx;
+    var handle = argToHandle(this.$context, arg);
+    var hType = handle.type;
+    var commandIdx;
 
     if (hType.canCastTo(type.int) === type.CAST_ERROR) {
       throw new Error('$errorIf failed, invalid type: ' + hType.spelling);
@@ -2366,8 +2366,8 @@ var mod = (function(Long, type, utils) {
     this.idToHandle_ = {};
   }
   HandleList.prototype.createHandle = function(context, type, value, id) {
-    var register = false,
-        handle;
+    var register = false;
+    var handle;
 
     if (id === undefined) {
       id = this.nextId_++;
@@ -2403,8 +2403,8 @@ var mod = (function(Long, type, utils) {
   };
   Context.prototype.destroyHandles = function() {
     // Call all finalizers. Run them in reverse order of the handle creation.
-    var i,
-        h;
+    var i;
+    var h;
     for (i = this.handles.length - 1; i >= 0; --i) {
       h = this.handles[i];
       if (h.finalizer) {

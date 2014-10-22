@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var type = require('../../src/js/naclbind').type,
-    assertTypesEqual = require('./equals').assertTypesEqual,
-    chai = require('chai'),
-    assert = chai.assert,
-    spell = type.getSpelling,
-    qual = type.describeQualifier,
-    canon = type.getCanonical,
-    viable = type.getBestViableFunction,
-    C = type.CONST,
-    CV = type.CONST | type.VOLATILE,
-    CR = type.CONST | type.RESTRICT,
-    CVR = type.CONST | type.VOLATILE | type.RESTRICT,
-    V = type.VOLATILE,
-    VR = type.VOLATILE | type.RESTRICT,
-    R = type.RESTRICT;
+var type = require('../../src/js/naclbind').type;
+var assertTypesEqual = require('./equals').assertTypesEqual;
+var chai = require('chai');
+var assert = chai.assert;
+var spell = type.getSpelling;
+var qual = type.describeQualifier;
+var canon = type.getCanonical;
+var viable = type.getBestViableFunction;
+var C = type.CONST;
+var CV = type.CONST | type.VOLATILE;
+var CR = type.CONST | type.RESTRICT;
+var CVR = type.CONST | type.VOLATILE | type.RESTRICT;
+var V = type.VOLATILE;
+var VR = type.VOLATILE | type.RESTRICT;
+var R = type.RESTRICT;
 
 chai.config.includeStack = true;
 
@@ -41,9 +41,9 @@ describe('Type', function() {
             [CV, CVR],
             [CR, CVR],
             [VR, CVR]
-          ],
-          Q = [0, C, V, R, CV, CR, VR, CVR],
-          NotOK = [];
+          ];
+      var Q = [0, C, V, R, CV, CR, VR, CVR];
+      var NotOK = [];
 
       Q.forEach(function(q1) {
         Q.forEach(function(q2) {
@@ -304,8 +304,8 @@ describe('Type', function() {
     });
 
     it('should have the correct size for records', function() {
-      var s1 = type.Record('s1', 12, type.STRUCT),
-          s2 = type.Record('s2', 4, type.UNION);
+      var s1 = type.Record('s1', 12, type.STRUCT);
+      var s2 = type.Record('s2', 4, type.UNION);
 
       assert.strictEqual(s1.size, 12);
       assert.strictEqual(s2.size, 4);
@@ -370,8 +370,8 @@ describe('Type', function() {
     });
 
     it('should correctly spell qualified primitive types', function() {
-      var cv = type.CONST | type.VOLATILE,
-          cvr = type.CONST | type.VOLATILE | type.RESTRICT;
+      var cv = type.CONST | type.VOLATILE;
+      var cvr = type.CONST | type.VOLATILE | type.RESTRICT;
       assert.strictEqual(spell(type.Void(type.CONST)), 'const void');
       assert.strictEqual(spell(type.char.qualify(type.CONST)), 'const char');
       assert.strictEqual(spell(type.int.qualify(type.CONST)), 'const int');
@@ -381,8 +381,8 @@ describe('Type', function() {
     });
 
     it('should correctly spell record types', function() {
-      var s = type.Record('s', 4),
-          u = type.Record('u', 4, type.UNION);
+      var s = type.Record('s', 4);
+      var u = type.Record('u', 4, type.UNION);
       assert.strictEqual(spell(s), 'struct s');
       assert.strictEqual(spell(u), 'union u');
     });
@@ -397,10 +397,10 @@ describe('Type', function() {
     });
 
     it('should correctly spell pointer types', function() {
-      var s = type.Record('myStruct', 4),
-          e = type.Enum('myEnum'),
-          t = type.Typedef('myTypedef', type.int),
-          f = type.Function(type.void, [type.int]);
+      var s = type.Record('myStruct', 4);
+      var e = type.Enum('myEnum');
+      var t = type.Typedef('myTypedef', type.int);
+      var f = type.Function(type.void, [type.int]);
       assert.strictEqual(spell(type.Pointer(type.void)), 'void *');
       assert.strictEqual(spell(type.Pointer(type.int)), 'int *');
       assert.strictEqual(spell(type.Pointer(s)), 'struct myStruct *');
@@ -411,12 +411,12 @@ describe('Type', function() {
     });
 
     it('should correctly spell qualified pointer types', function() {
-      var Kc = type.char.qualify(type.CONST),
-          PKc = type.Pointer(Kc),
-          PKPc = type.Pointer(type.Pointer(type.char, type.CONST)),
-          PKt = type.Pointer(type.Typedef('foo', type.char, type.CONST)),
-          PKPKc = type.Pointer(type.Pointer(Kc, type.CONST)),
-          PKVi = type.Pointer(type.int.qualify(type.CONST | type.VOLATILE));
+      var Kc = type.char.qualify(type.CONST);
+      var PKc = type.Pointer(Kc);
+      var PKPc = type.Pointer(type.Pointer(type.char, type.CONST));
+      var PKt = type.Pointer(type.Typedef('foo', type.char, type.CONST));
+      var PKPKc = type.Pointer(type.Pointer(Kc, type.CONST));
+      var PKVi = type.Pointer(type.int.qualify(type.CONST | type.VOLATILE));
       assert.strictEqual(spell(PKc), 'const char *');
       assert.strictEqual(spell(PKPc), 'char *const *');
       assert.strictEqual(spell(PKt), 'const foo *');
@@ -425,14 +425,14 @@ describe('Type', function() {
     });
 
     it('should correctly spell function types', function() {
-      var PKc = type.Pointer(type.char.qualify(type.CONST)),
-          f1 = type.Function(type.int, [type.int, type.int]),
-          f2 = type.Function(type.int, [PKc], type.VARIADIC),
-          f3 = type.Pointer(type.Function(type.void, [type.int])),
-          f4 = type.Function(f3, [type.int, f3]),
-          f5 = type.Function(type.void, []),
-          f6 = type.FunctionNoProto(type.void),
-          f7 = type.Pointer(type.FunctionNoProto(type.void));
+      var PKc = type.Pointer(type.char.qualify(type.CONST));
+      var f1 = type.Function(type.int, [type.int, type.int]);
+      var f2 = type.Function(type.int, [PKc], type.VARIADIC);
+      var f3 = type.Pointer(type.Function(type.void, [type.int]));
+      var f4 = type.Function(f3, [type.int, f3]);
+      var f5 = type.Function(type.void, []);
+      var f6 = type.FunctionNoProto(type.void);
+      var f7 = type.Pointer(type.FunctionNoProto(type.void));
       assert.strictEqual(spell(f1), 'int (int, int)');
       assert.strictEqual(spell(f2), 'int (const char *, ...)');
       assert.strictEqual(spell(f4), 'void (*(int, void (*)(int)))(int)');
@@ -444,13 +444,13 @@ describe('Type', function() {
     });
 
     it('should handle spelling precedence', function() {
-      var IA = type.IncompleteArray,
-          P = type.Pointer,
-          F = type.Function,
-          i = type.int,
-          A_PFiiE = IA(P(F(i, [i]))),
-          PA_PFiiE = P(IA(P(F(i, [i])))),
-          PFPFPivEiE = P(F(P(F(P(i), [])), [i]));
+      var IA = type.IncompleteArray;
+      var P = type.Pointer;
+      var F = type.Function;
+      var i = type.int;
+      var A_PFiiE = IA(P(F(i, [i])));
+      var PA_PFiiE = P(IA(P(F(i, [i]))));
+      var PFPFPivEiE = P(F(P(F(P(i), [])), [i]));
       assert.strictEqual(spell(A_PFiiE), 'int (*[])(int)');
       assert.strictEqual(spell(PA_PFiiE), 'int (*(*)[])(int)');
       assert.strictEqual(spell(PA_PFiiE, 'foo'), 'int (*(*foo)[])(int)');
@@ -460,14 +460,14 @@ describe('Type', function() {
 
   describe('Canonical', function() {
     it('should ignore types with typedefs', function() {
-      var v = type.void,
-          i = type.int,
-          Pc = type.Pointer(type.char),
-          A2_c = type.Array(type.char, 2),
-          A_c = type.IncompleteArray(type.char),
-          s = type.Record('s', 4),
-          e = type.Enum('e'),
-          FiiE = type.Function(type.int, [type.int]);
+      var v = type.void;
+      var i = type.int;
+      var Pc = type.Pointer(type.char);
+      var A2_c = type.Array(type.char, 2);
+      var A_c = type.IncompleteArray(type.char);
+      var s = type.Record('s', 4);
+      var e = type.Enum('e');
+      var FiiE = type.Function(type.int, [type.int]);
       assert.strictEqual(canon(v), v);
       assert.strictEqual(canon(i), i);
       assert.strictEqual(canon(Pc), Pc);
@@ -497,15 +497,15 @@ describe('Type', function() {
     });
 
     it('should reduce typedefs of child types', function() {
-      var t = type.Typedef('t', type.char),
-          tt = type.Typedef('tt', t);
+      var t = type.Typedef('t', type.char);
+      var tt = type.Typedef('tt', t);
 
       [t, tt].forEach(function(x) {
-        var Px = type.Pointer(x),
-            A2_x = type.Array(x, 2),
-            A_x = type.IncompleteArray(x),
-            FvxE = type.Function(type.void, [x]),
-            FxvE = type.Function(x, []);
+        var Px = type.Pointer(x);
+        var A2_x = type.Array(x, 2);
+        var A_x = type.IncompleteArray(x);
+        var FvxE = type.Function(type.void, [x]);
+        var FxvE = type.Function(x, []);
 
         assertTypesEqual(canon(x), type.char);
         assertTypesEqual(canon(Px), type.Pointer(type.char));
@@ -517,9 +517,9 @@ describe('Type', function() {
     });
 
     it('should combine typedef qualifiers', function() {
-      var Kc = type.char.qualify(type.CONST),
-          Kt = type.Typedef('Kt', Kc, type.CONST),
-          Vt = type.Typedef('Vt', Kc, type.VOLATILE);
+      var Kc = type.char.qualify(type.CONST);
+      var Kt = type.Typedef('Kt', Kc, type.CONST);
+      var Vt = type.Typedef('Vt', Kc, type.VOLATILE);
 
       assertTypesEqual(canon(Kt), Kc);  // Extra const is ignored.
       assertTypesEqual(canon(Vt),
@@ -544,10 +544,10 @@ describe('Type', function() {
     }
 
     function assertCast(from, to, expected) {
-      var tfrom = type.Typedef('from', from),
-          ttfrom = type.Typedef('fromfrom', tfrom),
-          tto = type.Typedef('to', to),
-          ttto = type.Typedef('toto', tto);
+      var tfrom = type.Typedef('from', from);
+      var ttfrom = type.Typedef('fromfrom', tfrom);
+      var tto = type.Typedef('to', to);
+      var ttto = type.Typedef('toto', tto);
 
       // console.log(spell(from), '=>', spell(to), expected);
 
@@ -566,16 +566,16 @@ describe('Type', function() {
       });
 
       it('should fail cast of void -> anything else', function() {
-        var e = type.Enum('e'),
-            s = type.Record('s', 4),
-            u = type.Record('s', 4, type.UNION),
-            f = type.Function(type.void, [type.int]),
-            fn = type.FunctionNoProto(type.void),
-            fu = type.FunctionUntyped(),
-            fp = type.Pointer(f),
-            p = type.Pointer(type.void),
-            a = type.Array(type.char, 2),
-            ia = type.IncompleteArray(type.char);
+        var e = type.Enum('e');
+        var s = type.Record('s', 4);
+        var u = type.Record('s', 4, type.UNION);
+        var f = type.Function(type.void, [type.int]);
+        var fn = type.FunctionNoProto(type.void);
+        var fu = type.FunctionUntyped();
+        var fp = type.Pointer(f);
+        var p = type.Pointer(type.void);
+        var a = type.Array(type.char, 2);
+        var ia = type.IncompleteArray(type.char);
         assertCast(type.void, e, type.CAST_ERROR);
         assertCast(type.void, s, type.CAST_ERROR);
         assertCast(type.void, u, type.CAST_ERROR);
@@ -655,11 +655,11 @@ describe('Type', function() {
       });
 
       it('should warn on cast of integral -> pointer-like', function() {
-        var c = type.char,
-            v = type.void,
-            p = type.Pointer(v),
-            a = type.Array(c, 2),
-            ia = type.IncompleteArray(c);
+        var c = type.char;
+        var v = type.void;
+        var p = type.Pointer(v);
+        var a = type.Array(c, 2);
+        var ia = type.IncompleteArray(c);
         [p, a, ia].forEach(function(x) {
           assertCast(type.char, x, type.CAST_INT_TO_POINTER);
           assertCast(type.short, x, type.CAST_INT_TO_POINTER);
@@ -675,11 +675,11 @@ describe('Type', function() {
       });
 
       it('should fail to cast float -> pointer-like', function() {
-        var c = type.char,
-            v = type.void,
-            p = type.Pointer(v),
-            a = type.Array(c, 2),
-            ia = type.IncompleteArray(c);
+        var c = type.char;
+        var v = type.void;
+        var p = type.Pointer(v);
+        var a = type.Array(c, 2);
+        var ia = type.IncompleteArray(c);
         [p, a, ia].forEach(function(x) {
           assertCast(type.float, x, type.CAST_ERROR);
           assertCast(type.double, x, type.CAST_ERROR);
@@ -709,12 +709,12 @@ describe('Type', function() {
       });
 
       it('should fail to cast numeric -> record, void, function', function() {
-        var s = type.Record('s', 4),
-            u = type.Record('s', 4, type.UNION),
-            v = type.void,
-            f = type.Function(type.void, [type.int]),
-            fn = type.FunctionNoProto(type.void),
-            fu = type.FunctionUntyped();
+        var s = type.Record('s', 4);
+        var u = type.Record('s', 4, type.UNION);
+        var v = type.void;
+        var f = type.Function(type.void, [type.int]);
+        var fn = type.FunctionNoProto(type.void);
+        var fu = type.FunctionUntyped();
         [s, u, v, f, fn, fu].forEach(function(x) {
           assertCast(type.char, x, type.CAST_ERROR);
           assertCast(type.short, x, type.CAST_ERROR);
@@ -734,20 +734,20 @@ describe('Type', function() {
     });
 
     describe('Pointer', function() {
-      var v = type.void,
-          c = type.char,
-          e = type.Enum('e'),
-          s = type.Record('s', 4),
-          u = type.Record('s', 4, type.UNION),
-          f = type.Function(type.void, [type.int]),
-          fn = type.FunctionNoProto(type.void),
-          fu = type.FunctionUntyped();
+      var v = type.void;
+      var c = type.char;
+      var e = type.Enum('e');
+      var s = type.Record('s', 4);
+      var u = type.Record('s', 4, type.UNION);
+      var f = type.Function(type.void, [type.int]);
+      var fn = type.FunctionNoProto(type.void);
+      var fu = type.FunctionUntyped();
 
       it('should allow cast of pointer -> same pointer', function() {
         [v, c, e, s, u, f, fn, fu].forEach(function(x) {
-          var p = type.Pointer(x),
-              a,
-              ia;
+          var p = type.Pointer(x);
+          var a;
+          var ia;
           assertCast(p, p, type.CAST_OK_EXACT);
           if (x.kind !== type.VOID) {
             a = type.Array(x, 2);
@@ -765,12 +765,12 @@ describe('Type', function() {
       });
 
       it('should warn on cast of fun* <-> fun* w/ no proto', function() {
-        var pf = type.Pointer(f),
-            pfn = type.Pointer(fn),
-            af = type.Array(f, 2),
-            afn = type.Array(fn, 2),
-            iaf = type.IncompleteArray(f),
-            iafn = type.IncompleteArray(fn);
+        var pf = type.Pointer(f);
+        var pfn = type.Pointer(fn);
+        var af = type.Array(f, 2);
+        var afn = type.Array(fn, 2);
+        var iaf = type.IncompleteArray(f);
+        var iafn = type.IncompleteArray(fn);
 
         [pf, af, iaf].forEach(function(from) {
           [pfn, afn, iafn].forEach(function(to) {
@@ -781,15 +781,15 @@ describe('Type', function() {
       });
 
       it('should allow cast of untyped fun <-> any other fun', function() {
-        var pf = type.Pointer(f),
-            pfn = type.Pointer(fn),
-            pfu = type.Pointer(fu),
-            af = type.Array(f, 2),
-            afn = type.Array(fn, 2),
-            afu = type.Array(fu, 2),
-            iaf = type.IncompleteArray(f),
-            iafn = type.IncompleteArray(fn),
-            iafu = type.IncompleteArray(fu);
+        var pf = type.Pointer(f);
+        var pfn = type.Pointer(fn);
+        var pfu = type.Pointer(fu);
+        var af = type.Array(f, 2);
+        var afn = type.Array(fn, 2);
+        var afu = type.Array(fu, 2);
+        var iaf = type.IncompleteArray(f);
+        var iafn = type.IncompleteArray(fn);
+        var iafu = type.IncompleteArray(fu);
 
         [pfu, afu, iafu].forEach(function(from) {
           [pf, af, iaf, pfn, afn, iafn].forEach(function(to) {
@@ -805,9 +805,9 @@ describe('Type', function() {
         [c, e, s, u].forEach(function(x) {
           [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
             [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
-              var p = type.Pointer(x),
-                  a = type.Array(x, 2),
-                  ia = type.IncompleteArray(x);
+              var p = type.Pointer(x);
+              var a = type.Array(x, 2);
+              var ia = type.IncompleteArray(x);
               assertCast(p.qualify(q1), pv.qualify(q2), type.CAST_OK_CONVERSION);
               assertCast(a, pv.qualify(q2), type.CAST_OK_CONVERSION);
               assertCast(ia, pv.qualify(q2), type.CAST_OK_CONVERSION);
@@ -833,10 +833,10 @@ describe('Type', function() {
       it('should warn on cast of void pointer <-> function pointer', function() {
         // This is disallowed by the C spec, but seems to work without warning
         // in clang + gcc.
-        var pv = type.Pointer(type.void),
-            pf = type.Pointer(f),
-            pfn = type.Pointer(fn),
-            pfu = type.Pointer(fu);
+        var pv = type.Pointer(type.void);
+        var pf = type.Pointer(f);
+        var pfn = type.Pointer(fn);
+        var pfu = type.Pointer(fu);
         assertCast(pv, pf, type.CAST_FUNCTION_POINTER_VOID_POINTER);
         assertCast(pf, pv, type.CAST_FUNCTION_POINTER_VOID_POINTER);
         assertCast(pv, pfn, type.CAST_FUNCTION_POINTER_VOID_POINTER);
@@ -878,9 +878,9 @@ describe('Type', function() {
         // Arrays cannot be qualified, so test unqualified arrays being cast to
         // qualified pointers.
         [c, e, s, u, f, fn, fu].forEach(function(x) {
-          var p = type.Pointer(x),
-              a = type.Array(x, 2),
-              ia = type.IncompleteArray(x);
+          var p = type.Pointer(x);
+          var a = type.Array(x, 2);
+          var ia = type.IncompleteArray(x);
           [C, CV, CVR, V, VR, R].forEach(function(q) {
             var qp = type.Pointer(x.qualify(q));
             assertCast(a, qp, type.CAST_OK_EXACT);
@@ -891,15 +891,15 @@ describe('Type', function() {
 
       it('should warn on cast of pointer-like to incompatible pointer', function() {
         [c, e, s, u, f].forEach(function(x) {
-          var xp = type.Pointer(x),
-              xa = type.Array(x, 2),
-              xia = type.IncompleteArray(x);
+          var xp = type.Pointer(x);
+          var xa = type.Array(x, 2);
+          var xia = type.IncompleteArray(x);
           [c, e, s, u, f].forEach(function(y) {
             if (x === y) return;
 
-            var yp = type.Pointer(y),
-                ya = type.Array(y, 2),
-                yia = type.IncompleteArray(y);
+            var yp = type.Pointer(y);
+            var ya = type.Array(y, 2);
+            var yia = type.IncompleteArray(y);
 
             assertCast(xp, yp, type.CAST_INCOMPATIBLE_POINTERS);
             assertCast(xp, ya, type.CAST_INCOMPATIBLE_POINTERS);
@@ -967,9 +967,9 @@ describe('Type', function() {
     });
 
     describe('Record', function() {
-      var s = type.Record('s', 4),
-          s2 = type.Record('s2', 4),
-          u = type.Record('s', 4, type.UNION);
+      var s = type.Record('s', 4);
+      var s2 = type.Record('s2', 4);
+      var u = type.Record('s', 4, type.UNION);
 
       it('should allow cast to same record', function() {
         assertCast(s, s, type.CAST_OK_EXACT);
@@ -1002,8 +1002,8 @@ describe('Type', function() {
     });
 
     describe('Enum', function() {
-      var e = type.Enum('E'),
-          e2 = type.Enum('E2');
+      var e = type.Enum('E');
+      var e2 = type.Enum('E2');
 
       it('should allow cast of enum -> same enum', function() {
         assertCast(e, e, type.CAST_OK_EXACT);
@@ -1097,10 +1097,10 @@ describe('Type', function() {
 
     describe('Typedef', function() {
       it('should allow cast of pointer -> same pointer w/ typedef', function() {
-        var Pc = type.Pointer(type.char),
-            PPc = type.Pointer(Pc),
-            t = type.Typedef('t', Pc),
-            Pt = type.Pointer(t);
+        var Pc = type.Pointer(type.char);
+        var PPc = type.Pointer(Pc);
+        var t = type.Typedef('t', Pc);
+        var Pt = type.Pointer(t);
         assertCast(Pc, t, type.CAST_OK_EXACT);
         assertCast(t, Pc, type.CAST_OK_EXACT);
         assertCast(PPc, Pt, type.CAST_OK_EXACT);
@@ -1108,10 +1108,10 @@ describe('Type', function() {
       });
 
       it('should allow qualifiers to propagate though typedef', function() {
-        var Kt = type.Typedef('t', type.char, type.CONST),
-            Kc = type.char.qualify(type.CONST),
-            VKt = type.Typedef('t2', Kt, type.VOLATILE),
-            KVc = type.char.qualify(type.CONST | type.VOLATILE);
+        var Kt = type.Typedef('t', type.char, type.CONST);
+        var Kc = type.char.qualify(type.CONST);
+        var VKt = type.Typedef('t2', Kt, type.VOLATILE);
+        var KVc = type.char.qualify(type.CONST | type.VOLATILE);
         assertCast(type.Pointer(Kt), type.Pointer(Kc), type.CAST_OK_EXACT);
         assertCast(type.Pointer(Kc), type.Pointer(Kt), type.CAST_OK_EXACT);
         assertCast(type.Pointer(VKt), type.Pointer(KVc), type.CAST_OK_EXACT);
@@ -1131,119 +1131,119 @@ describe('Type', function() {
     }
 
     it('should work if there is 1 overload w/ an exact match', function() {
-      var fn0 = type.Function(type.void, [type.int]),
-          fns = [fn0];
+      var fn0 = type.Function(type.void, [type.int]);
+      var fns = [fn0];
       assertBestViable(fns, [type.int], 0);
     });
 
     it('should work if there are 2 overloads w/ an exact match', function() {
-      var Pi = type.Pointer(type.int),
-          fn0 = type.Function(type.void, [type.int]),
-          fn1 = type.Function(type.void, [Pi]),
-          fns = [fn0, fn1];
+      var Pi = type.Pointer(type.int);
+      var fn0 = type.Function(type.void, [type.int]);
+      var fn1 = type.Function(type.void, [Pi]);
+      var fns = [fn0, fn1];
       assertBestViable(fns, [type.int], 0);
       assertBestViable(fns, [Pi], 1);
     });
 
     it('should prefer an exact match over a promotion', function() {
-      var fn0 = type.Function(type.void, [type.int]),
-          fn1 = type.Function(type.void, [type.short]),
-          fns = [fn0, fn1];
+      var fn0 = type.Function(type.void, [type.int]);
+      var fn1 = type.Function(type.void, [type.short]);
+      var fns = [fn0, fn1];
       assertBestViable(fns, [type.int], 0);
       assertBestViable(fns, [type.short], 1);
     });
 
     it('should prefer a int/float promotion over conversion', function() {
-      var fn0 = type.Function(type.void, [type.int]),
-          fn1 = type.Function(type.void, [type.double]),
-          fns = [fn0, fn1];
+      var fn0 = type.Function(type.void, [type.int]);
+      var fn1 = type.Function(type.void, [type.double]);
+      var fns = [fn0, fn1];
       assertBestViable(fns, [type.char], 0);
       assertBestViable(fns, [type.float], 1);
     });
 
     it('should choose a promotion if it is available', function() {
-      var fn0 = type.Function(type.void, [type.int]),
-          fn1 = type.Function(type.void, [type.Pointer(type.int)]),
-          fns = [fn0, fn1];
+      var fn0 = type.Function(type.void, [type.int]);
+      var fn1 = type.Function(type.void, [type.Pointer(type.int)]);
+      var fns = [fn0, fn1];
       assertBestViable(fns, [type.short], 0);
     });
 
     it('should prefer an exact match over a conversion', function() {
-      var e = type.Enum('e'),
-          fn0 = type.Function(type.void, [e]),
-          fn1 = type.Function(type.void, [type.int]),
-          fns = [fn0, fn1];
+      var e = type.Enum('e');
+      var fn0 = type.Function(type.void, [e]);
+      var fn1 = type.Function(type.void, [type.int]);
+      var fns = [fn0, fn1];
       assertBestViable(fns, [e], 0);
     });
 
     it('should choose a conversion if it is available', function() {
-      var e = type.Enum('e'),
-          fn0 = type.Function(type.void, [type.int]),
-          fns = [fn0];
+      var e = type.Enum('e');
+      var fn0 = type.Function(type.void, [type.int]);
+      var fns = [fn0];
       assertBestViable(fns, [e], 0);
     });
 
     it('should work with multiple arguments', function() {
-      var i = type.int,
-          c = type.char,
-          Pi = type.Pointer(i),
-          fn0 = type.Function(type.void, [i, c]),
-          fn1 = type.Function(type.void, [i, Pi]),
-          fns = [fn0, fn1];
+      var i = type.int;
+      var c = type.char;
+      var Pi = type.Pointer(i);
+      var fn0 = type.Function(type.void, [i, c]);
+      var fn1 = type.Function(type.void, [i, Pi]);
+      var fns = [fn0, fn1];
       assertBestViable(fns, [i, c], 0);
       assertBestViable(fns, [i, Pi], 1);
     });
 
     it('should ignore functions that aren\'t viable', function() {
-      var i = type.int,
-          c = type.char,
-          fn0 = type.Function(type.void, [i, i]),
-          fn1 = type.Function(type.void, [i, i, i, i]),  // Not viable
-          fns = [fn0, fn1];
+      var i = type.int;
+      var c = type.char;
+      var fn0 = type.Function(type.void, [i, i]);
+      var fn1 = type.Function(type.void, [i, i, i, i]);  // Not viable
+      var fns = [fn0, fn1];
       assertBestViable(fns, [i, i], 0);
       assertBestViable(fns, [i, c], 0);
     });
 
     it('should allow multiple promotions/conversions', function() {
-      var i = type.int,
-          Pv = type.Pointer(type.void),
-          Pi = type.Pointer(i),
-          c = type.char,
-          fn0 = type.Function(type.void, [Pi, i]),
-          fns = [fn0];
+      var i = type.int;
+      var Pv = type.Pointer(type.void);
+      var Pi = type.Pointer(i);
+      var c = type.char;
+      var fn0 = type.Function(type.void, [Pi, i]);
+      var fns = [fn0];
       assertBestViable(fns, [Pv, c], 0);
     });
 
     it('should allow multiple promotions/conversions', function() {
-      var i = type.int,
-          Pv = type.Pointer(type.void),
-          Pi = type.Pointer(i),
-          c = type.char,
-          fn0 = type.Function(type.void, [Pi, i]),
-          fns = [fn0];
+      var i = type.int;
+      var Pv = type.Pointer(type.void);
+      var Pi = type.Pointer(i);
+      var c = type.char;
+      var fn0 = type.Function(type.void, [Pi, i]);
+      var fns = [fn0];
       assertBestViable(fns, [Pv, c], 0);
     });
 
     it('should fail if there are no viable functions', function() {
-      var i = type.int,
-          fn0 = type.Function(type.void, [i, i]),
-          fns = [fn0];
+      var i = type.int;
+      var fn0 = type.Function(type.void, [i, i]);
+      var fns = [fn0];
       assertBestViable(fns, [], -1);
       assertBestViable(fns, [i], -1);
     });
 
     it('should fail if no function is best', function() {
-      var i = type.int,
-          c = type.char,
-          fn0 = type.Function(type.void, [c, i]),
-          fn1 = type.Function(type.void, [i, c]),
-          fns = [fn0, fn1];
+      var i = type.int;
+      var c = type.char;
+      var fn0 = type.Function(type.void, [c, i]);
+      var fn1 = type.Function(type.void, [i, c]);
+      var fns = [fn0, fn1];
       assertBestViable(fns, [c, c], -1);
     });
 
     it('should work with variadic functions', function() {
-      var i = type.int,
-          fn0 = type.Function(type.void, [i], type.VARIADIC);
+      var i = type.int;
+      var fn0 = type.Function(type.void, [i], type.VARIADIC);
 
       assertBestViable([fn0], [i], 0);
       assertBestViable([fn0], [i, i], 0);
@@ -1251,13 +1251,13 @@ describe('Type', function() {
     });
 
     it('should choose any other viable function over variadic', function() {
-      var i = type.int,
-          c = type.char,
-          f = type.float,
-          fn0 = type.Function(type.void, [i], type.VARIADIC),
-          fn1 = type.Function(type.void, [i, i]),
-          fn2 = type.Function(type.void, [c, f]),
-          fns = [fn0, fn1, fn2];
+      var i = type.int;
+      var c = type.char;
+      var f = type.float;
+      var fn0 = type.Function(type.void, [i], type.VARIADIC);
+      var fn1 = type.Function(type.void, [i, i]);
+      var fn2 = type.Function(type.void, [c, f]);
+      var fns = [fn0, fn1, fn2];
 
       assertBestViable(fns, [i, i], 1);
       assertBestViable(fns, [i, c], 1);
@@ -1268,11 +1268,11 @@ describe('Type', function() {
     });
 
     it('should work with functions without a prototype', function() {
-      var i = type.int,
-          f = type.float,
-          vp = type.Pointer(type.void),
-          fn = type.FunctionNoProto(type.void),
-          fns = [fn];
+      var i = type.int;
+      var f = type.float;
+      var vp = type.Pointer(type.void);
+      var fn = type.FunctionNoProto(type.void);
+      var fns = [fn];
 
       assertBestViable(fns, [], 0);
       assertBestViable(fns, [i], 0);
@@ -1282,10 +1282,10 @@ describe('Type', function() {
     });
 
     it('should work with function pointers', function() {
-      var pfn1 = type.Pointer(type.Function(type.int, [type.int])),
-          pfnu = type.Pointer(type.FunctionUntyped()),
-          fn2 = type.Function(type.void, [pfn1]),
-          fns = [fn2];
+      var pfn1 = type.Pointer(type.Function(type.int, [type.int]));
+      var pfnu = type.Pointer(type.FunctionUntyped());
+      var fn2 = type.Function(type.void, [pfn1]);
+      var fns = [fn2];
 
       assertBestViable(fns, [pfn1], 0);
       assertBestViable(fns, [pfnu], 0);

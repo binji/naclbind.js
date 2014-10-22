@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var chai = require('chai'),
-    assert = chai.assert,
-    naclbind = require('../../src/js/naclbind'),
-    NaClEmbed = require('./nacl_embed_for_testing');
-    Embed = naclbind.Embed;
+var chai = require('chai');
+var assert = chai.assert;
+var naclbind = require('../../src/js/naclbind');
+var NaClEmbed = require('./nacl_embed_for_testing');
+var Embed = naclbind.Embed;
 
 chai.config.includeStack = true;
 
 describe('Embed', function() {
   it('should not post messages before loaded', function() {
-    var ne = NaClEmbed(),
-        e = Embed(ne);
+    var ne = NaClEmbed();
+    var e = Embed(ne);
 
     ne.setPostMessageCallback(function() {
       assert.ok(false, 'Unexpected call to postMessage');
@@ -33,11 +33,11 @@ describe('Embed', function() {
   });
 
   it('should post all messages after load', function(done) {
-    var ne = NaClEmbed(),
-        e = Embed(ne),
-        loaded = false,
-        callCount = 0,
-        notCalled = function() { assert.ok(false, 'Shouldn\'t be called'); }
+    var ne = NaClEmbed();
+    var e = Embed(ne);
+    var loaded = false;
+    var callCount = 0;
+    var notCalled = function() { assert.ok(false, 'Shouldn\'t be called'); }
 
     ne.setPostMessageCallback(function(msg) {
       assert.strictEqual(loaded, true,
@@ -63,8 +63,8 @@ describe('Embed', function() {
   });
 
   it('should call callback when message is posted from module', function(done) {
-    var ne = NaClEmbed(),
-        e = Embed(ne);
+    var ne = NaClEmbed();
+    var e = Embed(ne);
 
     ne.setPostMessageCallback(function(msg) {
       assert.deepEqual(msg, {id: 1, msg: 'ping'});
@@ -80,9 +80,9 @@ describe('Embed', function() {
   });
 
   it('should use incrementing ids for messages', function(done) {
-    var ne = NaClEmbed(),
-        e = Embed(ne),
-        n = 1;
+    var ne = NaClEmbed();
+    var e = Embed(ne);
+    var n = 1;
 
     ne.setPostMessageCallback(function(msg) {
       assert.deepEqual(msg, {id: n});

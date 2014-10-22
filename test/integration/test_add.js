@@ -27,10 +27,10 @@
       this.timeout(10000);
 
       it('should work', function(done) {
-        var nmf = '/base/out/test/integration/add/add.nmf',
-            mimeType = 'application/x-nacl',
-            m = addModule.create(nmf, mimeType),
-            h;
+        var nmf = '/base/out/test/integration/add/add.nmf';
+        var mimeType = 'application/x-nacl';
+        var m = addModule.create(nmf, mimeType);
+        var h;
 
         h = m.add(3, 4);
         m.$commit([h], function(hVal) {

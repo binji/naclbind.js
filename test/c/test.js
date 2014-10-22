@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var chai = require('chai'),
-    assert = chai.assert,
-    nacl = require('nacl-sdk'),
-    path = require('path'),
-    testNexe;
+var chai = require('chai');
+var assert = chai.assert;
+var nacl = require('nacl-sdk');
+var path = require('path');
+var testNexe;
 
 chai.config.includeStack = true;
 
@@ -32,9 +32,9 @@ describe('C Unit Tests', function() {
   this.enableTimeouts(false);
 
   it('should build successfully', function(done) {
-    var outdir = path.resolve(__dirname, '../../out/test/c/test'),
-        srcdir = path.resolve(__dirname, '../../src/c'),
-        infiles = [
+    var outdir = path.resolve(__dirname, '../../out/test/c/test');
+    var srcdir = path.resolve(__dirname, '../../src/c');
+    var infiles = [
           path.join(srcdir, 'handle.c'),
           path.join(srcdir, 'interfaces.c'),
           path.join(srcdir, 'message.c'),
@@ -46,8 +46,8 @@ describe('C Unit Tests', function() {
           path.join(__dirname, 'test_handle.cc'),
           path.join(__dirname, 'test_message.cc'),
           path.join(__dirname, 'test_json.cc'),
-        ],
-        opts = {
+        ];
+    var opts = {
           toolchain: 'newlib',
           config: 'Debug',
           arch: 'x86_64',
@@ -78,8 +78,8 @@ describe('C Unit Tests', function() {
 
 function parseTests(callback) {
   runTest(['--gtest_list_tests'], function(error, stdout) {
-    var suites = [],
-        suite = null;
+    var suites = [];
+    var suite = null;
 
     if (error) {
       assert.ok(false, 'Error running to get test list.\n' + error);

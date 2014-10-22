@@ -29,8 +29,8 @@
       var m;
 
       before(function() {
-        var nmf = '/base/out/test/integration/nacl_io/nacl_io.nmf',
-            mimeType = 'application/x-nacl';
+        var nmf = '/base/out/test/integration/nacl_io/nacl_io.nmf';
+        var mimeType = 'application/x-nacl';
 
         m = nacl_ioModule.create(nmf, mimeType);
       });

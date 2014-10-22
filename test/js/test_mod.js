@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var chai = require('chai'),
-    assert = chai.assert,
-    assertTypesEqual = require('./equals').assertTypesEqual,
-    naclbind = require('../../src/js/naclbind'),
-    NaClEmbed = require('./nacl_embed_for_testing'),
-    Embed = naclbind.Embed,
-    Long = naclbind.Long,
-    mod = naclbind.mod,
-    type = naclbind.type;
+var chai = require('chai');
+var assert = chai.assert;
+var assertTypesEqual = require('./equals').assertTypesEqual;
+var naclbind = require('../../src/js/naclbind');
+var NaClEmbed = require('./nacl_embed_for_testing');
+var Embed = naclbind.Embed;
+var Long = naclbind.Long;
+var mod = naclbind.mod;
+var type = naclbind.type;
 
 chai.config.includeStack = true;
 
@@ -38,8 +38,8 @@ describe('Module', function() {
   });
 
   it('should work for a simple function type', function() {
-    var addType = type.Function(type.int, [type.int, type.int]),
-        m = mod.Module();
+    var addType = type.Function(type.int, [type.int, type.int]);
+    var m = mod.Module();
 
     m.$defineFunction('add', [mod.Function(0, addType)]);
 
@@ -58,9 +58,9 @@ describe('Module', function() {
   });
 
   it('should work for an overloaded function', function() {
-    var addIntType = type.Function(type.int, [type.int, type.int]),
-        addFloatType = type.Function(type.float, [type.float, type.float]),
-        m = mod.Module();
+    var addIntType = type.Function(type.int, [type.int, type.int]);
+    var addFloatType = type.Function(type.float, [type.float, type.float]);
+    var m = mod.Module();
 
     m.$defineFunction('add', [
         mod.Function(0, addIntType),
@@ -86,11 +86,11 @@ describe('Module', function() {
   });
 
   it('should allow passing function pointers', function() {
-    var pfunc = type.Pointer(type.Function(type.int, [type.int])),
-        getFuncType = type.Function(pfunc, []),
-        useFuncType = type.Function(type.void, [pfunc]),
-        m = mod.Module(),
-        h;
+    var pfunc = type.Pointer(type.Function(type.int, [type.int]));
+    var getFuncType = type.Function(pfunc, []);
+    var useFuncType = type.Function(type.void, [pfunc]);
+    var m = mod.Module();
+    var h;
 
     m.$defineFunction('getFunc', [mod.Function(0, getFuncType)]);
     m.$defineFunction('useFunc', [mod.Function(1, useFuncType)]);
@@ -108,11 +108,11 @@ describe('Module', function() {
   });
 
   it('should allow handle pipelining', function() {
-    var voidp = type.Pointer(type.void),
-        intp = type.Pointer(type.int),
-        mallocType = type.Function(voidp, [type.uint]),
-        getIntType = type.Function(type.int, [intp]),
-        m = mod.Module();
+    var voidp = type.Pointer(type.void);
+    var intp = type.Pointer(type.int);
+    var mallocType = type.Function(voidp, [type.uint]);
+    var getIntType = type.Function(type.int, [intp]);
+    var m = mod.Module();
 
     m.$defineFunction('malloc', [mod.Function(0, mallocType)]);
     m.$defineFunction('get', [mod.Function(1, getIntType)]);
@@ -130,9 +130,9 @@ describe('Module', function() {
   });
 
   it('should allow creation of another context', function() {
-    var m = mod.Module(),
-        c = m.$createContext(),
-        h;
+    var m = mod.Module();
+    var c = m.$createContext();
+    var h;
 
     m.$context = c;
     h = m.$handle(1000);
@@ -145,11 +145,11 @@ describe('Module', function() {
 
   describe('$commit', function() {
     it('should call callback and extract value from handle', function(done) {
-      var ne = NaClEmbed(),
-          e = Embed(ne),
-          m = mod.Module(e),
-          addType = type.Function(type.int, [type.int, type.int]),
-          h;
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
+      var addType = type.Function(type.int, [type.int, type.int]);
+      var h;
 
       m.$defineFunction('add', [mod.Function(0, addType)]);
 
@@ -175,12 +175,12 @@ describe('Module', function() {
     });
 
     it('should unwrap multiple handles', function(done) {
-      var ne = NaClEmbed(),
-          e = Embed(ne),
-          m = mod.Module(e),
-          addType = type.Function(type.int, [type.int, type.int]),
-          h1,
-          h2;
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
+      var addType = type.Function(type.int, [type.int, type.int]);
+      var h1;
+      var h2;
 
       m.$defineFunction('add', [mod.Function(0, addType)]);
 
@@ -200,11 +200,11 @@ describe('Module', function() {
     });
 
     it('should pass current context to commit callback', function(done) {
-      var ne = NaClEmbed(),
-          e = Embed(ne),
-          m = mod.Module(e),
-          c = m.$createContext(),
-          oldC;
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
+      var c = m.$createContext();
+      var oldC;
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -225,11 +225,11 @@ describe('Module', function() {
     });
 
     it('should convert longs back to objects in callback', function(done) {
-      var ne = NaClEmbed(),
-          e = Embed(ne),
-          m = mod.Module(e),
-          getLongLongType = type.Function(type.longlong, []),
-          h;
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
+      var getLongLongType = type.Function(type.longlong, []);
+      var h;
 
       m.$defineFunction('getLongLong', [mod.Function(0, getLongLongType)]);
 
@@ -253,11 +253,11 @@ describe('Module', function() {
     });
 
     it('should return errors to the caller', function(done) {
-      var ne = NaClEmbed(),
-          e = Embed(ne),
-          m = mod.Module(e),
-          getIntType = type.Function(type.int, []),
-          h;
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
+      var getIntType = type.Function(type.int, []);
+      var h;
 
       m.$defineFunction('getInt', [mod.Function(0, getIntType)]);
 
@@ -286,11 +286,11 @@ describe('Module', function() {
     });
 
     it('should push undefined error when everything works', function(done) {
-      var ne = NaClEmbed(),
-          e = Embed(ne),
-          m = mod.Module(e),
-          getIntType = type.Function(type.int, []),
-          h;
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
+      var getIntType = type.Function(type.int, []);
+      var h;
 
       m.$defineFunction('getInt', [mod.Function(0, getIntType)]);
 
@@ -318,8 +318,8 @@ describe('Module', function() {
 
   describe('$destroyHandles', function() {
     it('should only destroy handles that are in the context', function() {
-      var m = mod.Module(),
-          c = m.$createContext();
+      var m = mod.Module();
+      var c = m.$createContext();
 
       // Created in default context.
       m.$handle(1);
@@ -335,9 +335,9 @@ describe('Module', function() {
     });
 
     it('should destroy handles from passed-in context', function() {
-      var m = mod.Module(),
-          oldC = m.$context,
-          c = m.$createContext();
+      var m = mod.Module();
+      var oldC = m.$context;
+      var c = m.$createContext();
 
       m.$handle(1);
       m.$handle(2);
@@ -350,8 +350,8 @@ describe('Module', function() {
     });
 
     it('should remove handles from the context immediately', function() {
-      var m = mod.Module(),
-          c = m.$context;
+      var m = mod.Module();
+      var c = m.$context;
 
       m.$handle(1);
       assert.strictEqual(c.handles.length, 1);
@@ -383,9 +383,9 @@ describe('Module', function() {
 
   describe('$commitDestroy', function() {
     it('should be equivalent to calling destroy then commit', function(done) {
-      var ne = NaClEmbed(),
-          e = Embed(ne),
-          m = mod.Module(e);
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -400,10 +400,10 @@ describe('Module', function() {
     });
 
     it('should allow getting a handle that is being destroyed', function(done) {
-      var ne = NaClEmbed(),
-          e = Embed(ne),
-          m = mod.Module(e),
-          h;
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
+      var h;
 
       ne.load();
       ne.setPostMessageCallback(function(msg) {
@@ -434,9 +434,9 @@ describe('Module', function() {
     });
 
     it('should throw if called with non-convertible to int value', function() {
-      var m = mod.Module(),
-          rec = type.Record('rec', 4, type.STRUCT),
-          h;
+      var m = mod.Module();
+      var rec = type.Record('rec', 4, type.STRUCT);
+      var h;
 
       // TODO(binji): this should be illegal. Come up with a better way to get
       // a value that isn't convertible to an int...
@@ -487,9 +487,9 @@ describe('Module', function() {
 
   describe('longToType', function() {
     it('should return smallest type for a given positive number', function() {
-      var l = Long.ONE,
-          two = Long.fromInt(2),
-          i;
+      var l = Long.ONE;
+      var two = Long.fromInt(2);
+      var i;
       assertTypesEqual(mod.longToType(Long.ZERO), type.schar);
       for (i = 1; i <= 7; ++i) {
         assertTypesEqual(mod.longToType(l), type.schar);
@@ -522,9 +522,9 @@ describe('Module', function() {
     });
 
     it('should return smallest type for a given negative number', function() {
-      var l = Long.NEG_ONE,
-          two = Long.fromInt(2),
-          i;
+      var l = Long.NEG_ONE;
+      var two = Long.fromInt(2);
+      var i;
       for (i = 1; i <= 8; ++i) {
         assertTypesEqual(mod.longToType(l), type.schar);
         l = l.multiply(two);
@@ -572,8 +572,8 @@ describe('Module', function() {
     });
 
     it('should work for 64-bit ints', function() {
-      var two_to_the_fortieth = Long.fromNumber(Math.pow(2, 40)),
-          neg_two_to_the_fortieth = two_to_the_fortieth.negate();
+      var two_to_the_fortieth = Long.fromNumber(Math.pow(2, 40));
+      var neg_two_to_the_fortieth = two_to_the_fortieth.negate();
       assertTypesEqual(type.longlong, mod.objectToType(two_to_the_fortieth));
       assertTypesEqual(type.longlong, mod.objectToType(neg_two_to_the_fortieth));
       // TODO(binji): Fix unsigned long long. Long type represents s64 not u64.
@@ -593,9 +593,9 @@ describe('Module', function() {
   describe('Handle', function() {
     describe('create', function() {
       it('should allow creation of handles', function() {
-        var m = mod.Module(),
-            h1 = m.$handle(4),
-            h2 = m.$handle(4, type.float);
+        var m = mod.Module();
+        var h1 = m.$handle(4);
+        var h2 = m.$handle(4, type.float);
 
         assertTypesEqual(h1.type, type.schar);
         assertTypesEqual(h2.type, type.float);
@@ -610,9 +610,9 @@ describe('Module', function() {
       });
 
       it('should allow use of explicitly-created handles', function() {
-        var addType = type.Function(type.int, [type.int, type.int]),
-            m = mod.Module(),
-            h;
+        var addType = type.Function(type.int, [type.int, type.int]);
+        var m = mod.Module();
+        var h;
 
         m.$defineFunction('add', [mod.Function(0, addType)]);
         h = m.$handle(4);
@@ -628,9 +628,9 @@ describe('Module', function() {
       });
 
       it('should allow creation of int handles', function() {
-        var m = mod.Module(),
-            h1 = m.$handle(0),
-            h2 = m.$handle(1000);
+        var m = mod.Module();
+        var h1 = m.$handle(0);
+        var h2 = m.$handle(1000);
 
         assertTypesEqual(h1.type, type.schar);
         assertTypesEqual(h2.type, type.short);
@@ -646,9 +646,9 @@ describe('Module', function() {
 
 
       it('should allow creation of float handles', function() {
-        var m = mod.Module(),
-            h1 = m.$handle(Infinity),
-            h2 = m.$handle(1e10);
+        var m = mod.Module();
+        var h1 = m.$handle(Infinity);
+        var h2 = m.$handle(1e10);
 
         assertTypesEqual(h1.type, type.float);
         assertTypesEqual(h2.type, type.float);
@@ -663,8 +663,8 @@ describe('Module', function() {
       });
 
       it('should allow creation of string handles', function() {
-        var m = mod.Module(),
-            h = m.$handle("Hello");
+        var m = mod.Module();
+        var h = m.$handle("Hello");
 
         assertTypesEqual(h.type, type.Pointer(type.char.qualify(type.CONST)));
 
@@ -677,8 +677,8 @@ describe('Module', function() {
       });
 
       it('should allow creation of null handles', function() {
-        var m = mod.Module(),
-            h = m.$handle(null);
+        var m = mod.Module();
+        var h = m.$handle(null);
 
         assertTypesEqual(h.type, type.Pointer(type.void));
 
@@ -691,9 +691,9 @@ describe('Module', function() {
       });
 
       it('should allow creation of long handles', function() {
-        var m = mod.Module(),
-            two_to_the_fortieth = Long.fromBits(0, 256),
-            h = m.$handle(two_to_the_fortieth);
+        var m = mod.Module();
+        var two_to_the_fortieth = Long.fromBits(0, 256);
+        var h = m.$handle(two_to_the_fortieth);
 
         assertTypesEqual(h.type, type.longlong);
 
@@ -708,9 +708,9 @@ describe('Module', function() {
 
     describe('cast', function() {
       it('should create a new handle with the same id', function() {
-        var m = mod.Module(),
-            h1,
-            h2;
+        var m = mod.Module();
+        var h1;
+        var h2;
 
         h1 = m.$handle(1);
         h2 = h1.cast(type.long);
@@ -720,8 +720,8 @@ describe('Module', function() {
       });
 
       it('should throw if the cast is invalid', function() {
-        var m = mod.Module(),
-            h;
+        var m = mod.Module();
+        var h;
 
         h = m.$handle(1);
         assert.throws(function() {
@@ -732,8 +732,8 @@ describe('Module', function() {
 
     describe('setFinalizer', function() {
       it('should be called when the handle is destroyed', function(done) {
-        var m = mod.Module(),
-            h;
+        var m = mod.Module();
+        var h;
 
         h = m.$handle(1);
         h.setFinalizer(function(handle) {
@@ -745,13 +745,13 @@ describe('Module', function() {
       });
 
       it('should be called in reverse order of creation', function(done) {
-        var m = mod.Module(),
-            finalizer,
-            count = 0,
-            h1,
-            h2,
-            h3,
-            h4;
+        var m = mod.Module();
+        var finalizer;
+        var count = 0;
+        var h1;
+        var h2;
+        var h3;
+        var h4;
 
         finalizer = function(handle) {
           switch (count++) {
@@ -788,10 +788,10 @@ describe('Module', function() {
       });
 
       it('should only be called once', function() {
-        var m = mod.Module(),
-            count = 0,
-            h1,
-            h2;
+        var m = mod.Module();
+        var count = 0;
+        var h1;
+        var h2;
 
         h1 = m.$handle(1);
         h1.setFinalizer(function() { count++; });
@@ -802,11 +802,11 @@ describe('Module', function() {
       });
 
       it('should throw if setFinalizer is called more than once', function() {
-        var m = mod.Module(),
-            dummy = function() {},
-            h1,
-            h2,
-            h3;
+        var m = mod.Module();
+        var dummy = function() {};
+        var h1;
+        var h2;
+        var h3;
 
         h1 = m.$handle(1);
         h1.setFinalizer(dummy);
@@ -827,11 +827,11 @@ describe('Module', function() {
       });
 
       it('should allow function calls from the finalizer', function() {
-        var voidp = type.Pointer(type.void),
-            mallocType = type.Function(voidp, [type.uint]),
-            freeType = type.Function(type.void, [voidp]),
-            m = mod.Module(),
-            h;
+        var voidp = type.Pointer(type.void);
+        var mallocType = type.Function(voidp, [type.uint]);
+        var freeType = type.Function(type.void, [voidp]);
+        var m = mod.Module();
+        var h;
 
         m.$defineFunction('malloc', [mod.Function(0, mallocType)]);
         m.$defineFunction('free', [mod.Function(1, freeType)]);
@@ -855,11 +855,11 @@ describe('Module', function() {
 
   describe('Callbacks', function() {
     it('should pass the correct format to the module', function() {
-      var pfunc = type.Pointer(type.Function(type.int, [type.int])),
-          useFuncType = type.Function(type.void, [pfunc]),
-          callback = function(x) {},
-          m = mod.Module(),
-          h;
+      var pfunc = type.Pointer(type.Function(type.int, [type.int]));
+      var useFuncType = type.Function(type.void, [pfunc]);
+      var callback = function(x) {};
+      var m = mod.Module();
+      var h;
 
       m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
 

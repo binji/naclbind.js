@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var assert = require('chai').assert,
-    naclbind = require('../../src/js/naclbind'),
-    type = naclbind.type,
-    utils = naclbind.utils;
+var assert = require('chai').assert;
+var naclbind = require('../../src/js/naclbind');
+var type = naclbind.type;
+var utils = naclbind.utils;
 
 function helper(t1, t2, memo) {
   if (t1.kind !== t2.kind) {

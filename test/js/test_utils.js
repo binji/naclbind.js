@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var chai = require('chai'),
-    assert = chai.assert,
-    utils = require('../../src/js/naclbind').utils;
+var chai = require('chai');
+var assert = chai.assert;
+var utils = require('../../src/js/naclbind').utils;
 
 chai.config.includeStack = true;
 
@@ -72,8 +72,9 @@ describe('Utils', function() {
 
   describe('isFloat', function() {
     it('should return true for integers, abs(x) <= 2**24', function() {
+      var x;
       // += 100 to keep the test fast
-      for (var x = -(1<<24); x <= 1<<24; x += 100) {
+      for (x = -(1<<24); x <= 1<<24; x += 100) {
         assert.strictEqual(utils.isFloat(x), true);
       }
       assert.strictEqual(utils.isFloat(-(1<<24)-1), false);

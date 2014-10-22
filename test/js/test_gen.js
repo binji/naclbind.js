@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var chai = require('chai'),
-    assert = chai.assert,
-    gen = require('naclbind-gen'),
-    path = require('path'),
-    assertTypesEqual = require('./equals').assertTypesEqual;
+var chai = require('chai');
+var assert = chai.assert;
+var gen = require('naclbind-gen');
+var path = require('path');
+var assertTypesEqual = require('./equals').assertTypesEqual;
 
 chai.config.includeStack = true;
 
@@ -31,14 +31,14 @@ function assertFieldsEqual(f, name, type, offset) {
 }
 
 function genFile(infile, extraOpts, callback) {
-  var basename = path.basename(infile),
-      outdir = path.resolve(__dirname, '../../out/test/js', basename),
-      outfile = path.join(outdir, 'gen.js'),
-      inpath = path.join(__dirname, infile),
-      opts = {
+  var basename = path.basename(infile);
+  var outdir = path.resolve(__dirname, '../../out/test/js', basename);
+  var outfile = path.join(outdir, 'gen.js');
+  var inpath = path.join(__dirname, infile);
+  var opts = {
         template: 'glue.js'
-      },
-      opt;
+      };
+  var opt;
 
   if (arguments.length === 2) {
     callback = extraOpts;
@@ -54,8 +54,8 @@ function genFile(infile, extraOpts, callback) {
       return callback(error);
     }
 
-    var glue = require(outfile),
-        mod = glue.create();
+    var glue = require(outfile);
+    var mod = glue.create();
 
     callback(null, mod, glue.type);
   });
@@ -339,8 +339,8 @@ describe('Generate JS', function() {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
 
-      var voidp = type.Pointer(type.void),
-          charp = type.Pointer(type.char);
+      var voidp = type.Pointer(type.void);
+      var charp = type.Pointer(type.char);
 
       assert.strictEqual(5, m.$functionsCount);
       assert.strictEqual(6, m.$typesCount);
@@ -410,8 +410,8 @@ describe('Generate JS', function() {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
 
-      var e1 = type.Enum('e1'),
-          e2 = type.Enum('e2');
+      var e1 = type.Enum('e1');
+      var e2 = type.Enum('e2');
 
       assert.strictEqual(2, m.$functionsCount);
       assert.strictEqual(1, m.$typesCount);
@@ -445,18 +445,18 @@ describe('Generate JS', function() {
         assert.ok(false, 'Error generating JS.\n' + error);
       }
 
-      var s1 = type.Record('s1', 0, type.STRUCT),
-          s2 = type.Record('s2', 4, type.STRUCT),
-          u1 = type.Record('u1', 0, type.UNION),
-          voidp = type.Pointer(type.void),
-          constvoidp = type.Pointer(type.void.qualify(type.CONST)),
-          s1p = type.Pointer(s1),
-          u1p = type.Pointer(u1),
-          PFviE = type.Pointer(type.Function(type.void, [type.int])),
+      var s1 = type.Record('s1', 0, type.STRUCT);
+      var s2 = type.Record('s2', 4, type.STRUCT);
+      var u1 = type.Record('u1', 0, type.UNION);
+      var voidp = type.Pointer(type.void);
+      var constvoidp = type.Pointer(type.void.qualify(type.CONST));
+      var s1p = type.Pointer(s1);
+      var u1p = type.Pointer(u1);
+      var PFviE = type.Pointer(type.Function(type.void, [type.int]));
           // Array types decay to pointer types.
-          intArr = type.Pointer(type.int),
-          intArr10 = type.Pointer(type.int),
-          argv = type.Pointer(type.Pointer(type.char));
+      var intArr = type.Pointer(type.int);
+      var intArr10 = type.Pointer(type.int);
+      var argv = type.Pointer(type.Pointer(type.char));
 
       s2.addField('f', type.int, 0);
 

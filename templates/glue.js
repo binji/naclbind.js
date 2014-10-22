@@ -35,8 +35,8 @@
 
 {{IncludeFile('js/naclbind.js')}}
 
-var tags = {},
-    types = {};
+var tags = {};
+var types = {};
 
 [[for type in collector.types_topo:]]
 [[  if type.kind == TypeKind.TYPEDEF:]]
@@ -84,8 +84,8 @@ var funcType_{{type.mangled}} = type.FunctionNoProto(
 [[]]
 
 function createModule(nmf, mimeType) {
-  var embed,
-      m;
+  var embed;
+  var m;
 
   if (typeof nmf === 'undefined' ||
       typeof mimeType === 'undefined') {

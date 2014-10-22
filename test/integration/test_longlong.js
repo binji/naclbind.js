@@ -27,11 +27,11 @@
       this.timeout(10000);
 
       it('should work', function(done) {
-        var nmf = '/base/out/test/integration/longlong/longlong.nmf',
-            mimeType = 'application/x-nacl',
-            m = longlongModule.create(nmf, mimeType),
-            Long = longlongModule.Long,
-            h;
+        var nmf = '/base/out/test/integration/longlong/longlong.nmf';
+        var mimeType = 'application/x-nacl';
+        var m = longlongModule.create(nmf, mimeType);
+        var Long = longlongModule.Long;
+        var h;
 
         h = m.add(Long.fromInt(0x10000), Long.fromNumber(0x100000000));
         m.$commit([h], function(hVal) {

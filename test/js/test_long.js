@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var chai = require('chai'),
-    assert = chai.assert,
-    Long = require('../../src/js/naclbind').Long;
+var chai = require('chai');
+var assert = chai.assert;
+var Long = require('../../src/js/naclbind').Long;
 
 chai.config.includeStack = true;
 

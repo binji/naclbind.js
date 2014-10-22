@@ -27,13 +27,14 @@ function NaClEmbedForTesting() {
 
 NaClEmbedForTesting.prototype.fireEvent = function(message, e) {
   var callbacks = this.listeners[message];
+  var i;
   if (!callbacks) {
     return;
   }
 
   // Run on the next tick to more closely emulate a real embed.
   process.nextTick(function() {
-    for (var i = 0; i < callbacks.length; ++i) {
+    for (i = 0; i < callbacks.length; ++i) {
       callbacks[i](e);
     }
   });

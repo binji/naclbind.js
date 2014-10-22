@@ -12,33 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var chai = require('chai'),
-    assert = chai.assert,
-    fs = require('fs'),
-    gen = require('naclbind-gen'),
-    nacl = require('nacl-sdk'),
-    path = require('path'),
+var chai = require('chai');
+var assert = chai.assert;
+var fs = require('fs');
+var gen = require('naclbind-gen');
+var nacl = require('nacl-sdk');
+var path = require('path');
 
-    toolchain = 'newlib',
-    config = 'Debug',
-    arch = 'x86_64';
+var toolchain = 'newlib';
+var config = 'Debug';
+var arch = 'x86_64';
 
 chai.config.includeStack = true;
 
 function genAndRun(header, source, testSource, extraGenOpts, callback) {
-  var basename = header.match(/([^.]*)\.h/)[1],
-      outdir = path.resolve(__dirname, '../../out/test/c/test_gen', basename),
-      glueC = path.join(outdir, 'glue.c'),
-      glueH = path.join(outdir, 'glue.h'),
-      infiles = [
+  var basename = header.match(/([^.]*)\.h/)[1];
+  var outdir = path.resolve(__dirname, '../../out/test/c/test_gen', basename);
+  var glueC = path.join(outdir, 'glue.c');
+  var glueH = path.join(outdir, 'glue.h');
+  var infiles = [
         path.join(__dirname, 'data', source),
         path.join(__dirname, 'data', testSource),
         path.resolve(__dirname, 'test_gen.cc'),
         path.resolve(__dirname, 'fake_interfaces.c'),
         path.resolve(__dirname, 'json.cc'),
         path.resolve(__dirname, 'main.cc')
-      ],
-      opts = {
+      ];
+  var opts = {
         toolchain: toolchain,
         config: config,
         arch: arch,
@@ -61,11 +61,11 @@ function genAndRun(header, source, testSource, extraGenOpts, callback) {
           ]
         },
         translate: {}
-      },
-      genOpts = {
+      };
+  var genOpts = {
         template: ['glue.c', 'glue.h'],
         toolchain: toolchain
-      }
+      };
 
   if (arguments.length === 4) {
     callback = extraGenOpts;

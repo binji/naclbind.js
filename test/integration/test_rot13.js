@@ -29,8 +29,8 @@
       var m;
 
       before(function() {
-        var nmf = '/base/out/test/integration/rot13/rot13.nmf',
-            mimeType = 'application/x-nacl';
+        var nmf = '/base/out/test/integration/rot13/rot13.nmf';
+        var mimeType = 'application/x-nacl';
 
         m = rot13Module.create(nmf, mimeType);
       });
