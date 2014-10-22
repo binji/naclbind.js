@@ -29,7 +29,7 @@ describe('Embed', function() {
       assert.ok(false, 'Unexpected call to postMessage');
     });
 
-    e.postMessage({test: 'hello'});
+    e.postMessage({id: 1, test: 'hello'});
   });
 
   it('should post all messages after load', function(done) {
@@ -57,8 +57,8 @@ describe('Embed', function() {
       loaded = true;
     });
 
-    e.postMessage({test: 'hello'}, notCalled);
-    e.postMessage({test: 'world'}, notCalled);
+    e.postMessage({id: 1, test: 'hello'}, notCalled);
+    e.postMessage({id: 2, test: 'world'}, notCalled);
     ne.load();
   });
 
@@ -73,7 +73,7 @@ describe('Embed', function() {
     });
 
     ne.load();
-    e.postMessage({msg: 'ping'}, function(msg) {
+    e.postMessage({id: 1, msg: 'ping'}, function(msg) {
       assert.deepEqual(msg, {id: 1, msg: 'pong'});
       done();
     });
@@ -91,7 +91,7 @@ describe('Embed', function() {
 
     ne.load();
 
-    e.postMessage({}, function onMessage(msg) {
+    e.postMessage({id: n}, function onMessage(msg) {
       assert.deepEqual(msg, {id: n});
       if (msg.id >= 100) {
         done();
@@ -99,7 +99,7 @@ describe('Embed', function() {
       }
 
       ++n;
-      e.postMessage({}, onMessage);
+      e.postMessage({id: n}, onMessage);
     });
   });
 });

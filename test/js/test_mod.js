@@ -27,7 +27,7 @@ chai.config.includeStack = true;
 describe('Module', function() {
   it('should start with an empty message', function() {
     var m = mod.Module();
-    assert.deepEqual(m.$getMessage(), {});
+    assert.deepEqual(m.$getMessage(), {id: 1});
   });
 
   it('should throw when defining a function with id < 0', function() {
@@ -46,6 +46,7 @@ describe('Module', function() {
     m.add(3, 4);
 
     assert.deepEqual(m.$getMessage(), {
+      id: 1,
       set: {
         1: 3,
         2: 4
@@ -70,6 +71,7 @@ describe('Module', function() {
     m.add(3.5, 4);
 
     assert.deepEqual(m.$getMessage(), {
+      id: 1,
       set: {
         1: 3,
         2: 4,
@@ -97,6 +99,7 @@ describe('Module', function() {
     m.useFunc(h);
 
     assert.deepEqual(m.$getMessage(), {
+      id: 1,
       commands: [
         {id: 0, args: [], ret: 1},
         {id: 1, args: [1]}
@@ -117,6 +120,7 @@ describe('Module', function() {
     m.get(m.malloc(4).cast(intp));
 
     assert.deepEqual(m.$getMessage(), {
+      id: 1,
       set: { 1: 4 },
       commands: [
         {id: 0, args: [1], ret: 2},
@@ -167,7 +171,7 @@ describe('Module', function() {
         done();
       });
 
-      assert.deepEqual(m.$getMessage(), {});
+      assert.deepEqual(m.$getMessage(), {id: 2});
     });
 
     it('should unwrap multiple handles', function(done) {
@@ -421,6 +425,7 @@ describe('Module', function() {
 
       m.$errorIf(1);
       assert.deepEqual(m.$getMessage(), {
+        id: 1,
         set: {1: 1},
         commands: [
           {id: mod.ERROR_IF_ID, args: [1]}
@@ -596,6 +601,7 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.float);
 
         assert.deepEqual(m.$getMessage(), {
+          id: 1,
           set: {
             1: 4,
             2: 4
@@ -613,6 +619,7 @@ describe('Module', function() {
         m.add(h, h);
 
         assert.deepEqual(m.$getMessage(), {
+          id: 1,
           set: { 1: 4 },
           commands: [
             {id: 0, args: [1, 1], ret: 2}
@@ -629,6 +636,7 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.short);
 
         assert.deepEqual(m.$getMessage(), {
+          id: 1,
           set: {
             1: 0,
             2: 1000,
@@ -646,6 +654,7 @@ describe('Module', function() {
         assertTypesEqual(h2.type, type.float);
 
         assert.deepEqual(m.$getMessage(), {
+          id: 1,
           set: {
             1: Infinity,
             2: 1e10,
@@ -660,6 +669,7 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.Pointer(type.char.qualify(type.CONST)));
 
         assert.deepEqual(m.$getMessage(), {
+          id: 1,
           set: {
             1: "Hello",
           },
@@ -673,6 +683,7 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.Pointer(type.void));
 
         assert.deepEqual(m.$getMessage(), {
+          id: 1,
           set: {
             1: null,
           },
@@ -687,6 +698,7 @@ describe('Module', function() {
         assertTypesEqual(h.type, type.longlong);
 
         assert.deepEqual(m.$getMessage(), {
+          id: 1,
           set: {
             1: ['long', 0, 256],
           },
@@ -829,6 +841,7 @@ describe('Module', function() {
         m.$destroyHandles();
 
         assert.deepEqual(m.$getMessage(), {
+          id: 1,
           set: { 1: 4 },
           destroy: [1, 2],
           commands: [
@@ -853,6 +866,7 @@ describe('Module', function() {
       m.useFunc(callback);
 
       assert.deepEqual(m.$getMessage(), {
+        id: 1,
         set: {
           1: ['function'],
         },

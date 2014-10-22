@@ -178,7 +178,6 @@ var Embed = (function(utils) {
     this.embed_.addMessageListener(this.onMessage_.bind(this));
     this.loaded_ = false;
 
-    this.nextId_ = 1;
     this.idCallbackMap_ = [];
   }
 
@@ -232,10 +231,11 @@ var Embed = (function(utils) {
   };
 
   Embed.prototype.postMessage = function(msg, callback) {
-    var id = this.nextId_++;
+    if (msg.id === undefined) {
+      throw new Error('Expected msg object to have id set.');
+    }
 
-    this.idCallbackMap_[id] = callback;
-    msg.id = id;
+    this.idCallbackMap_[msg.id] = callback;
 
     if (!this.loaded_) {
       this.queuedMessages_.push(msg);
@@ -2109,6 +2109,7 @@ var mod = (function(Long, type, utils) {
 
   function Module(embed) {
     if (!(this instanceof Module)) { return new Module(embed); }
+    this.$nextId_ = 1;
     this.$embed_ = embed || null;
     this.$handles_ = new HandleList();
     this.$errors_ = {};
@@ -2177,8 +2178,8 @@ var mod = (function(Long, type, utils) {
     return new Context(this.$handles_);
   };
   Module.prototype.$initMessage_ = function() {
-    this.$message_ = {
-    };
+    var id = this.$nextId_++;
+    this.$message_ = {id : id};
   };
   Module.prototype.$getMessage = function() {
     return this.$message_;
