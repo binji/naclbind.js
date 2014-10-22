@@ -946,6 +946,10 @@ var type = (function(utils) {
       CONSTANTARRAY = 26,
       INCOMPLETEARRAY = 27,
 
+      // Not an LLVM C type. This is used to allow calling back to JavaScript
+      // functions.
+      FUNCTIONUNTYPED = 28,
+
       KIND_NAME = {
         0: 'INVALID',
         1: 'UNEXPOSED',
@@ -974,7 +978,8 @@ var type = (function(utils) {
         24: 'FUNCTIONPROTO',
         25: 'FUNCTIONNOPROTO',
         26: 'CONSTANTARRAY',
-        27: 'INCOMPLETEARRAY'
+        27: 'INCOMPLETEARRAY',
+        28: 'FUNCTIONUNTYPED',
       },
 
       PRIMITIVE_SPELLING = {
@@ -1137,7 +1142,9 @@ var type = (function(utils) {
   }
 
   function isFunction(type) {
-    return type.kind === FUNCTIONPROTO || type.kind === FUNCTIONNOPROTO;
+    return type.kind === FUNCTIONPROTO ||
+           type.kind === FUNCTIONNOPROTO ||
+           type.kind === FUNCTIONUNTYPED;
   }
 
   function isCastOK(result) {
@@ -1462,6 +1469,27 @@ var type = (function(utils) {
     return true;
   };
 
+  function FunctionUntyped() {
+    if (!(this instanceof FunctionUntyped)) {
+      return new FunctionUntyped();
+    }
+
+    Type.call(this, FUNCTIONUNTYPED, 0);
+    this.spelling = getSpelling(this);
+  }
+  FunctionUntyped.prototype = Object.create(Type.prototype);
+  FunctionUntyped.prototype.constructor = FunctionUntyped;
+  FunctionUntyped.prototype.size = -1;
+  FunctionUntyped.prototype.qualify = function(cv) {
+    return this;
+  };
+  FunctionUntyped.prototype.unqualified = function() {
+    return this;
+  };
+  FunctionUntyped.prototype.isViableForCall = function(argTypes) {
+    return true;
+  };
+
   function ConstantArray(elementType, arraySize) {
     if (!(this instanceof ConstantArray)) {
       return new ConstantArray(elementType, arraySize);
@@ -1606,6 +1634,9 @@ var type = (function(utils) {
     } else if (type.kind === FUNCTIONNOPROTO) {
       name += '()';
       spelling = getSpelling(type.resultType, name, FUNCTIONNOPROTO);
+    } else if (type.kind === FUNCTIONUNTYPED) {
+      // TODO(binji): Something better here?
+      spelling += '<UntypedFunction> ' + name;
     } else {
       throw new Error('Unknown kind: ' + type.kind);
     }
@@ -1644,8 +1675,8 @@ var type = (function(utils) {
         }
         break;
       case FUNCTIONPROTO:
-        return CAST_ERROR;
       case FUNCTIONNOPROTO:
+      case FUNCTIONUNTYPED:
         return CAST_ERROR;
       default:
         throw new Error('canCast: Unknown kind ' + from.kind);
@@ -1700,9 +1731,14 @@ var type = (function(utils) {
                  (isFunction(fp) && tp.kind === VOID)) {
         return CAST_FUNCTION_POINTER_VOID_POINTER;
       } else if (isFunction(fp) && isFunction(tp) && fp.kind !== tp.kind) {
-        return isCompatibleWith(fp, tp) ?
-            CAST_FUNCTION_POINTER_NOPROTO :
-            CAST_INCOMPATIBLE_POINTERS;
+        if (fp.kind === FUNCTIONUNTYPED || tp.kind === FUNCTIONUNTYPED) {
+          return CAST_OK_EXACT;
+        } else {
+          // Must be a cast between proto and no-proto.
+          return isCompatibleWith(fp, tp) ?
+              CAST_FUNCTION_POINTER_NOPROTO :
+              CAST_INCOMPATIBLE_POINTERS;
+        }
       } else if (fp.kind === VOID || tp.kind === VOID) {
         // Strangely cv-checks are ignored when casting from/to void*.
         return CAST_OK_CONVERSION;
@@ -1759,10 +1795,14 @@ var type = (function(utils) {
                 isCompatibleWith(from.resultType, to.resultType) &&
                 utils.everyArrayPair(from, to, isCompatibleWith)) ||
                (to.kind === FUNCTIONNOPROTO &&
-                isCompatibleWith(from.resultType, to.resultType));
+                isCompatibleWith(from.resultType, to.resultType)) ||
+               (to.kind === FUNCTIONUNTYPED);
       case FUNCTIONNOPROTO:
-        return (from.kind === to.kind || to.kind === FUNCTIONPROTO) &&
-               isCompatibleWith(from.resultType, to.resultType);
+        return ((from.kind === to.kind || to.kind === FUNCTIONPROTO) &&
+                isCompatibleWith(from.resultType, to.resultType)) ||
+               (to.kind === FUNCTIONUNTYPED);
+      case FUNCTIONUNTYPED:
+        return isFunction(to);
       default:
         throw new Error('canCast: Unknown kind ' + from.kind);
     }
@@ -1782,7 +1822,9 @@ var type = (function(utils) {
         i;
 
     for (i = 0; i < argTypes.length; ++i) {
-      if (fnType.kind === FUNCTIONNOPROTO ||
+      if (fnType.kind === FUNCTIONUNTYPED) {
+        castRank = CAST_OK_EXACT;
+      } else if (fnType.kind === FUNCTIONNOPROTO ||
           (fnType.variadic && i >= fnType.argTypes.length)) {
         castRank = CAST_OK_DEFAULT_PROMOTION;
       } else {
@@ -1882,6 +1924,7 @@ var type = (function(utils) {
     Typedef: Typedef,
     Function: FunctionProto,
     FunctionNoProto: FunctionNoProto,
+    FunctionUntyped: FunctionUntyped,
     Array: ConstantArray,
     IncompleteArray: IncompleteArray,
 
@@ -2032,6 +2075,8 @@ var mod = (function(Long, type, utils) {
         return numberToType(obj);
       case 'String':
         return type.Pointer(type.char.qualify(type.CONST));
+      case 'Function':
+        return type.Pointer(type.FunctionUntyped());
       // TODO(binji): handle other JS types.
       default:
         throw new Error('Unknown JavaScript class: "' + klass + '".');
@@ -2152,6 +2197,8 @@ var mod = (function(Long, type, utils) {
 
     if (value instanceof Long) {
       value = ['long', value.getLowBits(), value.getHighBits()];
+    } else if (value instanceof Function) {
+      value = ['function'];
     }
 
     if (!this.$message_.set) {

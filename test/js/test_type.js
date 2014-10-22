@@ -333,6 +333,7 @@ describe('Type', function() {
     it('should have no size for a function', function() {
       assert.strictEqual(type.Function(type.void, []).size, -1);
       assert.strictEqual(type.FunctionNoProto(type.void).size, -1);
+      assert.strictEqual(type.FunctionUntyped().size, -1);
     });
 
     it('should have size for an array', function() {
@@ -570,6 +571,7 @@ describe('Type', function() {
             u = type.Record('s', 4, type.UNION),
             f = type.Function(type.void, [type.int]),
             fn = type.FunctionNoProto(type.void),
+            fu = type.FunctionUntyped(),
             fp = type.Pointer(f),
             p = type.Pointer(type.void),
             a = type.Array(type.char, 2),
@@ -579,6 +581,7 @@ describe('Type', function() {
         assertCast(type.void, u, type.CAST_ERROR);
         assertCast(type.void, f, type.CAST_ERROR);
         assertCast(type.void, fn, type.CAST_ERROR);
+        assertCast(type.void, fu, type.CAST_ERROR);
         assertCast(type.void, fp, type.CAST_ERROR);
         assertCast(type.void, p, type.CAST_ERROR);
         assertCast(type.void, a, type.CAST_ERROR);
@@ -710,8 +713,9 @@ describe('Type', function() {
             u = type.Record('s', 4, type.UNION),
             v = type.void,
             f = type.Function(type.void, [type.int]),
-            fn = type.FunctionNoProto(type.void);
-        [s, u, v, f, fn].forEach(function(x) {
+            fn = type.FunctionNoProto(type.void),
+            fu = type.FunctionUntyped();
+        [s, u, v, f, fn, fu].forEach(function(x) {
           assertCast(type.char, x, type.CAST_ERROR);
           assertCast(type.short, x, type.CAST_ERROR);
           assertCast(type.int, x, type.CAST_ERROR);
@@ -736,10 +740,11 @@ describe('Type', function() {
           s = type.Record('s', 4),
           u = type.Record('s', 4, type.UNION),
           f = type.Function(type.void, [type.int]),
-          fn = type.FunctionNoProto(type.void);
+          fn = type.FunctionNoProto(type.void),
+          fu = type.FunctionUntyped();
 
       it('should allow cast of pointer -> same pointer', function() {
-        [v, c, e, s, u, f, fn].forEach(function(x) {
+        [v, c, e, s, u, f, fn, fu].forEach(function(x) {
           var p = type.Pointer(x),
               a,
               ia;
@@ -761,31 +766,37 @@ describe('Type', function() {
 
       it('should warn on cast of fun* <-> fun* w/ no proto', function() {
         var pf = type.Pointer(f),
-            pfn = type.Pointer(fn);
+            pfn = type.Pointer(fn),
             af = type.Array(f, 2),
             afn = type.Array(fn, 2),
             iaf = type.IncompleteArray(f),
             iafn = type.IncompleteArray(fn);
 
-        assertCast(pf, pfn, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(pf, afn, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(pf, iafn, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(af, pfn, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(af, afn, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(af, iafn, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(iaf, pfn, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(iaf, afn, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(iaf, iafn, type.CAST_FUNCTION_POINTER_NOPROTO);
+        [pf, af, iaf].forEach(function(from) {
+          [pfn, afn, iafn].forEach(function(to) {
+            assertCast(from, to, type.CAST_FUNCTION_POINTER_NOPROTO);
+            assertCast(to, from, type.CAST_FUNCTION_POINTER_NOPROTO);
+          });
+        });
+      });
 
-        assertCast(pfn, pf, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(pfn, af, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(pfn, iaf, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(afn, pf, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(afn, af, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(afn, iaf, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(iafn, pf, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(iafn, af, type.CAST_FUNCTION_POINTER_NOPROTO);
-        assertCast(iafn, iaf, type.CAST_FUNCTION_POINTER_NOPROTO);
+      it('should allow cast of untyped fun <-> any other fun', function() {
+        var pf = type.Pointer(f),
+            pfn = type.Pointer(fn),
+            pfu = type.Pointer(fu),
+            af = type.Array(f, 2),
+            afn = type.Array(fn, 2),
+            afu = type.Array(fu, 2),
+            iaf = type.IncompleteArray(f),
+            iafn = type.IncompleteArray(fn),
+            iafu = type.IncompleteArray(fu);
+
+        [pfu, afu, iafu].forEach(function(from) {
+          [pf, af, iaf, pfn, afn, iafn].forEach(function(to) {
+            assertCast(from, to, type.CAST_OK_EXACT);
+            assertCast(to, from, type.CAST_OK_EXACT);
+          });
+        });
       });
 
       it('should allow cast of non-void pointer <-> void pointer', function() {
@@ -824,15 +835,18 @@ describe('Type', function() {
         // in clang + gcc.
         var pv = type.Pointer(type.void),
             pf = type.Pointer(f),
-            pfn = type.Pointer(fn);
+            pfn = type.Pointer(fn),
+            pfu = type.Pointer(fu);
         assertCast(pv, pf, type.CAST_FUNCTION_POINTER_VOID_POINTER);
         assertCast(pf, pv, type.CAST_FUNCTION_POINTER_VOID_POINTER);
         assertCast(pv, pfn, type.CAST_FUNCTION_POINTER_VOID_POINTER);
         assertCast(pfn, pv, type.CAST_FUNCTION_POINTER_VOID_POINTER);
+        assertCast(pv, pfu, type.CAST_FUNCTION_POINTER_VOID_POINTER);
+        assertCast(pfu, pv, type.CAST_FUNCTION_POINTER_VOID_POINTER);
       });
 
       it('should allow cast of pointer -> more qualified pointer', function() {
-        [v, c, e, s, u, f].forEach(function(x) {
+        [v, c, e, s, u, f, fn, fu].forEach(function(x) {
           var p = type.Pointer(x);
           [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
             var q1p = p.qualify(q1);
@@ -863,7 +877,7 @@ describe('Type', function() {
       it('should allow cast of pointer-like -> qualified pointee', function() {
         // Arrays cannot be qualified, so test unqualified arrays being cast to
         // qualified pointers.
-        [c, e, s, u, f].forEach(function(x) {
+        [c, e, s, u, f, fn, fu].forEach(function(x) {
           var p = type.Pointer(x),
               a = type.Array(x, 2),
               ia = type.IncompleteArray(x);
@@ -912,7 +926,7 @@ describe('Type', function() {
       });
 
       it('should warn on cast of pointer-like -> integral', function() {
-        [v, c, e, s, u, f].forEach(function(x) {
+        [v, c, e, s, u, f, fn, fu].forEach(function(x) {
           assertCast(type.Pointer(x), type.int, type.CAST_POINTER_TO_INT);
           if (x.kind !== type.VOID) {
             assertCast(type.Array(x, 2), type.int, type.CAST_POINTER_TO_INT);
@@ -922,7 +936,7 @@ describe('Type', function() {
       });
 
       it('should fail on cast of pointer-like -> float', function() {
-        [v, c, e, s, u, f].forEach(function(x) {
+        [v, c, e, s, u, f, fn, fu].forEach(function(x) {
           var p = type.Pointer(x);
           assertCast(p, type.float, type.CAST_ERROR);
           assertCast(p, type.double, type.CAST_ERROR);
@@ -939,7 +953,7 @@ describe('Type', function() {
       });
 
       it('should fail on cast of pointer-like -> anything else', function() {
-        [v, c, e, s, u, f].forEach(function(x) {
+        [v, c, e, s, u, f, fn, fu].forEach(function(x) {
           var p = type.Pointer(x);
           [v, e, s, u, f].forEach(function(to) {
             assertCast(p, to, type.CAST_ERROR);
@@ -981,6 +995,7 @@ describe('Type', function() {
         assertCast(s, type.Enum('e'), type.CAST_ERROR);
         assertCast(s, type.Function(type.int, [type.int]), type.CAST_ERROR);
         assertCast(s, type.FunctionNoProto(type.int), type.CAST_ERROR);
+        assertCast(s, type.FunctionUntyped(), type.CAST_ERROR);
         assertCast(s, type.Array(type.int, 2), type.CAST_ERROR);
         assertCast(s, type.IncompleteArray(type.int), type.CAST_ERROR);
       });
@@ -1026,6 +1041,7 @@ describe('Type', function() {
         assertCast(e, type.Record('s', 4), type.CAST_ERROR);
         assertCast(e, type.Function(type.int, [type.int]), type.CAST_ERROR);
         assertCast(e, type.FunctionNoProto(type.int), type.CAST_ERROR);
+        assertCast(e, type.FunctionUntyped(), type.CAST_ERROR);
         assertCast(e, type.Array(type.int, 2), type.CAST_ERROR);
         assertCast(e, type.IncompleteArray(type.int), type.CAST_ERROR);
       });
@@ -1052,6 +1068,22 @@ describe('Type', function() {
         // Bare functions cannot even be specified in C (only C++). Referencing
         // a function in C is typed as a function pointer.
         var f = type.FunctionNoProto(type.int);
+        assertCast(f, f, type.CAST_ERROR);
+        assertCast(f, type.void, type.CAST_ERROR);
+        assertCast(f, type.int, type.CAST_ERROR);
+        assertCast(f, type.Enum('e'), type.CAST_ERROR);
+        assertCast(f, type.Pointer(type.int), type.CAST_ERROR);
+        assertCast(f, type.Record('s', 4), type.CAST_ERROR);
+        assertCast(f, type.Array(type.int, 2), type.CAST_ERROR);
+        assertCast(f, type.IncompleteArray(type.int), type.CAST_ERROR);
+      });
+    });
+
+    describe('FunctionUntyped', function() {
+      it('should fail to cast function -> anything', function() {
+        // Bare functions cannot even be specified in C (only C++). Referencing
+        // a function in C is typed as a function pointer.
+        var f = type.FunctionUntyped(type.int);
         assertCast(f, f, type.CAST_ERROR);
         assertCast(f, type.void, type.CAST_ERROR);
         assertCast(f, type.int, type.CAST_ERROR);
@@ -1250,12 +1282,13 @@ describe('Type', function() {
     });
 
     it('should work with function pointers', function() {
-      var fn1 = type.Function(type.int, [type.int]),
-          pfn1 = type.Pointer(fn1),
+      var pfn1 = type.Pointer(type.Function(type.int, [type.int])),
+          pfnu = type.Pointer(type.FunctionUntyped()),
           fn2 = type.Function(type.void, [pfn1]),
           fns = [fn2];
 
       assertBestViable(fns, [pfn1], 0);
+      assertBestViable(fns, [pfnu], 0);
     });
   });
 });

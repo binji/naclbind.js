@@ -839,4 +839,27 @@ describe('Module', function() {
       });
     });
   });
+
+  describe('Callbacks', function() {
+    it('should pass the correct format to the module', function() {
+      var pfunc = type.Pointer(type.Function(type.int, [type.int])),
+          useFuncType = type.Function(type.void, [pfunc]),
+          callback = function(x) {},
+          m = mod.Module(),
+          h;
+
+      m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
+
+      m.useFunc(callback);
+
+      assert.deepEqual(m.$getMessage(), {
+        set: {
+          1: ['function'],
+        },
+        commands: [
+          {id: 0, args: [1]}
+        ]
+      });
+    });
+  });
 });
