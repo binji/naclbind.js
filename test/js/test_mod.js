@@ -962,5 +962,33 @@ describe('Module', function() {
 
       m.$commit([], function() {});
     });
+
+    it('should throw when calling result twice', function(done) {
+      var pfunc = type.Pointer(type.Function(type.int, [type.int]));
+      var useFuncType = type.Function(type.void, [pfunc]);
+      var ne = NaClEmbed();
+      var m = mod.Module(Embed(ne));
+
+      m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        if (msg.id === 1) {
+          // First call the commit callback.
+          ne.message({id: 1, values: []});
+          // Then call callback.
+          ne.message({id: 2, cbId: 1, values: [42]});
+        }
+      });
+
+      m.useFunc(function(val, result) {
+        result(1);
+        assert.throws(function() {
+          result(2);
+        });
+        done();
+      });
+      m.$commit([], function() {});
+    });
   });
 });

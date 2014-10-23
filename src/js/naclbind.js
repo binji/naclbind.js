@@ -2267,7 +2267,13 @@ var mod = (function(Long, type, utils) {
   Module.prototype.$registerCallback_ = function(id, func) {
     var self = this;
     this.$embed_.registerCallback(id, function(msg) {
+      var doneCalled = false;
       var done = function(result) {
+        if (doneCalled) {
+          throw new Error('Expected callback to be called only once.');
+        }
+        doneCalled = true;
+
         result = self.$serializeJsValue_(result);
 
         self.$embed_.postMessage({
