@@ -29,7 +29,7 @@ describe('Embed', function() {
       assert.ok(false, 'Unexpected call to postMessage');
     });
 
-    e.postMessage({id: 1, test: 'hello'});
+    e.postMessageWithResponse({id: 1, test: 'hello'});
   });
 
   it('should post all messages after load', function(done) {
@@ -57,8 +57,8 @@ describe('Embed', function() {
       loaded = true;
     });
 
-    e.postMessage({id: 1, test: 'hello'}, notCalled);
-    e.postMessage({id: 2, test: 'world'}, notCalled);
+    e.postMessageWithResponse({id: 1, test: 'hello'}, notCalled);
+    e.postMessageWithResponse({id: 2, test: 'world'}, notCalled);
     ne.load();
   });
 
@@ -73,7 +73,7 @@ describe('Embed', function() {
     });
 
     ne.load();
-    e.postMessage({id: 1, msg: 'ping'}, function(msg) {
+    e.postMessageWithResponse({id: 1, msg: 'ping'}, function(msg) {
       assert.deepEqual(msg, {id: 1, msg: 'pong'});
       done();
     });
@@ -91,7 +91,7 @@ describe('Embed', function() {
 
     ne.load();
 
-    e.postMessage({id: n}, function onMessage(msg) {
+    e.postMessageWithResponse({id: n}, function onMessage(msg) {
       assert.deepEqual(msg, {id: n});
       if (msg.id >= 100) {
         done();
@@ -99,7 +99,40 @@ describe('Embed', function() {
       }
 
       ++n;
-      e.postMessage({id: n}, onMessage);
+      e.postMessageWithResponse({id: n}, onMessage);
     });
+  });
+
+  it('should allow registering callbacks', function(done) {
+    var ne = NaClEmbed();
+    var e = Embed(ne);
+
+    ne.setPostMessageCallback(function(msg) {
+      switch (msg.id) {
+        case 1:
+          assert.deepEqual(msg, {id: 1});
+          // Call callback.
+          ne.message({id: 2, cbId: 1, values: [10]});
+          break;
+
+        case 2:
+          // Got result of callback.
+          assert.deepEqual(msg, {id: 2, cbId: 1, values: [20]});
+          done();
+          break;
+      }
+    });
+
+    ne.load();
+
+    e.registerCallback(2, function(msg) {
+      // Check callback message.
+      assert.deepEqual(msg, {id: 2, cbId: 1, values: [10]});
+      // Return "result" of callback to module.
+      e.postMessage({id: 2, cbId: 1, values: [20]});
+      e.destroyCallback(2);
+    });
+
+    e.postMessageWithResponse({id: 1});
   });
 });

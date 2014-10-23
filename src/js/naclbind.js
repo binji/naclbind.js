@@ -121,11 +121,11 @@ var utils = (function() {
   }
 
   function isInteger(n) {
-    return n === (n | 0);
+    return isNumber(n) && (n === (n | 0));
   }
 
   function isUnsignedInteger(n) {
-    return n === (n >>> 0);
+    return isNumber(n) && (n === (n >>> 0));
   }
 
   function isFloat(n) {
@@ -171,11 +171,11 @@ var Embed = (function(utils) {
     if (!(this instanceof Embed)) {
       return new Embed(naclEmbed);
     }
-    this.embed_ = naclEmbed;
+    this.naclEmbed_ = naclEmbed;
 
     this.queuedMessages_ = [];
-    this.embed_.addLoadListener(this.onLoad_.bind(this));
-    this.embed_.addMessageListener(this.onMessage_.bind(this));
+    this.naclEmbed_.addLoadListener(this.onLoad_.bind(this));
+    this.naclEmbed_.addMessageListener(this.onMessage_.bind(this));
     this.loaded_ = false;
 
     this.idCallbackMap_ = [];
@@ -198,6 +198,7 @@ var Embed = (function(utils) {
     var msg = e.data;
     var jsonMsg;
     var id;
+    var cbId;
     var callback;
 
     if (typeof(msg) !== 'object') {
@@ -206,9 +207,15 @@ var Embed = (function(utils) {
     }
 
     id = msg.id;
-    if (!(utils.isNumber(id) && utils.isInteger(id))) {
+    if (!utils.isInteger(id)) {
       jsonMsg = JSON.stringify(msg);
       throw new Error('Received message with bad id: ' + jsonMsg);
+    }
+
+    cbId = msg.id;
+    if (cbId !== undefined && !utils.isNumber(cbId)) {
+      jsonMsg = JSON.stringify(msg);
+      throw new Error('Received message with bad cbId: ' + jsonMsg);
     }
 
     callback = this.idCallbackMap_[id];
@@ -219,18 +226,40 @@ var Embed = (function(utils) {
     }
 
     callback(msg);
-    delete this.idCallbackMap_[id];
+
+    // Messages with cbId set can potentially be called more than once, so we
+    // can't remove them from the map.
+    if (cbId === undefined) {
+      delete this.idCallbackMap_[id];
+    }
   };
 
   Embed.prototype.postQueuedMessages_ = function() {
     var i;
     for (i = 0; i < this.queuedMessages_.length; ++i) {
-      this.embed_.postMessage(this.queuedMessages_[i]);
+      this.naclEmbed_.postMessage(this.queuedMessages_[i]);
     }
     this.queuedMessages_ = null;
   };
 
-  Embed.prototype.postMessage = function(msg, callback) {
+  // Should only be used for returning results from callbacks.
+  Embed.prototype.postMessage = function(msg) {
+    if (msg.id === undefined) {
+      throw new Error('Expected msg object to have id set.');
+    }
+
+    if (msg.cbId === undefined) {
+      throw new Error('Expected msg object to have cbId set.');
+    }
+
+    if (!this.loaded_) {
+      throw new Error('Expected NaCl module to be loaded.');
+    }
+
+    this.naclEmbed_.postMessage(msg);
+  };
+
+  Embed.prototype.postMessageWithResponse = function(msg, callback) {
     if (msg.id === undefined) {
       throw new Error('Expected msg object to have id set.');
     }
@@ -242,11 +271,23 @@ var Embed = (function(utils) {
       return;
     }
 
-    this.embed_.postMessage(msg);
+    this.naclEmbed_.postMessage(msg);
   };
 
   Embed.prototype.appendToBody = function() {
-    this.embed_.appendToBody();
+    this.naclEmbed_.appendToBody();
+  };
+
+  Embed.prototype.registerCallback = function(id, callback) {
+    this.idCallbackMap_[id] = callback;
+  };
+
+  Embed.prototype.destroyCallback = function(id) {
+    if (typeof(this.idCallbackMap_[id]) !== 'function') {
+      throw new Error('Unknown callback id: ' + id);
+    }
+
+    delete this.idCallbackMap_[id];
   };
 
   return Embed;
@@ -2275,7 +2316,7 @@ var mod = (function(Long, type, utils) {
     }
 
     this.$message_.get = handlesToIds(handles);
-    this.$embed_.postMessage(this.$message_, function(msg) {
+    this.$embed_.postMessageWithResponse(this.$message_, function(msg) {
       // Call the callback with the same context as was set when $commit() was
       // called, then reset to the previous value.
       var oldContext = self.$context;
