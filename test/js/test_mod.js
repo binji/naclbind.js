@@ -858,7 +858,9 @@ describe('Module', function() {
       var pfunc = type.Pointer(type.Function(type.int, [type.int]));
       var useFuncType = type.Function(type.void, [pfunc]);
       var callback = function(x) {};
-      var m = mod.Module();
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
       var h;
 
       m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
@@ -868,12 +870,97 @@ describe('Module', function() {
       assert.deepEqual(m.$getMessage(), {
         id: 1,
         set: {
-          1: ['function'],
+          1: ['function', 2],
         },
         commands: [
           {id: 0, args: [1]}
         ]
       });
+    });
+
+    it('should call a JavaScript callback', function(done) {
+      var pfunc = type.Pointer(type.Function(type.int, [type.int]));
+      var useFuncType = type.Function(type.void, [pfunc]);
+      var ne = NaClEmbed();
+      var e = Embed(ne);
+      var m = mod.Module(e);
+      var callback;
+      var commitCallbackCalled = false;
+
+      m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        if (msg.id === 1) {
+          // First call the commit callback.
+          ne.message({id: 1, values: []});
+          // Then call callback.
+          ne.message({id: 2, cbId: 1, values: [42]});
+        } else if (msg.id === 2) {
+          // Return value from callback.
+          assert.deepEqual(msg, {
+            id: 2,
+            cbId: 1,
+            values: [13]
+          });
+
+          done();
+        }
+      });
+
+      callback = function(val, result) {
+        assert.strictEqual(commitCallbackCalled, true);
+        assert.strictEqual(val, 42);
+        result(13);
+      };
+
+      m.useFunc(callback);
+      m.$commit([], function() {
+        commitCallbackCalled = true;
+      });
+    });
+
+    it('should work calling a JavaScript callback twice', function(done) {
+      var pfunc = type.Pointer(type.Function(type.int, [type.int]));
+      var useFuncType = type.Function(type.void, [pfunc]);
+      var ne = NaClEmbed();
+      var m = mod.Module(Embed(ne));
+      var callback;
+
+      m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
+
+      ne.load();
+      ne.setPostMessageCallback(function(msg) {
+        switch (msg.id) {
+          case 1:
+            // First call the commit callback.
+            ne.message({id: 1, values: []});
+            // Then call callback.
+            ne.message({id: 2, cbId: 1, values: [10]});
+            break;
+
+          case 2:
+            switch (msg.cbId) {
+              case 1:
+                assert.deepEqual(msg.values, [20]);
+                // Call callback again.
+                ne.message({id: 2, cbId: 2, values: [42]});
+                break;
+
+              case 2:
+                assert.deepEqual(msg.values, [84]);
+                done();
+                break;
+            }
+            break;
+        }
+      });
+
+      m.useFunc(function(x, result) {
+        result(x * 2);
+      });
+
+      m.$commit([], function() {});
     });
   });
 });

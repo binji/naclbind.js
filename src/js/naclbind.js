@@ -2230,18 +2230,20 @@ var mod = (function(Long, type, utils) {
     this.$registerHandleWithValue_(handle);
     return handle;
   };
+  Module.prototype.$registerHandlesWithValues_ = function(handles) {
+    var i;
+    for (i = 0; i < handles.length; ++i) {
+      this.$registerHandleWithValue_(handles[i]);
+    }
+  };
   Module.prototype.$registerHandleWithValue_ = function(handle) {
-    if (handle.value === undefined) {
+    var value = handle.value;
+
+    if (value === undefined) {
       return;
     }
 
-    var value = handle.value;
-
-    if (value instanceof Long) {
-      value = ['long', value.getLowBits(), value.getHighBits()];
-    } else if (value instanceof Function) {
-      value = ['function'];
-    }
+    value = this.$serializeJsValue_(value);
 
     if (!this.$message_.set) {
       this.$message_.set = {};
@@ -2249,11 +2251,36 @@ var mod = (function(Long, type, utils) {
 
     this.$message_.set[handle.id] = value;
   };
-  Module.prototype.$registerHandlesWithValues_ = function(handles) {
-    var i;
-    for (i = 0; i < handles.length; ++i) {
-      this.$registerHandleWithValue_(handles[i]);
+  Module.prototype.$serializeJsValue_ = function(value) {
+    var id;
+
+    if (value instanceof Long) {
+      return ['long', value.getLowBits(), value.getHighBits()];
+    } else if (value instanceof Function) {
+      id = this.$nextId_++;
+      this.$registerCallback_(id, value);
+      return ['function', id];
+    } else {
+      return value;
     }
+  };
+  Module.prototype.$registerCallback_ = function(id, func) {
+    var self = this;
+    this.$embed_.registerCallback(id, function(msg) {
+      var done = function(result) {
+        result = self.$serializeJsValue_(result);
+
+        self.$embed_.postMessage({
+          id: id,
+          cbId: msg.cbId,
+          values: [result]
+        });
+      };
+      var args = msg.values.slice();
+
+      args.push(done);
+      func.apply(null, args);
+    });
   };
   Module.prototype.$pushCommand_ = function(id, argHandles, retHandle) {
     var command = {
