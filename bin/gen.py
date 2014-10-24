@@ -90,6 +90,10 @@ class OptionParser(optparse.OptionParser):
     self.add_option('--max-int-varargs', metavar='NUM', type='int', default=6)
     self.add_option('--max-double-varargs', metavar='NUM', type='int',
                     default=2)
+    self.add_option('--function-pointer-count', metavar='NUM', type='int',
+                    default=4)
+    self.add_option('--no-include', action='store_false', dest='include',
+                    default=True)
 
   def error(self, msg):
     if self.ignore_error:
@@ -542,6 +546,8 @@ def OutputForTemplate(template, output, collector, tu_filename, options):
   template_dict.BUILTINS_H = BUILTINS_H
   template_dict.MAX_INT_VARARGS = options.max_int_varargs
   template_dict.MAX_DBL_VARARGS = options.max_double_varargs
+  template_dict.FUNCTION_POINTER_COUNT = options.function_pointer_count
+  template_dict.INCLUDE_FILES = options.include
 
   out_text = easy_template.RunTemplateString(template, template_dict)
 

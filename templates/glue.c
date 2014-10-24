@@ -15,8 +15,8 @@
 
 /* DO NOT EDIT, this file is auto-generated from //templates/glue.c */
 
+[[if INCLUDE_FILES:]]
 #define NB_ONE_FILE
-
 {{IncludeFile('c/bool.h')}}
 {{IncludeFile('c/error.h')}}
 {{IncludeFile('c/handle.h')}}
@@ -28,9 +28,9 @@
 {{IncludeFile('c/run.h')}}
 {{IncludeFile('c/type.h')}}
 {{IncludeFile('c/var.h')}}
-[[if builtins:]]
+[[  if builtins:]]
 {{IncludeFile('c/builtins.h')}}
-[[]]
+[[  ]]
 
 {{IncludeFile('c/handle.c')}}
 {{IncludeFile('c/interfaces.c')}}
@@ -44,6 +44,7 @@
 {{IncludeFile('c/queue.c')}}
 {{IncludeFile('c/app.c')}}
 #endif
+[[]]
 
 /* ========================================================================== */
 
@@ -52,9 +53,10 @@
 
 #define NB_MAX_INT_VARARGS {{MAX_INT_VARARGS}}
 #define NB_MAX_DBL_VARARGS {{MAX_DBL_VARARGS}}
+#define NB_FUNC_PTR_COUNT {{FUNCTION_POINTER_COUNT}}
 
 [[[
-def FuncCall(fname, nargs, iargs, dargs):
+def FuncCall(fname, nargs, iargs=0, dargs=0, extra_args=None):
   args = []
   for i in xrange(nargs):
     args.append('arg%d' % i)
@@ -62,9 +64,17 @@ def FuncCall(fname, nargs, iargs, dargs):
     args.append('iargs[%d]' % i)
   for i in xrange(dargs):
     args.append('dargs[%d]' % i)
+  if extra_args:
+    args.extend(extra_args)
   return '%s(%s)' % (fname, ', '.join(args))
-]]]
 
+def FuncDef(fname, type, extra_args=None):
+  args = [t.GetCSpelling('arg%d' % i) for i, t in enumerate(type.arg_types)]
+  if extra_args:
+    args.extend(extra_args)
+  return '%s %s(%s)' % (type.result_type.c_spelling, fname, ', '.join(args))
+]]]
+#if 0
 [[for type in collector.types_topo:]]
 [[  if type.kind != TypeKind.RECORD or type.is_anonymous:]]
 [[    continue]]
@@ -74,10 +84,33 @@ NB_COMPILE_ASSERT(sizeof({{type.c_spelling}}) == {{type.size}});
 [[  for name, ftype, offset in type.fields:]]
 NB_COMPILE_ASSERT(offsetof({{type.c_spelling}}, {{name}}) == {{offset}});
 [[  ]]
-[[]]
 
+[[]]
+[[for type in collector.types_topo:]]
+[[  if not (type.kind == TypeKind.POINTER and type.pointee.kind in (TypeKind.FUNCTIONPROTO, TypeKind.FUNCTIONNOPROTO)):]]
+[[    continue]]
+[[  ]]
+/* {{type.c_spelling}} */
+static {{FuncDef('nb_callback_%s' % type.mangled, type.pointee, extra_args=['void* user_data'])}} {
+  /* CREATE RESPONSE */
+  /* SET VALUES */
+  /* POST RESPONSE */
+  /* WAIT FOR RESPONSE MESSAGE */
+  /* EXTRACT VALUE FROM RESPONSE */
+  /* RETURN VALUE */
+}
+
+static void* s_nb_callback_{{type.mangled}}_user_data[NB_FUNC_PTR_COUNT];
+[[  for i in xrange(FUNCTION_POINTER_COUNT):]]
+static {{FuncDef('nb_callback_%s_%d' % (type.mangled, i), type.pointee)}} {
+  return {{FuncCall('nb_callback_%s' % type.mangled, len(type.pointee.arg_types), extra_args=['s_nb_callback_%s_user_data[%d]' % (type.mangled, i)])}};
+}
+[[  ]]
+
+[[]]
+#endif
 [[for fn in collector.functions:]]
-// {{fn.displayname}}
+/* {{fn.displayname}} */
 static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int command_idx) {
 [[  if fn.type.kind == TypeKind.FUNCTIONPROTO:]]
 [[    arguments = list(fn.type.arg_types)]]
@@ -186,7 +219,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int co
     return NB_FALSE;
   }
 [[      elif arg.kind == TypeKind.CONSTANTARRAY:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} {{orig_arg.c_spelling}}
+  /* UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} {{orig_arg.c_spelling}} */
 [[        if orig_arg.c_spelling == '__gnuc_va_list':]]
   (void)handle{{i}};
   va_list arg{{i}};
@@ -196,7 +229,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int co
   {{arg.element_type.c_spelling}}* arg{{i}} = NULL;
   NB_ERROR("Arrays are not currently supported.");
 [[      elif arg.kind == TypeKind.INCOMPLETEARRAY:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} {{orig_arg.c_spelling}}
+  /* UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} {{orig_arg.c_spelling}} */
   (void)handle{{i}};
   {{arg.element_type.c_spelling}}* arg{{i}} = NULL;
   NB_ERROR("Arrays are not currently supported.");
@@ -205,7 +238,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int co
   {{arg.c_spelling}} arg{{i}};
   NB_ERROR("Passing structs and unions by value is not currently supported.");
 [[      else:]]
-  // UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}}
+  /* UNSUPPORTED: {{arg.kind}} {{arg.c_spelling}} */
   NB_ERROR("Type {{arg.c_spelling}} is not currently supported.");
 [[    ]]
 [[    if fn.type.is_variadic:]]
@@ -229,7 +262,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int co
 [[  elif fn.type.kind == TypeKind.FUNCTIONNOPROTO:]]
   int arg_count = nb_request_command_arg_count(request, command_idx);
   if (arg_count != 0) {
-    // UNSUPPORTED: no proto with non-zero argument list.
+    /* UNSUPPORTED: no proto with non-zero argument list. */
     NB_VERROR("Function with no prototype passed non-zero args: %d", arg_count);
     return NB_FALSE;
   }
@@ -312,7 +345,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int co
 [[    elif result_type.kind == TypeKind.ENUM:]]
   NB_Bool register_ok = nb_handle_register_int32(ret, (int32_t) result);
 [[    else:]]
-  // UNSUPPORTED: {{result_type.kind}} {{result_type.c_spelling}}
+  /* UNSUPPORTED: {{result_type.kind}} {{result_type.c_spelling}} */
   (void)result;
   NB_Bool register_ok = NB_FALSE;
 [[    ]]
@@ -329,7 +362,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int co
 
 [[]]
 
-// getFunc()
+/* getFunc() */
 static NB_Bool nb_command_run_get_func(struct NB_Request* request, int command_idx) {
   int arg_count = nb_request_command_arg_count(request, command_idx);
   if (arg_count != 1) {
@@ -364,7 +397,7 @@ static NB_Bool nb_command_run_get_func(struct NB_Request* request, int command_i
   return NB_TRUE;
 }
 
-// $errorIf()
+/* $errorIf() */
 static NB_Bool nb_command_run_error_if(struct NB_Request* request, int command_idx) {
   int arg_count = nb_request_command_arg_count(request, command_idx);
   if (arg_count != 1) {
