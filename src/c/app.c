@@ -15,6 +15,7 @@
 
 #ifndef NB_ONE_FILE
 #include "queue.h"
+#include "response.h"
 #include "run.h"
 #include "var.h"
 #endif

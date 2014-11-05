@@ -24,6 +24,7 @@
 {{IncludeFile('c/macros.h')}}
 {{IncludeFile('c/message.h')}}
 {{IncludeFile('c/queue.h')}}
+{{IncludeFile('c/response.h')}}
 {{IncludeFile('c/run.h')}}
 {{IncludeFile('c/type.h')}}
 {{IncludeFile('c/var.h')}}
@@ -34,6 +35,7 @@
 {{IncludeFile('c/handle.c')}}
 {{IncludeFile('c/interfaces.c')}}
 {{IncludeFile('c/message.c')}}
+{{IncludeFile('c/response.c')}}
 {{IncludeFile('c/run.c')}}
 {{IncludeFile('c/type.c')}}
 {{IncludeFile('c/var.c')}}
