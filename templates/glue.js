@@ -112,6 +112,13 @@ function createModule(nmf, mimeType) {
   ]);
 [[]]
 
+[[for enum_name, enum_type in collector.SortedEnums():]]
+  /* {{enum_name}} constants */
+[[  for enum_const_name, enum_const_value in enum_type.constants:]]
+  m.$defineEnum('{{enum_const_name}}', {{enum_const_value}});
+[[  ]]
+
+[[]]
   m.$types = types;
   m.$tags = tags;
 

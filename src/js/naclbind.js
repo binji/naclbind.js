@@ -2154,7 +2154,8 @@ var mod = (function(Long, type, utils) {
     this.$embed_ = embed || null;
     this.$handles_ = new HandleList();
     this.$errors_ = {};
-    this.$functions_ = {};
+    this.$functionsCount = 0;
+    this.$enumValuesCount = 0;
     this.$context = this.$createContext();
     this.$types = {};
     this.$tags = {};
@@ -2163,15 +2164,14 @@ var mod = (function(Long, type, utils) {
   Module.prototype.$defineFunction = function(name, functions) {
     utils.checkArray(functions, IdFunction);
 
-    if (this.$functions_[name] !== undefined) {
-      throw new Error('Function named "' + name + '" is already defined.');
+    if (name in this) {
+      throw new Error('Identifier named "' + name + '" is already defined.');
     }
 
     var self = this;
     var getType = function(x) { return x.type; };
     var fnTypes = Array.prototype.map.call(functions, getType);
 
-    this.$functions_[name] = functions;
     this[name] = function() {
       var argHandles = argsToHandles(self.$context, arguments);
       var argTypes = argHandles.map(getType);
@@ -2205,10 +2205,15 @@ var mod = (function(Long, type, utils) {
     };
 
     this[name].types = fnTypes;
+    this.$functionsCount++;
   };
-  Object.defineProperty(Module.prototype, '$functionsCount', {
-    get: function() { return Object.keys(this.$functions_).length; }
-  });
+  Module.prototype.$defineEnum = function(name, value) {
+    if (name in this) {
+      throw new Error('Identifier named "' + name + '" is already defined.');
+    }
+    this[name] = value;
+    this.$enumValuesCount++;
+  };
   Object.defineProperty(Module.prototype, '$typesCount', {
     get: function() { return Object.keys(this.$types).length; }
   });

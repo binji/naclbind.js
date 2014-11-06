@@ -792,20 +792,9 @@ class IncompleteArrayType(Type):
       visitor.ExitType(self)
 
 
-class Function(object):
-  def __init__(self, cindex_cursor):
-    self.type = Type.FromCindexType(cindex_cursor.type)
-    self.spelling = cindex_cursor.spelling
-    self.displayname = cindex_cursor.displayname
-    self.file_name = cindex_cursor.location.file.name
-    self.fn_id = None
-
-  @staticmethod
-  def FromCindexCursor(cindex_cursor):
-    return Function(cindex_cursor)
-
+class Cursor(object):
   def __eq__(self, other):
-    if not isinstance(other, Function):
+    if not isinstance(other, self.__class__):
       return False
     return self.spelling == other.spelling
 
@@ -815,14 +804,46 @@ class Function(object):
   def __hash__(self):
     return hash(self.spelling)
 
+
+class FunctionDecl(Cursor):
+  def __init__(self, cindex_cursor):
+    Cursor.__init__(self)
+    self.type = Type.FromCindexType(cindex_cursor.type)
+    self.spelling = cindex_cursor.spelling
+    self.displayname = cindex_cursor.displayname
+    self.fn_id = None
+
+  @staticmethod
+  def FromCindexCursor(cindex_cursor):
+    return FunctionDecl(cindex_cursor)
+
   def VisitTypes(self, visitor):
     self.type.VisitTypes(visitor)
 
+class EnumDecl(Cursor):
+  def __init__(self, cindex_cursor):
+    Cursor.__init__(self)
+    self.type = Type.FromCindexType(cindex_cursor.type)
+    # Use js_tag for spelling; this ensures that anonymous enums get a unique
+    # name.
+    self.spelling = self.type.js_tag
+    self.constants = []
+    for child in cindex_cursor.get_children():
+      if child.kind != CursorKind.ENUM_CONSTANT_DECL:
+        continue
+      self.constants.append((child.spelling, child.enum_value))
 
-def IterFunctions(cindex_cursor):
+  @staticmethod
+  def FromCindexCursor(cindex_cursor):
+    return EnumDecl(cindex_cursor)
+
+
+def Iter(cindex_cursor):
   for child in cindex_cursor.get_children():
     if child.kind == CursorKind.FUNCTION_DECL:
-      yield Function(child)
+      yield child
+    elif child.kind == CursorKind.ENUM_DECL:
+      yield child
     else:
-      for f in IterFunctions(child):
+      for f in Iter(child):
         yield f

@@ -381,15 +381,25 @@ class Collector(object):
     self.functions = []
     self.functions_remapped = {}
     self.function_types = {}
+    self.enums = {}
     self.next_id = 0
 
   def Collect(self, tu, acceptor, remap):
-    for fn in gen_types.IterFunctions(tu.cursor):
-      if acceptor.Accept(fn.file_name, fn.spelling):
-        logging.debug('ACCEPTED %s' % fn.spelling)
-        self._VisitFunction(fn, remap)
+    for cindex_cursor in gen_types.Iter(tu.cursor):
+      file_name = cindex_cursor.location.file.name
+      spelling = cindex_cursor.spelling
+      if acceptor.Accept(file_name, spelling):
+        logging.debug('ACCEPTED %s' % spelling)
+        if cindex_cursor.kind == CursorKind.FUNCTION_DECL:
+          fn = gen_types.FunctionDecl(cindex_cursor)
+          self._VisitFunction(fn, remap)
+        elif cindex_cursor.kind == CursorKind.ENUM_DECL:
+          enum = gen_types.EnumDecl(cindex_cursor)
+          self._VisitEnum(enum)
+        else:
+          raise Error('Unexpected cursor type: %r' % cindex_cursor.type)
       else:
-        logging.debug('REJECTED %s' % fn.spelling)
+        logging.debug('REJECTED %s' % spelling)
 
   def _VisitFunction(self, fn, remap):
     fn.VisitTypes(self)
@@ -403,6 +413,11 @@ class Collector(object):
     self.functions.append(fn)
     self.functions_remapped.setdefault(remapped_name, []).append(fn)
     self.function_types.setdefault(fn_type, []).append(fn)
+
+  def _VisitEnum(self, enum):
+    if enum.spelling in self.enums:
+      return
+    self.enums[enum.spelling] = enum
 
   def EnterType(self, t):
     t = t.Unqualified()
@@ -422,6 +437,10 @@ class Collector(object):
   def SortedRemappedFunctions(self):
     for fn_name in sorted(self.functions_remapped.keys()):
       yield fn_name, self.functions_remapped[fn_name]
+
+  def SortedEnums(self):
+    for name in sorted(self.enums.keys()):
+      yield name, self.enums[name]
 
 
 def StripCopyright(text):

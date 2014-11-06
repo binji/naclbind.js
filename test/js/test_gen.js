@@ -416,6 +416,7 @@ describe('Generate JS', function() {
       assert.strictEqual(2, m.$functionsCount);
       assert.strictEqual(1, m.$typesCount);
       assert.strictEqual(2, m.$tagsCount);
+      assert.strictEqual(9, m.$enumValuesCount);
 
       assert.ok(m.$tags.e1);
       assert.strictEqual('e1', m.$tags.e1.tag);
@@ -434,6 +435,23 @@ describe('Generate JS', function() {
       assert.ok(m.f2);
       assert.strictEqual(m.f2.types.length, 1);
       assertTypesEqual(type.Function(type.void, [e2]), m.f2.types[0]);
+
+      // e1
+      assert.strictEqual(m.E0, 0);
+      assert.strictEqual(m.E1, 1);
+
+      // e2/t1
+      assert.strictEqual(m.E2, 2);
+      assert.strictEqual(m.E3, 3);
+      assert.strictEqual(m.E4, 4);
+      assert.strictEqual(m.E100, 100);
+
+      // t2
+      assert.strictEqual(m.E5, 5);
+      assert.strictEqual(m.E6, 6);
+
+      // t3
+      assert.strictEqual(m.E7, 7);
 
       done();
     })
