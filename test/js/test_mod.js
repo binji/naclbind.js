@@ -590,6 +590,126 @@ describe('Module', function() {
     });
   });
 
+  describe('$set', function() {
+    var voidp = type.Pointer(type.void);
+    var intp = type.Pointer(type.int);
+    var floatp = type.Pointer(type.float);
+    var mallocType = type.Function(voidp, [type.uint]);
+    var setIntType = type.Function(type.void, [intp, type.int]);
+    var setFloatType = type.Function(type.void, [floatp, type.float]);
+    var addVoidType = type.Function(voidp, [voidp, type.int]);
+
+    it('should provide syntatic sugar for setting a field', function() {
+      var m = mod.Module();
+      var s = type.Record('s', 8, type.STRUCT);
+      var h;
+
+      s.$addField('f', type.int, 0);
+      s.$addField('g', type.float, 4);
+
+      m.$defineFunction('malloc', [mod.Function(0, mallocType)]);
+      // Necessary functions used by $set.
+      m.$defineFunction('set', [mod.Function(1, setIntType),
+                                mod.Function(2, setFloatType)]);
+      m.$defineFunction('add', [mod.Function(3, addVoidType)]);
+
+      h = m.malloc(s.$size);
+      m.$set(h, s.f, 42);
+      m.$set(h, s.g, 3.25);
+
+      assert.deepEqual(m.$getMessage(), {
+        id: 1,
+        set: {
+          1: 8,    // s.size
+          3: 42,   // value to write into h.f
+          4: 4,    // s.g offset
+          6: 3.25  // value to write into h.g
+        },
+        commands: [
+          {id: 0, args: [1], ret: 2},     // $2 = malloc(4);
+          {id: 1, args: [2, 3]},          // *($2) = 42;
+          {id: 3, args: [2, 4], ret: 5},  // $5 = $2 + 4;
+          {id: 2, args: [5, 6]},          // *($5) = 3.25;
+        ]
+      });
+    });
+
+    it('should allow setting nested field', function() {
+      var m = mod.Module();
+      var s = type.Record('s', 4, type.STRUCT);
+      var t = type.Record('t', 4, type.STRUCT);
+      var h;
+
+      s.$addField('i', type.int, 0);
+      s.$addField('f', t, 4);
+      t.$addField('g', type.int, 0);
+
+      m.$defineFunction('malloc', [mod.Function(0, mallocType)]);
+      // Necessary functions used by $set.
+      m.$defineFunction('set', [mod.Function(1, setIntType)]);
+      m.$defineFunction('add', [mod.Function(2, addVoidType)]);
+
+      h = m.malloc(s.$size);
+      m.$set(h, s.f.g, 42);
+
+      assert.deepEqual(m.$getMessage(), {
+        id: 1,
+        set: {
+          1: 4,   // s.size
+          3: 4,   // s.f.g offset
+          5: 42,  // value to write into s.f.g
+        },
+        commands: [
+          {id: 0, args: [1], ret: 2},     // $2 = malloc(4);
+          {id: 2, args: [2, 3], ret: 4},  // $4 = $2 + 4;
+          {id: 1, args: [4, 5]},          // *($4) = 42;
+        ]
+      });
+    });
+  });
+
+  describe('$get', function() {
+    it('should provide syntatic sugar for getting a field', function() {
+      var m = mod.Module();
+      var voidp = type.Pointer(type.void);
+      var intp = type.Pointer(type.int);
+      var floatp = type.Pointer(type.float);
+      var mallocType = type.Function(voidp, [type.uint]);
+      var getIntType = type.Function(type.int, [intp]);
+      var getFloatType = type.Function(type.float, [floatp]);
+      var addVoidType = type.Function(voidp, [voidp, type.int]);
+      var s = type.Record('s', 8, type.STRUCT);
+      var h;
+
+      s.$addField('f', type.int, 0);
+      s.$addField('g', type.float, 4);
+
+      m.$defineFunction('malloc', [mod.Function(0, mallocType)]);
+      // Necessary functions used by $get.
+      m.$defineFunction('get', [mod.Function(1, getIntType),
+                                mod.Function(2, getFloatType)]);
+      m.$defineFunction('add', [mod.Function(3, addVoidType)]);
+
+      h = m.malloc(s.$size);
+      m.$get(h, s.f);
+      m.$get(h, s.g);
+
+      assert.deepEqual(m.$getMessage(), {
+        id: 1,
+        set: {
+          1: 8,    // s.size
+          4: 4,    // s.g offset
+        },
+        commands: [
+          {id: 0, args: [1], ret: 2},     // $2 = malloc(4);
+          {id: 1, args: [2], ret: 3},     // $3 = *($2);
+          {id: 3, args: [2, 4], ret: 5},  // $5 = $2 + 4;
+          {id: 2, args: [5], ret: 6},     // $6 = *($5);
+        ]
+      });
+    });
+  });
+
   describe('Handle', function() {
     describe('create', function() {
       it('should allow creation of handles', function() {

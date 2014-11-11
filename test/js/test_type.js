@@ -220,17 +220,53 @@ describe('Type', function() {
 
     describe('Record', function() {
       it('should allow access to fields', function() {
-        var r = type.Record('foo', 4);
+        var r = type.Record('foo', 8);
         r.$addField('f', type.int, 0);
         r.$addField('g', type.float, 4);
 
-        assert.strictEqual(r.$fields[0].$name, 'f');
-        assertTypesEqual(r.$fields[0].$type, type.int);
-        assert.strictEqual(r.$fields[0].$offset, 0);
+        assert.strictEqual(r.$fields.f.$name, 'f');
+        assertTypesEqual(r.$fields.f.$type, type.int);
+        assert.strictEqual(r.$fields.f.$offset, 0);
+        assert.strictEqual(r.$fields.f.$relOffset, null);
 
-        assert.strictEqual(r.$fields[1].$name, 'g');
-        assertTypesEqual(r.$fields[1].$type, type.float);
-        assert.strictEqual(r.$fields[1].$offset, 4);
+        assert.strictEqual(r.$fields.g.$name, 'g');
+        assertTypesEqual(r.$fields.g.$type, type.float);
+        assert.strictEqual(r.$fields.g.$offset, 4);
+        assert.strictEqual(r.$fields.g.$relOffset, null);
+      });
+
+      it('should have a convenient field accessor syntax', function() {
+        var r = type.Record('foo', 8);
+        r.$addField('f', type.int, 0);
+        r.$addField('g', type.float, 4);
+
+        assert.strictEqual(r.f.$name, 'f');
+        assertTypesEqual(r.f.$type, type.int);
+        assert.strictEqual(r.f.$offset, 0);
+
+        assert.strictEqual(r.g.$name, 'g');
+        assertTypesEqual(r.g.$type, type.float);
+        assert.strictEqual(r.g.$offset, 4);
+      });
+
+      it('should have correct offset for nested records', function() {
+        var r1 = type.Record('foo', 8);
+        var r2 = type.Record('bar', 4);
+        r1.$addField('i', type.int, 0);
+        r1.$addField('f', r2, 4);
+        r2.$addField('g', type.int, 0);
+
+        // Accessing $offset always produces unmodified offsets (i.e. not
+        // relative to the base struct).
+        assert.strictEqual(r1.$fields.f.$type.$fields.g.$offset, 0);
+        assert.strictEqual(r1.f.g.$offset, 0);
+
+        // Accessing $relOffset via the long syntax produces unmodified offsets.
+        assert.strictEqual(r1.$fields.f.$type.$fields.g.$relOffset, null);
+
+        // Accessing $relOffset via the short syntax gives offsets relative to
+        // the base struct.
+        assert.strictEqual(r1.f.g.$relOffset, 4);
       });
 
       it('should throw creating a record with bad name', function() {

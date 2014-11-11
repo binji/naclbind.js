@@ -1368,7 +1368,8 @@ var type = (function(utils) {
     Type.call(this, RECORD, cv);
     this.$tag = tag;
     this.$size = size;
-    this.$fields = [];
+    this.$fields = {};
+    this.$fieldsCount = 0;
     this.$isUnion = isUnion || false;
     this.$spelling = getSpelling(this);
   }
@@ -1376,20 +1377,71 @@ var type = (function(utils) {
   Record.prototype.constructor = Record;
   Record.prototype.$qualify = function(cv) {
     var record = Record(this.$tag, this.$size, this.$isUnion, this.$cv | cv);
-    record.fields = this.$fields;
+    record.$fields = this.$fields;
+    record.$fieldsCount = this.$fieldsCount;
     return record;
   };
   Record.prototype.$unqualified = function() {
     var record = Record(this.$tag, this.$size, this.$isUnion);
-    record.fields = this.$fields;
+    record.$fields = this.$fields;
+    record.$fieldsCount = this.$fieldsCount;
     return record;
   };
   Record.prototype.$addField = function(name, type, offset) {
-    this.$fields.push(Field(name, type, offset));
+    if (name in this.$fields) {
+      throw new Error(name + ' is already a field in this record.');
+    }
+
+    // Define the new field as a property, then redefine it after its first
+    // access. It is assumed that all fields have been added before the first
+    // access (the JavaScript generator does this), so at this point it is safe
+    // to access the field's type to populate nested fields (if any).
+    var self = this;
+    Object.defineProperty(this, name, {
+      configurable: true,
+      enumerable: true,
+      get: function() {
+        self.$setFieldProperties_(self, 0);
+        return self[name];
+      }
+    });
+    this.$fields[name] = Field(name, type, offset);
+    this.$fieldsCount++;
+  };
+  Record.prototype.$setFieldProperties_ = function(onObject, baseOffset) {
+    var name;
+    var field;
+    var newField;
+    var relOffset;
+
+    for (name in this.$fields) {
+      if (!this.$fields.hasOwnProperty(name)) {
+        continue;
+      }
+
+      field = this.$fields[name];
+      relOffset = field.$offset + baseOffset;
+
+      newField = Field(name, field.$type, field.$offset, relOffset);
+      newField.$setNestedFieldProperties_(relOffset);
+
+      // Can't use assignment here because the original property (if any) may
+      // have been defined with defineProperty where "writable" is false (e.g.
+      // $addField above).
+      //
+      // It is not possible to have a writable property with an accessor.
+      Object.defineProperty(onObject, name, {
+        configurable: true,
+        enumerable: true,
+        value: newField
+      });
+    }
   };
 
-  function Field(name, type, offset) {
-    if (!(this instanceof Field)) { return new Field(name, type, offset); }
+  function Field(name, type, offset, relOffset) {
+    if (!(this instanceof Field)) {
+      return new Field(name, type, offset, relOffset);
+    }
 
     utils.checkNullOrString(name, 'name');
     checkType(type, 'type');
@@ -1398,7 +1450,16 @@ var type = (function(utils) {
     this.$name = name;
     this.$type = type;
     this.$offset = offset;
+    // Set $relOffset to null if it is not defined. This allows us to catch
+    // invalid uses of $set/$get.
+    this.$relOffset = relOffset !== undefined ? relOffset : null;
   }
+  Field.prototype.$setNestedFieldProperties_ = function(baseOffset) {
+    if (this.$type.$kind !== RECORD) {
+      return;
+    }
+    this.$type.$setFieldProperties_(this, baseOffset);
+  };
 
 
   function Enum(tag, cv) {
@@ -2426,6 +2487,24 @@ var mod = (function(Long, type, utils) {
   };
   Module.prototype.$clearErrors_ = function() {
     this.$errors_ = {};
+  };
+  Module.prototype.$set = function(p, field, value) {
+    if (field.$relOffset === null) {
+      throw new Error('$set expected to be called with short syntax, i.e. ' +
+                      'my_struct.my_field.my_nested_field');
+    }
+
+    var poff = field.$relOffset === 0 ? p : this.add(p, field.$relOffset);
+    this.set(poff, value);
+  };
+  Module.prototype.$get = function(p, field) {
+    if (field.$relOffset === null) {
+      throw new Error('$set expected to be called with short syntax, i.e. ' +
+                      'my_struct.my_field.my_nested_field');
+    }
+
+    var poff = field.$relOffset === 0 ? p : this.add(p, field.$relOffset);
+    return this.get(poff.$cast(type.Pointer(field.$type)));
   };
 
   function IdFunction(id, fnType) {
