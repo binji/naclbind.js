@@ -135,4 +135,75 @@ describe('Embed', function() {
 
     e.postMessageWithResponse({id: 1});
   });
+
+  var fireEventsImmediately = true;
+
+  it('should throw if the message is not an object', function() {
+    var ne = NaClEmbed(fireEventsImmediately);
+    var e = Embed(ne);
+
+    assert.throws(function() {
+      ne.message(4);
+    });
+  });
+
+  it('should throw if the id is not an integer', function() {
+    var ne = NaClEmbed(fireEventsImmediately);
+    var e = Embed(ne);
+
+    assert.throws(function() {
+      ne.message({id: '1'});
+    }, /bad id/);
+  });
+
+  it('should throw if the cbId is not an integer', function() {
+    var ne = NaClEmbed(fireEventsImmediately);
+    var e = Embed(ne);
+
+    assert.throws(function() {
+      ne.message({id: 1, cbId: 3.5});
+    }, /bad cbId/);
+  });
+
+  it('should throw if the id has no callback', function() {
+    var ne = NaClEmbed(fireEventsImmediately);
+    var e = Embed(ne);
+
+    assert.throws(function() {
+      ne.message({id: 1});
+    }, /callback/);
+  });
+
+  it('should throw if postMessage has non-integer id', function() {
+    var ne = NaClEmbed();
+    var e = Embed(ne);
+
+    assert.throws(function() {
+      e.postMessage({});
+    }, /id/);
+
+    assert.throws(function() {
+      e.postMessageWithResponse({}, function() {});
+    }, /id/);
+  });
+
+  it('should throw if postMessage has non-integer or missing cbId', function() {
+    var ne = NaClEmbed();
+    var e = Embed(ne);
+
+    assert.throws(function() {
+      e.postMessage({id: 1, cbId: 'foo'});
+    }, /cbId/);
+
+    assert.throws(function() {
+      e.postMessage({id: 1});  // missing cbId
+    }, /cbId/);
+
+    // postMessage is not queued because it should only be called from a
+    // callback. As such, it is an error if it is called before the module is
+    // loaded.
+    assert.throws(function() {
+      e.postMessage({id: 1, cbId: 1});
+    }, /loaded/);
+  });
 });

@@ -14,30 +14,38 @@
 
 var assert = require('chai').assert;
 
-function NaClEmbedForTesting() {
+function NaClEmbedForTesting(fireEventsImmediately) {
   if (!(this instanceof NaClEmbedForTesting)) {
-    return new NaClEmbedForTesting();
+    return new NaClEmbedForTesting(fireEventsImmediately);
   }
   this.loaded = false;
   this.listeners = {};
   this.postMessageCallback = null;
   this.lastError = undefined;
   this.exitStatus = undefined;
+  this.fireEventsImmediately = fireEventsImmediately || false;
 }
 
 NaClEmbedForTesting.prototype.fireEvent = function(message, e) {
   var callbacks = this.listeners[message];
   var i;
+  var fireEvents;
   if (!callbacks) {
     return;
   }
 
-  // Run on the next tick to more closely emulate a real embed.
-  process.nextTick(function() {
+  fireEvents = function() {
     for (i = 0; i < callbacks.length; ++i) {
       callbacks[i](e);
     }
-  });
+  };
+
+  if (this.fireEventsImmediately) {
+    fireEvents();
+  } else {
+    // Run on the next tick to more closely emulate a real embed.
+    process.nextTick(fireEvents);
+  }
 };
 
 NaClEmbedForTesting.prototype.addEventListener_ = function(message, callback) {

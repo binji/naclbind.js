@@ -212,8 +212,8 @@ var Embed = (function(utils) {
       throw new Error('Received message with bad id: ' + jsonMsg);
     }
 
-    cbId = msg.id;
-    if (cbId !== undefined && !utils.isNumber(cbId)) {
+    cbId = msg.cbId;
+    if (cbId !== undefined && !utils.isInteger(cbId)) {
       jsonMsg = JSON.stringify(msg);
       throw new Error('Received message with bad cbId: ' + jsonMsg);
     }
@@ -248,7 +248,7 @@ var Embed = (function(utils) {
       throw new Error('Expected msg object to have id set.');
     }
 
-    if (msg.cbId === undefined) {
+    if (msg.cbId === undefined || !utils.isInteger(msg.cbId)) {
       throw new Error('Expected msg object to have cbId set.');
     }
 
