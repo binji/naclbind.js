@@ -1957,6 +1957,7 @@ var type = (function(utils) {
     longdouble: Numeric(LONGDOUBLE),
 
     // Type constructors
+    Type: Type,  // Only used for tests
     Void: Void,
     Numeric: Numeric,
     Pointer: Pointer,

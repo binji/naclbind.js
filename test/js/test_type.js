@@ -348,7 +348,6 @@ describe('Type', function() {
     });
   });
 
-
   describe('Spell', function() {
     it('should correctly spell primitive types', function() {
       assert.strictEqual(spell(type.void), 'void');
@@ -455,6 +454,14 @@ describe('Type', function() {
       assert.strictEqual(spell(PA_PFiiE), 'int (*(*)[])(int)');
       assert.strictEqual(spell(PA_PFiiE, 'foo'), 'int (*(*foo)[])(int)');
       assert.strictEqual(spell(PFPFPivEiE), 'int *(*(*)(int))(void)');
+    });
+
+    it('should throw when given a type with unknown kind', function() {
+      var kind = 1000;
+      var t = type.Type(kind);
+      assert.throws(function() {
+        spell(t);
+      }, /kind/);
     });
   });
 
@@ -1118,6 +1125,14 @@ describe('Type', function() {
         assertCast(type.Pointer(KVc), type.Pointer(VKt), type.CAST_OK_EXACT);
       });
     });
+
+    it('should throw when given a type with unknown kind', function() {
+      var kind = 1000;
+      var t = type.Type(kind);
+      assert.throws(function() {
+        t.canCastTo(t);
+      }, /kind/);
+    });
   });
 
   describe('BestViable', function() {
@@ -1289,6 +1304,72 @@ describe('Type', function() {
 
       assertBestViable(fns, [pfn1], 0);
       assertBestViable(fns, [pfnu], 0);
+    });
+  });
+
+  describe('Qualify', function() {
+    it('should combine qualifiers for most types', function() {
+      var TV = type.Void;
+      var TN = function(cv) { return type.Numeric(type.INT, cv); };
+      var TP = function(cv) { return type.Pointer(type.int, cv); };
+      var TR = function(cv) { return type.Record('s', 0, type.STRUCT, cv); };
+      var TE = function(cv) { return type.Enum('e', cv); };
+      var TT = function(cv) { return type.Typedef('t', type.int, cv); };
+
+      // Loop through each type's constructor function.
+      [TV, TN, TP, TR, TE, TT].forEach(function(make) {
+        var t = make();
+        var tc = make(C);
+        var tcv = make(CV);
+        var tcvr = make(CVR);
+
+        assertTypesEqual(t.qualify(C), tc);
+        assertTypesEqual(t.qualify(CV), tcv);
+        assertTypesEqual(t.qualify(CVR), tcvr);
+        // If already qualified, it is a no-op.
+        assertTypesEqual(tc.qualify(C), tc);
+        assertTypesEqual(tcvr.qualify(CVR), tcvr);
+        // Should apply new qualifiers.
+        assertTypesEqual(tc.qualify(V), tcv);
+        assertTypesEqual(tc.qualify(CV), tcv);
+      });
+    });
+
+    it('should not apply any qualifiers for some types', function() {
+      var fp = type.Function(type.void, []);
+      var fn = type.FunctionNoProto(type.void);
+      var fu = type.FunctionUntyped();
+      var ca = type.Array(type.int, 10);
+      var ia = type.IncompleteArray(type.int);
+
+      [fp, fn, fu, ca, ia].forEach(function(t) {
+        assertTypesEqual(t.qualify(C), t);
+        assertTypesEqual(t.qualify(VR), t);
+        assertTypesEqual(t.qualify(V), t);
+      });
+    });
+  });
+
+  describe('Unqualified', function() {
+    it('should remove qualifiers for all types', function() {
+      var TV = type.Void;
+      var TN = function(cv) { return type.Numeric(type.INT, cv); };
+      var TP = function(cv) { return type.Pointer(type.int, cv); };
+      var TR = function(cv) { return type.Record('s', 0, type.STRUCT, cv); };
+      var TE = function(cv) { return type.Enum('e', cv); };
+      var TT = function(cv) { return type.Typedef('t', type.int, cv); };
+      var TFP = function(cv) { return type.Function(type.void, []); };
+      var TFN = function(cv) { return type.FunctionNoProto(type.void); };
+      var TFU = function(cv) { return type.FunctionUntyped(); };
+      var TCA = function(cv) { return type.Array(type.int, 10); };
+      var TIA = function(cv) { return type.IncompleteArray(type.int); };
+
+      // Loop through each type's constructor function.
+      [TV, TN, TP, TR, TE, TT, TFP, TFN, TFU, TCA, TIA].forEach(function(make) {
+        [0, C, V, R, CV, CR, VR, CVR].forEach(function(cv) {
+          assertTypesEqual(make(cv).unqualified(), make());
+        });
+      });
     });
   });
 });
