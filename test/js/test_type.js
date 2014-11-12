@@ -221,16 +221,16 @@ describe('Type', function() {
     describe('Record', function() {
       it('should allow access to fields', function() {
         var r = type.Record('foo', 4);
-        r.addField('f', type.int, 0);
-        r.addField('g', type.float, 4);
+        r.$addField('f', type.int, 0);
+        r.$addField('g', type.float, 4);
 
-        assert.strictEqual(r.fields[0].name, 'f');
-        assertTypesEqual(r.fields[0].type, type.int);
-        assert.strictEqual(r.fields[0].offset, 0);
+        assert.strictEqual(r.$fields[0].$name, 'f');
+        assertTypesEqual(r.$fields[0].$type, type.int);
+        assert.strictEqual(r.$fields[0].$offset, 0);
 
-        assert.strictEqual(r.fields[1].name, 'g');
-        assertTypesEqual(r.fields[1].type, type.float);
-        assert.strictEqual(r.fields[1].offset, 4);
+        assert.strictEqual(r.$fields[1].$name, 'g');
+        assertTypesEqual(r.$fields[1].$type, type.float);
+        assert.strictEqual(r.$fields[1].$offset, 4);
       });
 
       it('should throw creating a record with bad name', function() {
@@ -277,74 +277,74 @@ describe('Type', function() {
 
   describe('Size', function() {
     it('should have the correct size for primitives', function() {
-      assert.strictEqual(type.void.size, 0);
-      assert.strictEqual(type.bool.size, 1);
-      assert.strictEqual(type.char.size, 1);
-      assert.strictEqual(type.uchar.size, 1);
-      assert.strictEqual(type.ushort.size, 2);
-      assert.strictEqual(type.uint.size, 4);
-      assert.strictEqual(type.ulong.size, 4);
-      assert.strictEqual(type.ulonglong.size, 8);
-      assert.strictEqual(type.schar.size, 1);
-      assert.strictEqual(type.wchar.size, 4);
-      assert.strictEqual(type.short.size, 2);
-      assert.strictEqual(type.int.size, 4);
-      assert.strictEqual(type.long.size, 4);
-      assert.strictEqual(type.longlong.size, 8);
-      assert.strictEqual(type.float.size, 4);
-      assert.strictEqual(type.double.size, 8);
-      assert.strictEqual(type.longdouble.size, 10);
+      assert.strictEqual(type.void.$size, 0);
+      assert.strictEqual(type.bool.$size, 1);
+      assert.strictEqual(type.char.$size, 1);
+      assert.strictEqual(type.uchar.$size, 1);
+      assert.strictEqual(type.ushort.$size, 2);
+      assert.strictEqual(type.uint.$size, 4);
+      assert.strictEqual(type.ulong.$size, 4);
+      assert.strictEqual(type.ulonglong.$size, 8);
+      assert.strictEqual(type.schar.$size, 1);
+      assert.strictEqual(type.wchar.$size, 4);
+      assert.strictEqual(type.short.$size, 2);
+      assert.strictEqual(type.int.$size, 4);
+      assert.strictEqual(type.long.$size, 4);
+      assert.strictEqual(type.longlong.$size, 8);
+      assert.strictEqual(type.float.$size, 4);
+      assert.strictEqual(type.double.$size, 8);
+      assert.strictEqual(type.longdouble.$size, 10);
     });
 
     it('should have the correct size for pointers', function() {
-      assert.strictEqual(type.Pointer(type.void).size, 4);
-      assert.strictEqual(type.Pointer(type.int).size, 4);
-      assert.strictEqual(type.Pointer(type.longlong).size, 4);
-      assert.strictEqual(type.Pointer(type.Function(type.void, [])).size, 4);
+      assert.strictEqual(type.Pointer(type.void).$size, 4);
+      assert.strictEqual(type.Pointer(type.int).$size, 4);
+      assert.strictEqual(type.Pointer(type.longlong).$size, 4);
+      assert.strictEqual(type.Pointer(type.Function(type.void, [])).$size, 4);
     });
 
     it('should have the correct size for records', function() {
       var s1 = type.Record('s1', 12, type.STRUCT);
       var s2 = type.Record('s2', 4, type.UNION);
 
-      assert.strictEqual(s1.size, 12);
-      assert.strictEqual(s2.size, 4);
+      assert.strictEqual(s1.$size, 12);
+      assert.strictEqual(s2.$size, 4);
     });
 
     it('should have the correct size for enums', function() {
       var e1 = type.Enum('e1');
 
-      assert.strictEqual(e1.size, 4);
+      assert.strictEqual(e1.$size, 4);
     });
 
     it('should have the correct size for typedefs', function() {
-      assert.strictEqual(type.Typedef('t1', type.void).size, 0);
-      assert.strictEqual(type.Typedef('t2', type.short).size, 2);
-      assert.strictEqual(type.Typedef('t3', type.int).size, 4);
-      assert.strictEqual(type.Typedef('t4', type.long).size, 4);
-      assert.strictEqual(type.Typedef('t5', type.longlong).size, 8);
-      assert.strictEqual(type.Typedef('t6', type.Pointer(type.void)).size, 4);
-      assert.strictEqual(type.Typedef('t7', type.Enum('e1')).size, 4);
-      assert.strictEqual(type.Typedef('t8', type.Record('s1', 12)).size, 12);
-      assert.strictEqual(type.Typedef('t9', type.Typedef('t9', type.int)).size,
+      assert.strictEqual(type.Typedef('t1', type.void).$size, 0);
+      assert.strictEqual(type.Typedef('t2', type.short).$size, 2);
+      assert.strictEqual(type.Typedef('t3', type.int).$size, 4);
+      assert.strictEqual(type.Typedef('t4', type.long).$size, 4);
+      assert.strictEqual(type.Typedef('t5', type.longlong).$size, 8);
+      assert.strictEqual(type.Typedef('t6', type.Pointer(type.void)).$size, 4);
+      assert.strictEqual(type.Typedef('t7', type.Enum('e1')).$size, 4);
+      assert.strictEqual(type.Typedef('t8', type.Record('s1', 12)).$size, 12);
+      assert.strictEqual(type.Typedef('t9', type.Typedef('t9', type.int)).$size,
                          4);
     });
 
     it('should have no size for a function', function() {
-      assert.strictEqual(type.Function(type.void, []).size, -1);
-      assert.strictEqual(type.FunctionNoProto(type.void).size, -1);
-      assert.strictEqual(type.FunctionUntyped().size, -1);
+      assert.strictEqual(type.Function(type.void, []).$size, -1);
+      assert.strictEqual(type.FunctionNoProto(type.void).$size, -1);
+      assert.strictEqual(type.FunctionUntyped().$size, -1);
     });
 
     it('should have size for an array', function() {
-      assert.strictEqual(type.Array(type.int, 10).size, 40);
-      assert.strictEqual(type.Array(type.Pointer(type.void), 5).size, 20);
-      assert.strictEqual(type.Array(type.Typedef('t1', type.char), 5).size, 5);
+      assert.strictEqual(type.Array(type.int, 10).$size, 40);
+      assert.strictEqual(type.Array(type.Pointer(type.void), 5).$size, 20);
+      assert.strictEqual(type.Array(type.Typedef('t1', type.char), 5).$size, 5);
     });
 
     it('should have size for an incomplete array', function() {
-      assert.strictEqual(type.IncompleteArray(type.int).size, 4);
-      assert.strictEqual(type.IncompleteArray(type.Pointer(type.void)).size, 4);
+      assert.strictEqual(type.IncompleteArray(type.int).$size, 4);
+      assert.strictEqual(type.IncompleteArray(type.Pointer(type.void)).$size, 4);
     });
   });
 
@@ -372,10 +372,10 @@ describe('Type', function() {
       var cv = type.CONST | type.VOLATILE;
       var cvr = type.CONST | type.VOLATILE | type.RESTRICT;
       assert.strictEqual(spell(type.Void(type.CONST)), 'const void');
-      assert.strictEqual(spell(type.char.qualify(type.CONST)), 'const char');
-      assert.strictEqual(spell(type.int.qualify(type.CONST)), 'const int');
-      assert.strictEqual(spell(type.int.qualify(cv)), 'const volatile int');
-      assert.strictEqual(spell(type.float.qualify(cvr)),
+      assert.strictEqual(spell(type.char.$qualify(type.CONST)), 'const char');
+      assert.strictEqual(spell(type.int.$qualify(type.CONST)), 'const int');
+      assert.strictEqual(spell(type.int.$qualify(cv)), 'const volatile int');
+      assert.strictEqual(spell(type.float.$qualify(cvr)),
                    'const volatile restrict float');
     });
 
@@ -410,12 +410,12 @@ describe('Type', function() {
     });
 
     it('should correctly spell qualified pointer types', function() {
-      var Kc = type.char.qualify(type.CONST);
+      var Kc = type.char.$qualify(type.CONST);
       var PKc = type.Pointer(Kc);
       var PKPc = type.Pointer(type.Pointer(type.char, type.CONST));
       var PKt = type.Pointer(type.Typedef('foo', type.char, type.CONST));
       var PKPKc = type.Pointer(type.Pointer(Kc, type.CONST));
-      var PKVi = type.Pointer(type.int.qualify(type.CONST | type.VOLATILE));
+      var PKVi = type.Pointer(type.int.$qualify(type.CONST | type.VOLATILE));
       assert.strictEqual(spell(PKc), 'const char *');
       assert.strictEqual(spell(PKPc), 'char *const *');
       assert.strictEqual(spell(PKt), 'const foo *');
@@ -424,7 +424,7 @@ describe('Type', function() {
     });
 
     it('should correctly spell function types', function() {
-      var PKc = type.Pointer(type.char.qualify(type.CONST));
+      var PKc = type.Pointer(type.char.$qualify(type.CONST));
       var f1 = type.Function(type.int, [type.int, type.int]);
       var f2 = type.Function(type.int, [PKc], type.VARIADIC);
       var f3 = type.Pointer(type.Function(type.void, [type.int]));
@@ -524,26 +524,26 @@ describe('Type', function() {
     });
 
     it('should combine typedef qualifiers', function() {
-      var Kc = type.char.qualify(type.CONST);
+      var Kc = type.char.$qualify(type.CONST);
       var Kt = type.Typedef('Kt', Kc, type.CONST);
       var Vt = type.Typedef('Vt', Kc, type.VOLATILE);
 
       assertTypesEqual(canon(Kt), Kc);  // Extra const is ignored.
       assertTypesEqual(canon(Vt),
-                       type.char.qualify(type.CONST | type.VOLATILE));
+                       type.char.$qualify(type.CONST | type.VOLATILE));
     });
   });
 
   describe('Cast', function() {
     function spellTypedef(t) {
-      if (t.kind === type.TYPEDEF) {
-        return 'typedef of ' + spellTypedef(t.alias);
+      if (t.$kind === type.TYPEDEF) {
+        return 'typedef of ' + spellTypedef(t.$alias);
       }
       return spell(t);
     }
 
     function assertCastHelper(from, to, expected) {
-      var actual = from.canCastTo(to);
+      var actual = from.$canCastTo(to);
       var msg = 'Cast from "' + spellTypedef(from) + '" -> "' +
                                 spellTypedef(to) + '": ' +
                 'expected: ' + expected + ' actual: ' + actual;
@@ -756,7 +756,7 @@ describe('Type', function() {
           var a;
           var ia;
           assertCast(p, p, type.CAST_OK_EXACT);
-          if (x.kind !== type.VOID) {
+          if (x.$kind !== type.VOID) {
             a = type.Array(x, 2);
             ia = type.IncompleteArray(x);
             assertCast(p, a, type.CAST_OK_EXACT);
@@ -815,12 +815,12 @@ describe('Type', function() {
               var p = type.Pointer(x);
               var a = type.Array(x, 2);
               var ia = type.IncompleteArray(x);
-              assertCast(p.qualify(q1), pv.qualify(q2), type.CAST_OK_CONVERSION);
-              assertCast(a, pv.qualify(q2), type.CAST_OK_CONVERSION);
-              assertCast(ia, pv.qualify(q2), type.CAST_OK_CONVERSION);
-              assertCast(pv.qualify(q1), p.qualify(q2), type.CAST_OK_CONVERSION);
-              assertCast(pv.qualify(q1), a, type.CAST_OK_CONVERSION);
-              assertCast(pv.qualify(q1), ia, type.CAST_OK_CONVERSION);
+              assertCast(p.$qualify(q1), pv.$qualify(q2), type.CAST_OK_CONVERSION);
+              assertCast(a, pv.$qualify(q2), type.CAST_OK_CONVERSION);
+              assertCast(ia, pv.$qualify(q2), type.CAST_OK_CONVERSION);
+              assertCast(pv.$qualify(q1), p.$qualify(q2), type.CAST_OK_CONVERSION);
+              assertCast(pv.$qualify(q1), a, type.CAST_OK_CONVERSION);
+              assertCast(pv.$qualify(q1), ia, type.CAST_OK_CONVERSION);
             });
           });
         });
@@ -828,10 +828,10 @@ describe('Type', function() {
 
       it('should warn on cast of void* -> less qualified void*', function() {
         [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
-          var q1p = type.Pointer(v.qualify(q1));
+          var q1p = type.Pointer(v.$qualify(q1));
           [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
             if (!type.isLessQualified(q2, q1)) return;
-            var q2p = type.Pointer(v.qualify(q2));
+            var q2p = type.Pointer(v.$qualify(q2));
             assertCast(q1p, q2p, type.CAST_DISCARD_QUALIFIER);
           });
         });
@@ -856,10 +856,10 @@ describe('Type', function() {
         [v, c, e, s, u, f, fn, fu].forEach(function(x) {
           var p = type.Pointer(x);
           [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
-            var q1p = p.qualify(q1);
+            var q1p = p.$qualify(q1);
             [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
               if (!type.isLessQualified(q1, q2)) return;
-              var q2p = p.qualify(q2);
+              var q2p = p.$qualify(q2);
               assertCast(q1p, q2p, type.CAST_OK_EXACT);
             });
           });
@@ -871,10 +871,10 @@ describe('Type', function() {
         // const void* => volatile void*
         [v, c, e, s, u].forEach(function(x) {
           [0, C, CV, CVR, V, VR, R].forEach(function(q1) {
-            var q1p = type.Pointer(x.qualify(q1));
+            var q1p = type.Pointer(x.$qualify(q1));
             [0, C, CV, CVR, V, VR, R].forEach(function(q2) {
               if (!type.isLessQualified(q2, q1)) return;
-              var q2p = type.Pointer(x.qualify(q2));
+              var q2p = type.Pointer(x.$qualify(q2));
               assertCast(q1p, q2p, type.CAST_DISCARD_QUALIFIER);
             });
           });
@@ -889,7 +889,7 @@ describe('Type', function() {
           var a = type.Array(x, 2);
           var ia = type.IncompleteArray(x);
           [C, CV, CVR, V, VR, R].forEach(function(q) {
-            var qp = type.Pointer(x.qualify(q));
+            var qp = type.Pointer(x.$qualify(q));
             assertCast(a, qp, type.CAST_OK_EXACT);
             assertCast(ia, qp, type.CAST_OK_EXACT);
           });
@@ -923,10 +923,10 @@ describe('Type', function() {
 
       it('should warn on cast between differently-qualified pointees', function() {
         [0, C, V, R, CV, CR, VR, CVR].forEach(function (q1) {
-          var q1p = type.Pointer(type.Pointer(type.char.qualify(q1)));
+          var q1p = type.Pointer(type.Pointer(type.char.$qualify(q1)));
           [0, C, V, R, CV, CR, VR, CVR].forEach(function (q2) {
             if (q1 === q2) return;
-            var q2p = type.Pointer(type.Pointer(type.char.qualify(q2)));
+            var q2p = type.Pointer(type.Pointer(type.char.$qualify(q2)));
             assertCast(q1p, q2p, type.CAST_INCOMPATIBLE_POINTERS);
           });
         });
@@ -935,7 +935,7 @@ describe('Type', function() {
       it('should warn on cast of pointer-like -> integral', function() {
         [v, c, e, s, u, f, fn, fu].forEach(function(x) {
           assertCast(type.Pointer(x), type.int, type.CAST_POINTER_TO_INT);
-          if (x.kind !== type.VOID) {
+          if (x.$kind !== type.VOID) {
             assertCast(type.Array(x, 2), type.int, type.CAST_POINTER_TO_INT);
             assertCast(type.IncompleteArray(x), type.int, type.CAST_POINTER_TO_INT);
           }
@@ -948,7 +948,7 @@ describe('Type', function() {
           assertCast(p, type.float, type.CAST_ERROR);
           assertCast(p, type.double, type.CAST_ERROR);
           assertCast(p, type.longdouble, type.CAST_ERROR);
-          if (x.kind !== type.VOID) {
+          if (x.$kind !== type.VOID) {
             assertCast(type.Array(x, 2), type.float, type.CAST_ERROR);
             assertCast(type.Array(x, 2), type.double, type.CAST_ERROR);
             assertCast(type.Array(x, 2), type.longdouble, type.CAST_ERROR);
@@ -964,7 +964,7 @@ describe('Type', function() {
           var p = type.Pointer(x);
           [v, e, s, u, f].forEach(function(to) {
             assertCast(p, to, type.CAST_ERROR);
-            if (x.kind !== type.VOID) {
+            if (x.$kind !== type.VOID) {
               assertCast(type.Array(x, 2), to, type.CAST_ERROR);
               assertCast(type.IncompleteArray(x), to, type.CAST_ERROR);
             }
@@ -1116,9 +1116,9 @@ describe('Type', function() {
 
       it('should allow qualifiers to propagate though typedef', function() {
         var Kt = type.Typedef('t', type.char, type.CONST);
-        var Kc = type.char.qualify(type.CONST);
+        var Kc = type.char.$qualify(type.CONST);
         var VKt = type.Typedef('t2', Kt, type.VOLATILE);
-        var KVc = type.char.qualify(type.CONST | type.VOLATILE);
+        var KVc = type.char.$qualify(type.CONST | type.VOLATILE);
         assertCast(type.Pointer(Kt), type.Pointer(Kc), type.CAST_OK_EXACT);
         assertCast(type.Pointer(Kc), type.Pointer(Kt), type.CAST_OK_EXACT);
         assertCast(type.Pointer(VKt), type.Pointer(KVc), type.CAST_OK_EXACT);
@@ -1130,7 +1130,7 @@ describe('Type', function() {
       var kind = 1000;
       var t = type.Type(kind);
       assert.throws(function() {
-        t.canCastTo(t);
+        t.$canCastTo(t);
       }, /kind/);
     });
   });
@@ -1323,15 +1323,15 @@ describe('Type', function() {
         var tcv = make(CV);
         var tcvr = make(CVR);
 
-        assertTypesEqual(t.qualify(C), tc);
-        assertTypesEqual(t.qualify(CV), tcv);
-        assertTypesEqual(t.qualify(CVR), tcvr);
+        assertTypesEqual(t.$qualify(C), tc);
+        assertTypesEqual(t.$qualify(CV), tcv);
+        assertTypesEqual(t.$qualify(CVR), tcvr);
         // If already qualified, it is a no-op.
-        assertTypesEqual(tc.qualify(C), tc);
-        assertTypesEqual(tcvr.qualify(CVR), tcvr);
+        assertTypesEqual(tc.$qualify(C), tc);
+        assertTypesEqual(tcvr.$qualify(CVR), tcvr);
         // Should apply new qualifiers.
-        assertTypesEqual(tc.qualify(V), tcv);
-        assertTypesEqual(tc.qualify(CV), tcv);
+        assertTypesEqual(tc.$qualify(V), tcv);
+        assertTypesEqual(tc.$qualify(CV), tcv);
       });
     });
 
@@ -1343,9 +1343,9 @@ describe('Type', function() {
       var ia = type.IncompleteArray(type.int);
 
       [fp, fn, fu, ca, ia].forEach(function(t) {
-        assertTypesEqual(t.qualify(C), t);
-        assertTypesEqual(t.qualify(VR), t);
-        assertTypesEqual(t.qualify(V), t);
+        assertTypesEqual(t.$qualify(C), t);
+        assertTypesEqual(t.$qualify(VR), t);
+        assertTypesEqual(t.$qualify(V), t);
       });
     });
   });
@@ -1367,7 +1367,7 @@ describe('Type', function() {
       // Loop through each type's constructor function.
       [TV, TN, TP, TR, TE, TT, TFP, TFN, TFU, TCA, TIA].forEach(function(make) {
         [0, C, V, R, CV, CR, VR, CVR].forEach(function(cv) {
-          assertTypesEqual(make(cv).unqualified(), make());
+          assertTypesEqual(make(cv).$unqualified(), make());
         });
       });
     });

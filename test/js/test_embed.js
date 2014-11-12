@@ -25,11 +25,11 @@ describe('Embed', function() {
     var ne = NaClEmbed();
     var e = Embed(ne);
 
-    ne.setPostMessageCallback(function() {
+    ne.$setPostMessageCallback(function() {
       assert.ok(false, 'Unexpected call to postMessage');
     });
 
-    e.postMessageWithResponse({id: 1, test: 'hello'});
+    e.$postMessageWithResponse({id: 1, test: 'hello'});
   });
 
   it('should post all messages after load', function(done) {
@@ -39,7 +39,7 @@ describe('Embed', function() {
     var callCount = 0;
     var notCalled = function() { assert.ok(false, 'Shouldn\'t be called'); }
 
-    ne.setPostMessageCallback(function(msg) {
+    ne.$setPostMessageCallback(function(msg) {
       assert.strictEqual(loaded, true,
                          'postMessage called before embed loaded');
       if (callCount === 0) {
@@ -53,27 +53,27 @@ describe('Embed', function() {
       ++callCount;
     });
 
-    ne.addLoadListener(function() {
+    ne.$addLoadListener(function() {
       loaded = true;
     });
 
-    e.postMessageWithResponse({id: 1, test: 'hello'}, notCalled);
-    e.postMessageWithResponse({id: 2, test: 'world'}, notCalled);
-    ne.load();
+    e.$postMessageWithResponse({id: 1, test: 'hello'}, notCalled);
+    e.$postMessageWithResponse({id: 2, test: 'world'}, notCalled);
+    ne.$load();
   });
 
   it('should call callback when message is posted from module', function(done) {
     var ne = NaClEmbed();
     var e = Embed(ne);
 
-    ne.setPostMessageCallback(function(msg) {
+    ne.$setPostMessageCallback(function(msg) {
       assert.deepEqual(msg, {id: 1, msg: 'ping'});
       // When we get a ping, respond with a pong.
-      ne.message({id: 1, msg: 'pong'});
+      ne.$message({id: 1, msg: 'pong'});
     });
 
-    ne.load();
-    e.postMessageWithResponse({id: 1, msg: 'ping'}, function(msg) {
+    ne.$load();
+    e.$postMessageWithResponse({id: 1, msg: 'ping'}, function(msg) {
       assert.deepEqual(msg, {id: 1, msg: 'pong'});
       done();
     });
@@ -84,14 +84,14 @@ describe('Embed', function() {
     var e = Embed(ne);
     var n = 1;
 
-    ne.setPostMessageCallback(function(msg) {
+    ne.$setPostMessageCallback(function(msg) {
       assert.deepEqual(msg, {id: n});
-      ne.message({id: n});
+      ne.$message({id: n});
     });
 
-    ne.load();
+    ne.$load();
 
-    e.postMessageWithResponse({id: n}, function onMessage(msg) {
+    e.$postMessageWithResponse({id: n}, function onMessage(msg) {
       assert.deepEqual(msg, {id: n});
       if (msg.id >= 100) {
         done();
@@ -99,7 +99,7 @@ describe('Embed', function() {
       }
 
       ++n;
-      e.postMessageWithResponse({id: n}, onMessage);
+      e.$postMessageWithResponse({id: n}, onMessage);
     });
   });
 
@@ -107,12 +107,12 @@ describe('Embed', function() {
     var ne = NaClEmbed();
     var e = Embed(ne);
 
-    ne.setPostMessageCallback(function(msg) {
+    ne.$setPostMessageCallback(function(msg) {
       switch (msg.id) {
         case 1:
           assert.deepEqual(msg, {id: 1});
           // Call callback.
-          ne.message({id: 2, cbId: 1, values: [10]});
+          ne.$message({id: 2, cbId: 1, values: [10]});
           break;
 
         case 2:
@@ -123,17 +123,17 @@ describe('Embed', function() {
       }
     });
 
-    ne.load();
+    ne.$load();
 
-    e.registerCallback(2, function(msg) {
+    e.$registerCallback(2, function(msg) {
       // Check callback message.
       assert.deepEqual(msg, {id: 2, cbId: 1, values: [10]});
       // Return "result" of callback to module.
-      e.postMessage({id: 2, cbId: 1, values: [20]});
-      e.destroyCallback(2);
+      e.$postMessage({id: 2, cbId: 1, values: [20]});
+      e.$destroyCallback(2);
     });
 
-    e.postMessageWithResponse({id: 1});
+    e.$postMessageWithResponse({id: 1});
   });
 
   var fireEventsImmediately = true;
@@ -152,7 +152,7 @@ describe('Embed', function() {
     var e = Embed(ne);
 
     assert.throws(function() {
-      ne.message({id: '1'});
+      ne.$message({id: '1'});
     }, /bad id/);
   });
 
@@ -161,7 +161,7 @@ describe('Embed', function() {
     var e = Embed(ne);
 
     assert.throws(function() {
-      ne.message({id: 1, cbId: 3.5});
+      ne.$message({id: 1, cbId: 3.5});
     }, /bad cbId/);
   });
 
@@ -170,7 +170,7 @@ describe('Embed', function() {
     var e = Embed(ne);
 
     assert.throws(function() {
-      ne.message({id: 1});
+      ne.$message({id: 1});
     }, /callback/);
   });
 
@@ -179,11 +179,11 @@ describe('Embed', function() {
     var e = Embed(ne);
 
     assert.throws(function() {
-      e.postMessage({});
+      e.$postMessage({});
     }, /id/);
 
     assert.throws(function() {
-      e.postMessageWithResponse({}, function() {});
+      e.$postMessageWithResponse({}, function() {});
     }, /id/);
   });
 
@@ -192,18 +192,18 @@ describe('Embed', function() {
     var e = Embed(ne);
 
     assert.throws(function() {
-      e.postMessage({id: 1, cbId: 'foo'});
+      e.$postMessage({id: 1, cbId: 'foo'});
     }, /cbId/);
 
     assert.throws(function() {
-      e.postMessage({id: 1});  // missing cbId
+      e.$postMessage({id: 1});  // missing cbId
     }, /cbId/);
 
     // postMessage is not queued because it should only be called from a
     // callback. As such, it is an error if it is called before the module is
     // loaded.
     assert.throws(function() {
-      e.postMessage({id: 1, cbId: 1});
+      e.$postMessage({id: 1, cbId: 1});
     }, /loaded/);
   });
 });

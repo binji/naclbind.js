@@ -171,17 +171,17 @@ var Embed = (function(utils) {
     if (!(this instanceof Embed)) {
       return new Embed(naclEmbed);
     }
-    this.naclEmbed_ = naclEmbed;
+    this.$naclEmbed_ = naclEmbed;
 
-    this.queuedMessages_ = [];
-    this.naclEmbed_.addLoadListener(this.onLoad_.bind(this));
-    this.naclEmbed_.addMessageListener(this.onMessage_.bind(this));
-    this.loaded_ = false;
+    this.$queuedMessages_ = [];
+    this.$naclEmbed_.$addLoadListener(this.$onLoad_.bind(this));
+    this.$naclEmbed_.$addMessageListener(this.$onMessage_.bind(this));
+    this.$loaded_ = false;
 
-    this.idCallbackMap_ = [];
+    this.$idCallbackMap_ = [];
   }
 
-  Embed.prototype.onLoad_ = function(e) {
+  Embed.prototype.$onLoad_ = function(e) {
     // Wait till the next time through the eventloop to allow other 'load'
     // listeners to be called.
     var self = this;
@@ -189,12 +189,12 @@ var Embed = (function(utils) {
             process.nextTick :
             window.setTimeout;
 
-    nextTick(self.postQueuedMessages_.bind(self));
+    nextTick(self.$postQueuedMessages_.bind(self));
 
-    this.loaded_ = true;
+    this.$loaded_ = true;
   };
 
-  Embed.prototype.onMessage_ = function(e) {
+  Embed.prototype.$onMessage_ = function(e) {
     var msg = e.data;
     var jsonMsg;
     var id;
@@ -218,7 +218,7 @@ var Embed = (function(utils) {
       throw new Error('Received message with bad cbId: ' + jsonMsg);
     }
 
-    callback = this.idCallbackMap_[id];
+    callback = this.$idCallbackMap_[id];
     if (utils.getClass(callback) !== 'Function') {
       jsonMsg = JSON.stringify(msg);
       throw new Error('No callback associated with id: ' + id + ' for msg: ' +
@@ -230,20 +230,20 @@ var Embed = (function(utils) {
     // Messages with cbId set can potentially be called more than once, so we
     // can't remove them from the map.
     if (cbId === undefined) {
-      delete this.idCallbackMap_[id];
+      delete this.$idCallbackMap_[id];
     }
   };
 
-  Embed.prototype.postQueuedMessages_ = function() {
+  Embed.prototype.$postQueuedMessages_ = function() {
     var i;
-    for (i = 0; i < this.queuedMessages_.length; ++i) {
-      this.naclEmbed_.postMessage(this.queuedMessages_[i]);
+    for (i = 0; i < this.$queuedMessages_.length; ++i) {
+      this.$naclEmbed_.$postMessage(this.$queuedMessages_[i]);
     }
-    this.queuedMessages_ = null;
+    this.$queuedMessages_ = null;
   };
 
   // Should only be used for returning results from callbacks.
-  Embed.prototype.postMessage = function(msg) {
+  Embed.prototype.$postMessage = function(msg) {
     if (msg.id === undefined) {
       throw new Error('Expected msg object to have id set.');
     }
@@ -252,42 +252,42 @@ var Embed = (function(utils) {
       throw new Error('Expected msg object to have cbId set.');
     }
 
-    if (!this.loaded_) {
+    if (!this.$loaded_) {
       throw new Error('Expected NaCl module to be loaded.');
     }
 
-    this.naclEmbed_.postMessage(msg);
+    this.$naclEmbed_.$postMessage(msg);
   };
 
-  Embed.prototype.postMessageWithResponse = function(msg, callback) {
+  Embed.prototype.$postMessageWithResponse = function(msg, callback) {
     if (msg.id === undefined) {
       throw new Error('Expected msg object to have id set.');
     }
 
-    this.idCallbackMap_[msg.id] = callback;
+    this.$idCallbackMap_[msg.id] = callback;
 
-    if (!this.loaded_) {
-      this.queuedMessages_.push(msg);
+    if (!this.$loaded_) {
+      this.$queuedMessages_.push(msg);
       return;
     }
 
-    this.naclEmbed_.postMessage(msg);
+    this.$naclEmbed_.$postMessage(msg);
   };
 
-  Embed.prototype.appendToBody = function() {
-    this.naclEmbed_.appendToBody();
+  Embed.prototype.$appendToBody = function() {
+    this.$naclEmbed_.$appendToBody();
   };
 
-  Embed.prototype.registerCallback = function(id, callback) {
-    this.idCallbackMap_[id] = callback;
+  Embed.prototype.$registerCallback = function(id, callback) {
+    this.$idCallbackMap_[id] = callback;
   };
 
-  Embed.prototype.destroyCallback = function(id) {
-    if (typeof(this.idCallbackMap_[id]) !== 'function') {
+  Embed.prototype.$destroyCallback = function(id) {
+    if (typeof(this.$idCallbackMap_[id]) !== 'function') {
       throw new Error('Unknown callback id: ' + id);
     }
 
-    delete this.idCallbackMap_[id];
+    delete this.$idCallbackMap_[id];
   };
 
   return Embed;
@@ -904,50 +904,50 @@ var NaClEmbed = (function() {
 
   function NaClEmbed(nmf, mimeType) {
     if (!(this instanceof NaClEmbed)) { return new NaClEmbed(nmf, mimeType); }
-    this.nmf = nmf;
-    this.mimeType = mimeType;
-    this.element = document.createElement('embed');
-    this.element.setAttribute('width', '0');
-    this.element.setAttribute('height', '0');
-    this.element.setAttribute('src', this.nmf);
-    this.element.setAttribute('type', this.mimeType);
+    this.$nmf = nmf;
+    this.$mimeType = mimeType;
+    this.$element = document.createElement('embed');
+    this.$element.setAttribute('width', '0');
+    this.$element.setAttribute('height', '0');
+    this.$element.setAttribute('src', this.$nmf);
+    this.$element.setAttribute('type', this.$mimeType);
   }
 
-  NaClEmbed.prototype.addEventListener_ = function(message, callback) {
-    this.element.addEventListener(message, callback, false);
+  NaClEmbed.prototype.$addEventListener_ = function(message, callback) {
+    this.$element.addEventListener(message, callback, false);
   };
 
-  NaClEmbed.prototype.addLoadListener = function(callback) {
-    this.addEventListener_('load', callback);
+  NaClEmbed.prototype.$addLoadListener = function(callback) {
+    this.$addEventListener_('load', callback);
   };
 
-  NaClEmbed.prototype.addMessageListener = function(callback) {
-    this.addEventListener_('message', callback);
+  NaClEmbed.prototype.$addMessageListener = function(callback) {
+    this.$addEventListener_('message', callback);
   };
 
-  NaClEmbed.prototype.addErrorListener = function(callback) {
-    this.addEventListener_('error', callback);
+  NaClEmbed.prototype.$addErrorListener = function(callback) {
+    this.$addEventListener_('error', callback);
   };
 
-  NaClEmbed.prototype.addCrashListener = function(callback) {
-    this.addEventListener_('crash', callback);
+  NaClEmbed.prototype.$addCrashListener = function(callback) {
+    this.$addEventListener_('crash', callback);
   };
 
-  NaClEmbed.prototype.appendToBody = function() {
-    document.body.appendChild(this.element);
+  NaClEmbed.prototype.$appendToBody = function() {
+    document.body.appendChild(this.$element);
   };
 
-  NaClEmbed.prototype.postMessage = function(msg) {
-    this.element.postMessage(msg);
+  NaClEmbed.prototype.$postMessage = function(msg) {
+    this.$element.postMessage(msg);
   };
 
   Object.defineProperty(NaClEmbed.prototype, 'lastError', {
-    get: function() { return this.element.lastError; },
+    get: function() { return this.$element.lastError; },
     enumerable: true
   });
 
   Object.defineProperty(NaClEmbed.prototype, 'exitStatus', {
-    get: function() { return this.element.exitStatus; },
+    get: function() { return this.$element.exitStatus; },
     enumerable: true
   });
 
@@ -1148,13 +1148,13 @@ var type = (function(utils) {
     }
     if (optKind) {
       if (Array.isArray(optKind)) {
-        if (optKind.indexOf(x.kind) === -1) {
+        if (optKind.indexOf(x.$kind) === -1) {
           throw new Error(
               varName + ' must be Type with kind in [' +
               optKind.map(function(x) { return KIND_NAME[x]; }).join(', ') +
               ']');
         }
-      } else if (x.kind !== optKind) {
+      } else if (x.$kind !== optKind) {
         throw new Error(varName + ' must be Type with kind ' +
                         KIND_NAME[optKind]);
       }
@@ -1162,30 +1162,30 @@ var type = (function(utils) {
   }
 
   function isVoid(type) {
-    return type.kind === VOID;
+    return type.$kind === VOID;
   }
 
   function isInteger(type) {
-    return type.kind >= BOOL && type.kind <= LONGLONG;
+    return type.$kind >= BOOL && type.$kind <= LONGLONG;
   }
 
   function isNumeric(type) {
-    return type.kind >= BOOL && type.kind <= LONGDOUBLE;
+    return type.$kind >= BOOL && type.$kind <= LONGDOUBLE;
   }
 
   function isPointerlike(type) {
-    return type.kind === POINTER || type.kind === CONSTANTARRAY ||
-           type.kind === INCOMPLETEARRAY;
+    return type.$kind === POINTER || type.$kind === CONSTANTARRAY ||
+           type.$kind === INCOMPLETEARRAY;
   }
 
   function isArray(type) {
-    return type.kind === CONSTANTARRAY || type.kind === INCOMPLETEARRAY;
+    return type.$kind === CONSTANTARRAY || type.$kind === INCOMPLETEARRAY;
   }
 
   function isFunction(type) {
-    return type.kind === FUNCTIONPROTO ||
-           type.kind === FUNCTIONNOPROTO ||
-           type.kind === FUNCTIONUNTYPED;
+    return type.$kind === FUNCTIONPROTO ||
+           type.$kind === FUNCTIONNOPROTO ||
+           type.$kind === FUNCTIONUNTYPED;
   }
 
   function isCastOK(result) {
@@ -1201,20 +1201,20 @@ var type = (function(utils) {
   }
 
   function hasTypedef(type) {
-    switch (type.kind) {
+    switch (type.$kind) {
       case TYPEDEF:
         return true;
       case POINTER:
-        return hasTypedef(type.pointee);
+        return hasTypedef(type.$pointee);
       case CONSTANTARRAY:
-        return hasTypedef(type.elementType);
+        return hasTypedef(type.$elementType);
       case INCOMPLETEARRAY:
-        return hasTypedef(type.elementType);
+        return hasTypedef(type.$elementType);
       case FUNCTIONPROTO:
-        return hasTypedef(type.resultType) ||
-               Array.prototype.some.call(type.argTypes, hasTypedef);
+        return hasTypedef(type.$resultType) ||
+               Array.prototype.some.call(type.$argTypes, hasTypedef);
       case FUNCTIONNOPROTO:
-        return hasTypedef(type.resultType);
+        return hasTypedef(type.$resultType);
       default:
         return false;
     }
@@ -1222,22 +1222,22 @@ var type = (function(utils) {
 
   function getCanonicalHelper(type) {
     var recurse = getCanonicalHelper;
-    switch (type.kind) {
+    switch (type.$kind) {
       case TYPEDEF:
-        return getCanonicalHelper(type.alias).qualify(type.cv);
+        return getCanonicalHelper(type.$alias).$qualify(type.$cv);
       case POINTER:
-        return Pointer(recurse(type.pointee), type.cv);
+        return Pointer(recurse(type.$pointee), type.$cv);
       case CONSTANTARRAY:
-        return ConstantArray(recurse(type.elementType), type.arraySize,
-                             type.cv);
+        return ConstantArray(recurse(type.$elementType), type.$arraySize,
+                             type.$cv);
       case INCOMPLETEARRAY:
-        return IncompleteArray(recurse(type.elementType), type.cv);
+        return IncompleteArray(recurse(type.$elementType), type.$cv);
       case FUNCTIONPROTO:
-        return FunctionProto(recurse(type.resultType),
-                             Array.prototype.map.call(type.argTypes, recurse),
+        return FunctionProto(recurse(type.$resultType),
+                             Array.prototype.map.call(type.$argTypes, recurse),
                              type.variadic);
       case FUNCTIONNOPROTO:
-        return FunctionNoProto(recurse(type.resultType));
+        return FunctionNoProto(recurse(type.$resultType));
       default:
         return type;
     }
@@ -1254,12 +1254,12 @@ var type = (function(utils) {
   }
 
   function getPointerlikePointee(type) {
-    if (type.kind === POINTER) {
-      return type.pointee;
-    } else if (type.kind === CONSTANTARRAY) {
-      return type.elementType;
-    } else if (type.kind === INCOMPLETEARRAY) {
-      return type.elementType;
+    if (type.$kind === POINTER) {
+      return type.$pointee;
+    } else if (type.$kind === CONSTANTARRAY) {
+      return type.$elementType;
+    } else if (type.$kind === INCOMPLETEARRAY) {
+      return type.$elementType;
     }
     return null;
   }
@@ -1291,47 +1291,47 @@ var type = (function(utils) {
       }
     }
 
-    this.kind = kind;
-    this.cv = cv || 0;
+    this.$kind = kind;
+    this.$cv = cv || 0;
   }
-  Type.prototype.qualify = function(cv) {
+  Type.prototype.$qualify = function(cv) {
     return null;
   };
-  Type.prototype.isCompatibleWith = function(that) {
+  Type.prototype.$isCompatibleWith = function(that) {
     return isCompatibleWith(this, that);
   };
-  Type.prototype.canCastTo = function(that) {
+  Type.prototype.$canCastTo = function(that) {
     return canCast(this, that);
   };
 
   function Void(cv) {
     if (!(this instanceof Void)) { return new Void(cv); }
     Type.call(this, VOID, cv);
-    this.spelling = getSpelling(this);
+    this.$spelling = getSpelling(this);
   }
   Void.prototype = Object.create(Type.prototype);
-  Void.prototype.constructor = Void;
-  Void.prototype.size = 0;
-  Void.prototype.qualify = function(cv) {
-    return Void(this.cv | cv);
+  Void.prototype.$constructor = Void;
+  Void.prototype.$size = 0;
+  Void.prototype.$qualify = function(cv) {
+    return Void(this.$cv | cv);
   };
-  Void.prototype.unqualified = function() {
+  Void.prototype.$unqualified = function() {
     return Void();
   };
 
   function Numeric(kind, cv) {
     if (!(this instanceof Numeric)) { return new Numeric(kind, cv); }
     Type.call(this, kind, cv);
-    this.size = PRIMITIVE_SIZE[kind];
-    this.spelling = getSpelling(this);
+    this.$size = PRIMITIVE_SIZE[kind];
+    this.$spelling = getSpelling(this);
   }
   Numeric.prototype = Object.create(Type.prototype);
   Numeric.prototype.constructor = Numeric;
-  Numeric.prototype.qualify = function(cv) {
-    return Numeric(this.kind, this.cv | cv);
+  Numeric.prototype.$qualify = function(cv) {
+    return Numeric(this.$kind, this.$cv | cv);
   };
-  Numeric.prototype.unqualified = function() {
-    return Numeric(this.kind);
+  Numeric.prototype.$unqualified = function() {
+    return Numeric(this.$kind);
   };
 
   function Pointer(pointee, cv) {
@@ -1340,17 +1340,17 @@ var type = (function(utils) {
     checkType(pointee, 'pointee');
 
     Type.call(this, POINTER, cv);
-    this.pointee = pointee;
-    this.spelling = getSpelling(this);
+    this.$pointee = pointee;
+    this.$spelling = getSpelling(this);
   }
   Pointer.prototype = Object.create(Type.prototype);
   Pointer.prototype.constructor = Pointer;
-  Pointer.prototype.size = 4;
-  Pointer.prototype.qualify = function(cv) {
-    return Pointer(this.pointee, this.cv | cv);
+  Pointer.prototype.$size = 4;
+  Pointer.prototype.$qualify = function(cv) {
+    return Pointer(this.$pointee, this.$cv | cv);
   };
-  Pointer.prototype.unqualified = function() {
-    return Pointer(this.pointee);
+  Pointer.prototype.$unqualified = function() {
+    return Pointer(this.$pointee);
   };
 
   function Record(tag, size, isUnion, cv) {
@@ -1366,26 +1366,26 @@ var type = (function(utils) {
     }
 
     Type.call(this, RECORD, cv);
-    this.tag = tag;
-    this.size = size;
-    this.fields = [];
-    this.isUnion = isUnion || false;
-    this.spelling = getSpelling(this);
+    this.$tag = tag;
+    this.$size = size;
+    this.$fields = [];
+    this.$isUnion = isUnion || false;
+    this.$spelling = getSpelling(this);
   }
   Record.prototype = Object.create(Type.prototype);
   Record.prototype.constructor = Record;
-  Record.prototype.qualify = function(cv) {
-    var record = Record(this.tag, this.size, this.isUnion, this.cv | cv);
-    record.fields = this.fields;
+  Record.prototype.$qualify = function(cv) {
+    var record = Record(this.$tag, this.$size, this.$isUnion, this.$cv | cv);
+    record.fields = this.$fields;
     return record;
   };
-  Record.prototype.unqualified = function() {
-    var record = Record(this.tag, this.size, this.isUnion);
-    record.fields = this.fields;
+  Record.prototype.$unqualified = function() {
+    var record = Record(this.$tag, this.$size, this.$isUnion);
+    record.fields = this.$fields;
     return record;
   };
-  Record.prototype.addField = function(name, type, offset) {
-    this.fields.push(Field(name, type, offset));
+  Record.prototype.$addField = function(name, type, offset) {
+    this.$fields.push(Field(name, type, offset));
   };
 
   function Field(name, type, offset) {
@@ -1395,9 +1395,9 @@ var type = (function(utils) {
     checkType(type, 'type');
     utils.checkNonnegativeNumber(offset, 'offset');
 
-    this.name = name;
-    this.type = type;
-    this.offset = offset;
+    this.$name = name;
+    this.$type = type;
+    this.$offset = offset;
   }
 
 
@@ -1407,36 +1407,36 @@ var type = (function(utils) {
     utils.checkNullOrString(tag, 'tag');
 
     Type.call(this, ENUM, cv);
-    this.tag = tag;
-    this.spelling = getSpelling(this);
+    this.$tag = tag;
+    this.$spelling = getSpelling(this);
   }
   Enum.prototype = Object.create(Type.prototype);
   Enum.prototype.constructor = Enum;
-  Enum.prototype.size = 4;
-  Enum.prototype.qualify = function(cv) {
-    return Enum(this.tag, this.cv | cv);
+  Enum.prototype.$size = 4;
+  Enum.prototype.$qualify = function(cv) {
+    return Enum(this.$tag, this.$cv | cv);
   };
-  Enum.prototype.unqualified = function() {
-    return Enum(this.tag);
+  Enum.prototype.$unqualified = function() {
+    return Enum(this.$tag);
   };
 
   function Typedef(tag, alias, cv) {
     if (!(this instanceof Typedef)) { return new Typedef(tag, alias, cv); }
     Type.call(this, TYPEDEF, cv);
-    this.tag = tag;
-    this.alias = alias;
-    this.spelling = getSpelling(this);
+    this.$tag = tag;
+    this.$alias = alias;
+    this.$spelling = getSpelling(this);
   }
   Typedef.prototype = Object.create(Type.prototype);
   Typedef.prototype.constructor = Typedef;
-  Typedef.prototype.qualify = function(cv) {
-    return Typedef(this.tag, this.alias, this.cv | cv);
+  Typedef.prototype.$qualify = function(cv) {
+    return Typedef(this.$tag, this.$alias, this.$cv | cv);
   };
-  Typedef.prototype.unqualified = function() {
-    return Typedef(this.tag, this.alias);
+  Typedef.prototype.$unqualified = function() {
+    return Typedef(this.$tag, this.$alias);
   };
-  Object.defineProperty(Typedef.prototype, 'size', {
-    get: function() { return this.alias.size; }
+  Object.defineProperty(Typedef.prototype, '$size', {
+    get: function() { return this.$alias.$size; }
   });
 
   function FunctionProto(resultType, argTypes, variadic) {
@@ -1462,23 +1462,23 @@ var type = (function(utils) {
     }
 
     Type.call(this, FUNCTIONPROTO, 0);
-    this.resultType = resultType;
-    this.argTypes = argTypes;
-    this.variadic = variadic || false;
-    this.spelling = getSpelling(this);
+    this.$resultType = resultType;
+    this.$argTypes = argTypes;
+    this.$variadic = variadic || false;
+    this.$spelling = getSpelling(this);
   }
   FunctionProto.prototype = Object.create(Type.prototype);
-  FunctionProto.prototype.size = -1;
+  FunctionProto.prototype.$size = -1;
   FunctionProto.prototype.constructor = FunctionProto;
-  FunctionProto.prototype.qualify = function(cv) {
+  FunctionProto.prototype.$qualify = function(cv) {
     return this;
   };
-  FunctionProto.prototype.unqualified = function() {
+  FunctionProto.prototype.$unqualified = function() {
     return this;
   };
-  FunctionProto.prototype.isViableForCall = function(argTypes) {
-    return this.argTypes.length === argTypes.length ||
-           (this.argTypes.length < argTypes.length && this.variadic);
+  FunctionProto.prototype.$isViableForCall = function(argTypes) {
+    return this.$argTypes.length === argTypes.length ||
+           (this.$argTypes.length < argTypes.length && this.$variadic);
   };
 
   function FunctionNoProto(resultType) {
@@ -1494,19 +1494,19 @@ var type = (function(utils) {
     }
 
     Type.call(this, FUNCTIONNOPROTO, 0);
-    this.resultType = resultType;
-    this.spelling = getSpelling(this);
+    this.$resultType = resultType;
+    this.$spelling = getSpelling(this);
   }
   FunctionNoProto.prototype = Object.create(Type.prototype);
   FunctionNoProto.prototype.constructor = FunctionNoProto;
-  FunctionNoProto.prototype.size = -1;
-  FunctionNoProto.prototype.qualify = function(cv) {
+  FunctionNoProto.prototype.$size = -1;
+  FunctionNoProto.prototype.$qualify = function(cv) {
     return this;
   };
-  FunctionNoProto.prototype.unqualified = function() {
+  FunctionNoProto.prototype.$unqualified = function() {
     return this;
   };
-  FunctionNoProto.prototype.isViableForCall = function(argTypes) {
+  FunctionNoProto.prototype.$isViableForCall = function(argTypes) {
     return true;
   };
 
@@ -1516,18 +1516,18 @@ var type = (function(utils) {
     }
 
     Type.call(this, FUNCTIONUNTYPED, 0);
-    this.spelling = getSpelling(this);
+    this.$spelling = getSpelling(this);
   }
   FunctionUntyped.prototype = Object.create(Type.prototype);
   FunctionUntyped.prototype.constructor = FunctionUntyped;
-  FunctionUntyped.prototype.size = -1;
-  FunctionUntyped.prototype.qualify = function(cv) {
+  FunctionUntyped.prototype.$size = -1;
+  FunctionUntyped.prototype.$qualify = function(cv) {
     return this;
   };
-  FunctionUntyped.prototype.unqualified = function() {
+  FunctionUntyped.prototype.$unqualified = function() {
     return this;
   };
-  FunctionUntyped.prototype.isViableForCall = function(argTypes) {
+  FunctionUntyped.prototype.$isViableForCall = function(argTypes) {
     return true;
   };
 
@@ -1539,22 +1539,22 @@ var type = (function(utils) {
     checkType(elementType, 'elementType');
     utils.checkNonnegativeNumber(arraySize, 'arraySize');
 
-    if (elementType.kind === VOID) {
+    if (elementType.$kind === VOID) {
       throw new Error('Cannot create an array of voids.');
     }
 
     Type.call(this, CONSTANTARRAY, 0);
-    this.elementType = elementType;
-    this.arraySize = arraySize;
-    this.size = this.elementType.size * this.arraySize;
-    this.spelling = getSpelling(this);
+    this.$elementType = elementType;
+    this.$arraySize = arraySize;
+    this.$size = this.$elementType.$size * this.$arraySize;
+    this.$spelling = getSpelling(this);
   }
   ConstantArray.prototype = Object.create(Type.prototype);
   ConstantArray.prototype.constructor = ConstantArray;
-  ConstantArray.prototype.qualify = function(cv) {
+  ConstantArray.prototype.$qualify = function(cv) {
     return this;
   };
-  ConstantArray.prototype.unqualified = function() {
+  ConstantArray.prototype.$unqualified = function() {
     return this;
   };
 
@@ -1565,21 +1565,21 @@ var type = (function(utils) {
 
     checkType(elementType, 'elementType');
 
-    if (elementType.kind === VOID) {
+    if (elementType.$kind === VOID) {
       throw new Error('Cannot create an array of voids.');
     }
 
     Type.call(this, INCOMPLETEARRAY, 0);
-    this.elementType = elementType;
-    this.spelling = getSpelling(this);
+    this.$elementType = elementType;
+    this.$spelling = getSpelling(this);
   }
   IncompleteArray.prototype = Object.create(Type.prototype);
   IncompleteArray.prototype.constructor = IncompleteArray;
-  IncompleteArray.prototype.size = 4;
-  IncompleteArray.prototype.qualify = function(cv) {
+  IncompleteArray.prototype.$size = 4;
+  IncompleteArray.prototype.$qualify = function(cv) {
     return this;
   };
-  IncompleteArray.prototype.unqualified = function() {
+  IncompleteArray.prototype.$unqualified = function() {
     return this;
   };
 
@@ -1611,9 +1611,9 @@ var type = (function(utils) {
     var argsSpelling;
     var name;
 
-    spelling = getQualifier(type.cv);
-    if (type.kind in PRIMITIVE_SPELLING) {
-      spelling += PRIMITIVE_SPELLING[type.kind];
+    spelling = getQualifier(type.$cv);
+    if (type.$kind in PRIMITIVE_SPELLING) {
+      spelling += PRIMITIVE_SPELLING[type.$kind];
       if (opt_name) {
         spelling += ' ' + opt_name;
       }
@@ -1622,48 +1622,48 @@ var type = (function(utils) {
     }
 
     name = opt_name || '';
-    prec = SPELLING_PRECEDENCE[type.kind];
+    prec = SPELLING_PRECEDENCE[type.$kind];
     lastPrec = SPELLING_PRECEDENCE[opt_lastKind];
 
     if (prec && lastPrec && prec > lastPrec) {
       name = '(' + name + ')';
     }
 
-    if (type.kind === TYPEDEF) {
-      spelling += type.tag;
+    if (type.$kind === TYPEDEF) {
+      spelling += type.$tag;
       if (name) {
         spelling += ' ' + name;
       }
-    } else if (type.kind === POINTER) {
+    } else if (type.$kind === POINTER) {
       name = '*' + spelling + name;
-      spelling = getSpelling(type.pointee, name, POINTER);
-    } else if (type.kind === ENUM) {
-      spelling += 'enum ' + type.tag;
+      spelling = getSpelling(type.$pointee, name, POINTER);
+    } else if (type.$kind === ENUM) {
+      spelling += 'enum ' + type.$tag;
       if (name) {
         spelling += ' ' + name;
       }
-    } else if (type.kind === RECORD) {
-      if (type.isUnion) {
-        spelling += 'union ' + type.tag;
+    } else if (type.$kind === RECORD) {
+      if (type.$isUnion) {
+        spelling += 'union ' + type.$tag;
       } else {
-        spelling += 'struct ' + type.tag;
+        spelling += 'struct ' + type.$tag;
       }
       if (name) {
         spelling += ' ' + name;
       }
-    } else if (type.kind === CONSTANTARRAY) {
-      name += '[' + type.arraySize + ']';
-      spelling = getSpelling(type.elementType, name, CONSTANTARRAY);
-    } else if (type.kind === INCOMPLETEARRAY) {
+    } else if (type.$kind === CONSTANTARRAY) {
+      name += '[' + type.$arraySize + ']';
+      spelling = getSpelling(type.$elementType, name, CONSTANTARRAY);
+    } else if (type.$kind === INCOMPLETEARRAY) {
       name += '[]';
-      spelling = getSpelling(type.elementType, name, INCOMPLETEARRAY);
-    } else if (type.kind === FUNCTIONPROTO) {
+      spelling = getSpelling(type.$elementType, name, INCOMPLETEARRAY);
+    } else if (type.$kind === FUNCTIONPROTO) {
       name += '(';
-      if (type.argTypes.length > 0) {
-        argsSpelling = type.argTypes.map(function(a) {
+      if (type.$argTypes.length > 0) {
+        argsSpelling = type.$argTypes.map(function(a) {
           return getSpelling(a);
         });
-        if (type.variadic) {
+        if (type.$variadic) {
           argsSpelling.push('...');
         }
         name += argsSpelling.join(', ');
@@ -1671,15 +1671,15 @@ var type = (function(utils) {
         name += 'void';
       }
       name += ')';
-      spelling = getSpelling(type.resultType, name, FUNCTIONPROTO);
-    } else if (type.kind === FUNCTIONNOPROTO) {
+      spelling = getSpelling(type.$resultType, name, FUNCTIONPROTO);
+    } else if (type.$kind === FUNCTIONNOPROTO) {
       name += '()';
-      spelling = getSpelling(type.resultType, name, FUNCTIONNOPROTO);
-    } else if (type.kind === FUNCTIONUNTYPED) {
+      spelling = getSpelling(type.$resultType, name, FUNCTIONNOPROTO);
+    } else if (type.$kind === FUNCTIONUNTYPED) {
       // TODO(binji): Something better here?
       spelling += '<UntypedFunction> ' + name;
     } else {
-      throw new Error('Unknown kind: ' + type.kind);
+      throw new Error('Unknown kind: ' + type.$kind);
     }
 
     return spelling;
@@ -1693,24 +1693,24 @@ var type = (function(utils) {
       return canCastNumeric(from, to);
     }
 
-    switch (from.kind) {
+    switch (from.$kind) {
       case VOID:
-        return to.kind === VOID ? CAST_OK_EXACT : CAST_ERROR;
+        return to.$kind === VOID ? CAST_OK_EXACT : CAST_ERROR;
       case POINTER:
       case CONSTANTARRAY:
       case INCOMPLETEARRAY:
         return canCastPointer(from, to);
       case RECORD:
-        return from.kind === to.kind &&
-               from.tag === to.tag &&
-               from.isUnion === to.isUnion ?
+        return from.$kind === to.$kind &&
+               from.$tag === to.$tag &&
+               from.$isUnion === to.$isUnion ?
             CAST_OK_EXACT :
             CAST_ERROR;
       case ENUM:
         if (isInteger(to)) {
           return CAST_OK_CONVERSION;
-        } else if (to.kind === ENUM) {
-          return from.tag === to.tag ? CAST_OK_EXACT : CAST_DIFFERENT_ENUMS;
+        } else if (to.$kind === ENUM) {
+          return from.$tag === to.$tag ? CAST_OK_EXACT : CAST_DIFFERENT_ENUMS;
         } else {
           return CAST_ERROR;
         }
@@ -1720,19 +1720,19 @@ var type = (function(utils) {
       case FUNCTIONUNTYPED:
         return CAST_ERROR;
       default:
-        throw new Error('canCast: Unknown kind ' + from.kind);
+        throw new Error('canCast: Unknown kind ' + from.$kind);
     }
   }
 
   function canCastNumeric(from, to) {
-    if (from.kind === to.kind) {
+    if (from.$kind === to.$kind) {
       return CAST_OK_EXACT;
     }
 
     if (isInteger(from)) {
       if (isPointerlike(to)) {
         return CAST_INT_TO_POINTER;
-      } else if (to.kind === ENUM) {
+      } else if (to.$kind === ENUM) {
         return CAST_INT_TO_ENUM;
       } else if (isNumeric(to)) {
         // Fall through to below.
@@ -1740,16 +1740,16 @@ var type = (function(utils) {
         return CAST_ERROR;
       }
     } else {
-      // from.kind is float/double.
+      // from.$kind is float/double.
       if (!isNumeric(to)) {
         return CAST_ERROR;
       }
     }
 
-    var fromRank = PRIMITIVE_RANK[from.kind];
-    var toRank = PRIMITIVE_RANK[to.kind];
-    var fromSigned = PRIMITIVE_SIGNED[from.kind];
-    var toSigned = PRIMITIVE_SIGNED[to.kind];
+    var fromRank = PRIMITIVE_RANK[from.$kind];
+    var toRank = PRIMITIVE_RANK[to.$kind];
+    var fromSigned = PRIMITIVE_SIGNED[from.$kind];
+    var toSigned = PRIMITIVE_SIGNED[to.$kind];
     if (fromRank > toRank) {
       return CAST_TRUNCATE;
     } else if (fromRank === toRank && fromSigned !== toSigned) {
@@ -1766,13 +1766,13 @@ var type = (function(utils) {
     var tp;
     if (isPointerlike(to)) {
       tp = getPointerlikePointee(to);
-      if (fp.kind === VOID && tp.kind === VOID) {
+      if (fp.$kind === VOID && tp.$kind === VOID) {
         // Fall through to cv-check.
-      } else if ((fp.kind === VOID && isFunction(tp)) ||
-                 (isFunction(fp) && tp.kind === VOID)) {
+      } else if ((fp.$kind === VOID && isFunction(tp)) ||
+                 (isFunction(fp) && tp.$kind === VOID)) {
         return CAST_FUNCTION_POINTER_VOID_POINTER;
-      } else if (isFunction(fp) && isFunction(tp) && fp.kind !== tp.kind) {
-        if (fp.kind === FUNCTIONUNTYPED || tp.kind === FUNCTIONUNTYPED) {
+      } else if (isFunction(fp) && isFunction(tp) && fp.$kind !== tp.$kind) {
+        if (fp.$kind === FUNCTIONUNTYPED || tp.$kind === FUNCTIONUNTYPED) {
           return CAST_OK_EXACT;
         } else {
           // Must be a cast between proto and no-proto.
@@ -1780,14 +1780,14 @@ var type = (function(utils) {
               CAST_FUNCTION_POINTER_NOPROTO :
               CAST_INCOMPATIBLE_POINTERS;
         }
-      } else if (fp.kind === VOID || tp.kind === VOID) {
+      } else if (fp.$kind === VOID || tp.$kind === VOID) {
         // Strangely cv-checks are ignored when casting from/to void*.
         return CAST_OK_CONVERSION;
-      } else if (!isCompatibleWith(fp.unqualified(), tp.unqualified())) {
+      } else if (!isCompatibleWith(fp.$unqualified(), tp.$unqualified())) {
         return CAST_INCOMPATIBLE_POINTERS;
       }
 
-      if (!isLessOrEquallyQualified(fp.cv, tp.cv)) {
+      if (!isLessOrEquallyQualified(fp.$cv, tp.$cv)) {
         return CAST_DISCARD_QUALIFIER;
       }
 
@@ -1804,13 +1804,13 @@ var type = (function(utils) {
     to = getCanonical(to);
 
     if (isNumeric(from)) {
-      return from.kind === to.kind &&
-             from.cv === to.cv;
+      return from.$kind === to.$kind &&
+             from.$cv === to.$cv;
     }
 
-    switch (from.kind) {
+    switch (from.$kind) {
       case VOID:
-        return from.kind === to.kind;
+        return from.$kind === to.$kind;
       case POINTER:
       case CONSTANTARRAY:
       case INCOMPLETEARRAY:
@@ -1820,32 +1820,32 @@ var type = (function(utils) {
 
         return isCompatibleWith(getPointerlikePointee(from),
                                 getPointerlikePointee(to)) &&
-               from.cv === to.cv;
+               from.$cv === to.$cv;
       case RECORD:
-        return from.kind === to.kind &&
+        return from.$kind === to.$kind &&
                from.tag === to.tag &&
-               from.cv === to.cv &&
-               from.isUnion === to.isUnion;
+               from.$cv === to.$cv &&
+               from.$isUnion === to.$isUnion;
       case ENUM:
-        return from.kind === to.kind &&
+        return from.$kind === to.$kind &&
                from.tag === to.tag &&
-               from.cv === to.cv;
+               from.$cv === to.$cv;
       case FUNCTIONPROTO:
-        return (from.kind === to.kind &&
-                from.argTypes.length === to.argTypes.length &&
-                isCompatibleWith(from.resultType, to.resultType) &&
+        return (from.$kind === to.$kind &&
+                from.$argTypes.length === to.$argTypes.length &&
+                isCompatibleWith(from.$resultType, to.$resultType) &&
                 utils.everyArrayPair(from, to, isCompatibleWith)) ||
-               (to.kind === FUNCTIONNOPROTO &&
-                isCompatibleWith(from.resultType, to.resultType)) ||
-               (to.kind === FUNCTIONUNTYPED);
+               (to.$kind === FUNCTIONNOPROTO &&
+                isCompatibleWith(from.$resultType, to.$resultType)) ||
+               (to.$kind === FUNCTIONUNTYPED);
       case FUNCTIONNOPROTO:
-        return ((from.kind === to.kind || to.kind === FUNCTIONPROTO) &&
-                isCompatibleWith(from.resultType, to.resultType)) ||
-               (to.kind === FUNCTIONUNTYPED);
+        return ((from.$kind === to.$kind || to.$kind === FUNCTIONPROTO) &&
+                isCompatibleWith(from.$resultType, to.$resultType)) ||
+               (to.$kind === FUNCTIONUNTYPED);
       case FUNCTIONUNTYPED:
         return isFunction(to);
       default:
-        throw new Error('canCast: Unknown kind ' + from.kind);
+        throw new Error('canCast: Unknown kind ' + from.$kind);
     }
   }
 
@@ -1863,13 +1863,13 @@ var type = (function(utils) {
     var i;
 
     for (i = 0; i < argTypes.length; ++i) {
-      if (fnType.kind === FUNCTIONUNTYPED) {
+      if (fnType.$kind === FUNCTIONUNTYPED) {
         castRank = CAST_OK_EXACT;
-      } else if (fnType.kind === FUNCTIONNOPROTO ||
-          (fnType.variadic && i >= fnType.argTypes.length)) {
+      } else if (fnType.$kind === FUNCTIONNOPROTO ||
+          (fnType.$variadic && i >= fnType.$argTypes.length)) {
         castRank = CAST_OK_DEFAULT_PROMOTION;
       } else {
-        castRank = getCastRank(argTypes[i], fnType.argTypes[i]);
+        castRank = getCastRank(argTypes[i], fnType.$argTypes[i]);
         if (castRank < 0) {
           return null;
         }
@@ -1908,7 +1908,7 @@ var type = (function(utils) {
     for (i = 0; i < fnTypes.length; ++i) {
       var cmpResult;
       var rank;
-      if (!fnTypes[i].isViableForCall(argTypes)) {
+      if (!fnTypes[i].$isViableForCall(argTypes)) {
         continue;
       }
 
@@ -2116,7 +2116,7 @@ var mod = (function(Long, type, utils) {
       case 'Number':
         return numberToType(obj);
       case 'String':
-        return type.Pointer(type.char.qualify(type.CONST));
+        return type.Pointer(type.char.$qualify(type.CONST));
       case 'Function':
         return type.Pointer(type.FunctionUntyped());
       // TODO(binji): handle other JS types.
@@ -2132,7 +2132,7 @@ var mod = (function(Long, type, utils) {
       // TODO(binji): check that obj and type are compatible.
     }
 
-    return context.createHandle(type, obj);
+    return context.$createHandle(type, obj);
   }
 
   function argToHandle(context, arg) {
@@ -2146,7 +2146,7 @@ var mod = (function(Long, type, utils) {
   }
 
   function handlesToIds(handles) {
-    return Array.prototype.map.call(handles, function(h) { return h.id; });
+    return Array.prototype.map.call(handles, function(h) { return h.$id; });
   }
 
   function Module(embed) {
@@ -2170,7 +2170,7 @@ var mod = (function(Long, type, utils) {
     }
 
     var self = this;
-    var getType = function(x) { return x.type; };
+    var getType = function(x) { return x.$type; };
     var fnTypes = Array.prototype.map.call(functions, getType);
 
     this[name] = function() {
@@ -2195,17 +2195,17 @@ var mod = (function(Long, type, utils) {
       }
 
       fn = functions[bestFnIdx];
-      if (fn.type.resultType !== type.void) {
-        retHandle = self.$context.createHandle(fn.type.resultType);
+      if (fn.$type.$resultType !== type.void) {
+        retHandle = self.$context.$createHandle(fn.$type.$resultType);
       }
 
       self.$registerHandlesWithValues_(argHandles);
-      self.$pushCommand_(fn.id, argHandles, retHandle);
+      self.$pushCommand_(fn.$id, argHandles, retHandle);
 
       return retHandle;
     };
 
-    this[name].types = fnTypes;
+    this[name].$types = fnTypes;
     this.$functionsCount++;
   };
   Module.prototype.$defineEnum = function(name, value) {
@@ -2243,7 +2243,7 @@ var mod = (function(Long, type, utils) {
     }
   };
   Module.prototype.$registerHandleWithValue_ = function(handle) {
-    var value = handle.value;
+    var value = handle.$value;
 
     if (value === undefined) {
       return;
@@ -2255,7 +2255,7 @@ var mod = (function(Long, type, utils) {
       this.$message_.set = {};
     }
 
-    this.$message_.set[handle.id] = value;
+    this.$message_.set[handle.$id] = value;
   };
   Module.prototype.$serializeJsValue_ = function(value) {
     var id;
@@ -2272,7 +2272,7 @@ var mod = (function(Long, type, utils) {
   };
   Module.prototype.$registerCallback_ = function(id, func) {
     var self = this;
-    this.$embed_.registerCallback(id, function(msg) {
+    this.$embed_.$registerCallback(id, function(msg) {
       var doneCalled = false;
       var done = function(result) {
         if (doneCalled) {
@@ -2282,7 +2282,7 @@ var mod = (function(Long, type, utils) {
 
         result = self.$serializeJsValue_(result);
 
-        self.$embed_.postMessage({
+        self.$embed_.$postMessage({
           id: id,
           cbId: msg.cbId,
           values: [result]
@@ -2301,7 +2301,7 @@ var mod = (function(Long, type, utils) {
     };
 
     if (retHandle) {
-      command.ret = retHandle.id;
+      command.ret = retHandle.$id;
     }
 
     if (!this.$message_.commands) {
@@ -2317,8 +2317,8 @@ var mod = (function(Long, type, utils) {
     var i;
 
     for (i = 0; i < handles.length; ++i) {
-      if (handles[i].type.kind === type.LONGLONG ||
-          handles[i].type.kind === type.ULONGLONG) {
+      if (handles[i].$type.$kind === type.LONGLONG ||
+          handles[i].$type.$kind === type.ULONGLONG) {
         if (utils.getClass(values[i]) !== 'Array') {
           throw new Error('Expected longlong to have Array value type, not ' +
                           utils.getClass(values[i]));
@@ -2355,7 +2355,7 @@ var mod = (function(Long, type, utils) {
     }
 
     this.$message_.get = handlesToIds(handles);
-    this.$embed_.postMessageWithResponse(this.$message_, function(msg) {
+    this.$embed_.$postMessageWithResponse(this.$message_, function(msg) {
       // Call the callback with the same context as was set when $commit() was
       // called, then reset to the previous value.
       var oldContext = self.$context;
@@ -2385,7 +2385,7 @@ var mod = (function(Long, type, utils) {
   };
   Module.prototype.$destroyHandles = function(context) {
     var c = context || this.$context;
-    var handles = c.handles;
+    var handles = c.$handles;
     var i;
 
     if (!this.$message_.destroy) {
@@ -2393,10 +2393,10 @@ var mod = (function(Long, type, utils) {
     }
 
     for (i = 0; i < handles.length; ++i) {
-      this.$message_.destroy.push(handles[i].id);
+      this.$message_.destroy.push(handles[i].$id);
     }
 
-    c.destroyHandles();
+    c.$destroyHandles();
   };
   Module.prototype.$commitDestroy = function(handles, callback) {
     this.$destroyHandles();
@@ -2404,10 +2404,10 @@ var mod = (function(Long, type, utils) {
   };
   Module.prototype.$errorIf = function(arg) {
     var handle = argToHandle(this.$context, arg);
-    var hType = handle.type;
+    var hType = handle.$type;
     var commandIdx;
 
-    if (hType.canCastTo(type.int) === type.CAST_ERROR) {
+    if (hType.$canCastTo(type.int) === type.CAST_ERROR) {
       throw new Error('$errorIf failed, invalid type: ' + hType.spelling);
     }
 
@@ -2437,20 +2437,20 @@ var mod = (function(Long, type, utils) {
       throw new Error('Illegal id, reserved for built-in functions: ' + id);
     }
 
-    this.id = id;
-    this.type = fnType;
+    this.$id = id;
+    this.$type = fnType;
   }
 
   function HandleList() {
-    this.nextId_ = 1;
-    this.idToHandle_ = {};
+    this.$nextId_ = 1;
+    this.$idToHandle_ = {};
   }
-  HandleList.prototype.createHandle = function(context, type, value, id) {
+  HandleList.prototype.$createHandle = function(context, type, value, id) {
     var register = false;
     var handle;
 
     if (id === undefined) {
-      id = this.nextId_++;
+      id = this.$nextId_++;
       register = true;
     }
 
@@ -2458,67 +2458,67 @@ var mod = (function(Long, type, utils) {
     // Only register a handle if it was created without a given id (i.e. it was
     // not created as the result of a cast).
     if (register) {
-      context.registerHandle(handle);
+      context.$registerHandle(handle);
     }
 
     return handle;
   };
-  HandleList.prototype.get = function(id) {
-    return this.idToHandle_[id];
+  HandleList.prototype.$get = function(id) {
+    return this.$idToHandle_[id];
   };
-  HandleList.prototype.registerHandle = function(handle) {
-    this.idToHandle_[handle.id] = handle;
+  HandleList.prototype.$registerHandle = function(handle) {
+    this.$idToHandle_[handle.$id] = handle;
   };
 
   function Context(handleList) {
-    this.handleList = handleList;
-    this.handles = [];
+    this.$handleList = handleList;
+    this.$handles = [];
   }
-  Context.prototype.createHandle = function(type, value, id) {
-    return this.handleList.createHandle(this, type, value, id);
+  Context.prototype.$createHandle = function(type, value, id) {
+    return this.$handleList.$createHandle(this, type, value, id);
   };
-  Context.prototype.registerHandle = function(handle) {
-    this.handleList.registerHandle(handle);
-    this.handles.push(handle);
+  Context.prototype.$registerHandle = function(handle) {
+    this.$handleList.$registerHandle(handle);
+    this.$handles.push(handle);
   };
-  Context.prototype.destroyHandles = function() {
+  Context.prototype.$destroyHandles = function() {
     // Call all finalizers. Run them in reverse order of the handle creation.
     var i;
     var h;
-    for (i = this.handles.length - 1; i >= 0; --i) {
-      h = this.handles[i];
-      if (h.finalizer) {
-        h.finalizer(h);
+    for (i = this.$handles.length - 1; i >= 0; --i) {
+      h = this.$handles[i];
+      if (h.$finalizer) {
+        h.$finalizer(h);
       }
     }
-    this.handles = [];
+    this.$handles = [];
   };
 
   function Handle(context, type, value, id) {
-    this.id = id;
-    this.type = type;
-    this.value = value;
-    this.finalizer = null;
-    this.context = context;
+    this.$id = id;
+    this.$type = type;
+    this.$value = value;
+    this.$finalizer = null;
+    this.$context = context;
   }
-  Handle.prototype.cast = function(toType) {
-    var castResult = this.type.canCastTo(toType);
+  Handle.prototype.$cast = function(toType) {
+    var castResult = this.$type.$canCastTo(toType);
     if (castResult === type.CAST_ERROR) {
-      throw new Error('Invalid cast: ' + this.type.spelling + ' to ' +
-                      toType.spelling + '.');
+      throw new Error('Invalid cast: ' + this.$type.$spelling + ' to ' +
+                      toType.$spelling + '.');
     }
 
-    return this.context.handleList.createHandle(
-        this.context, toType, this.value, this.id);
+    return this.$context.$handleList.$createHandle(
+        this.$context, toType, this.$value, this.$id);
   };
-  Handle.prototype.setFinalizer = function(callback) {
+  Handle.prototype.$setFinalizer = function(callback) {
     // Get the "root" handle, i.e. the one not created by casting.
-    var root = this.context.handleList.get(this.id);
-    if (root.finalizer) {
-      throw new Error('Handle ' + root.id + ' already has finalizer.');
+    var root = this.$context.$handleList.$get(this.$id);
+    if (root.$finalizer !== null) {
+      throw new Error('Handle ' + root.$id + ' already has finalizer.');
     }
 
-    root.finalizer = callback.bind(root);
+    root.$finalizer = callback.bind(root);
   };
 
 

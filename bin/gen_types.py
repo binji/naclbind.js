@@ -454,7 +454,7 @@ class PrimitiveType(Type):
   def GetJsSpelling(self):
     js_name = self.kind.js_name
     if self.qualifiers:
-      return 'type.%s.qualify(%s)' % (js_name, self.qualifiers.js_spelling)
+      return 'type.%s.$qualify(%s)' % (js_name, self.qualifiers.js_spelling)
     return 'type.%s' % js_name
 
   def GetMangled(self):
@@ -529,7 +529,7 @@ class TagType(Type):
 
   def GetJsSpelling(self):
     if self.qualifiers:
-      return 'tags.%s.qualify(%s)' % (self.js_tag, self.qualifiers.js_spelling)
+      return 'tags.%s.$qualify(%s)' % (self.js_tag, self.qualifiers.js_spelling)
     return 'tags.%s' % self.js_tag
 
   def GetMangled(self):
@@ -625,7 +625,7 @@ class TypedefType(Type):
 
   def GetJsSpelling(self):
     if self.qualifiers:
-      return 'types.%s.qualify(%s)' % (self.name, self.qualifiers.js_spelling)
+      return 'types.%s.$qualify(%s)' % (self.name, self.qualifiers.js_spelling)
     return 'types.%s' % self.name
 
   def GetMangled(self):

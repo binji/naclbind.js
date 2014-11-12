@@ -25,9 +25,9 @@ function appendPath(s, path) {
 }
 
 function assertFieldsEqual(f, name, type, offset) {
-  assert.strictEqual(name, f.name);
-  assertTypesEqual(type, f.type);
-  assert.strictEqual(offset, f.offset);
+  assert.strictEqual(name, f.$name);
+  assertTypesEqual(type, f.$type);
+  assert.strictEqual(offset, f.$offset);
 }
 
 function genFile(infile, extraOpts, callback) {
@@ -80,8 +80,8 @@ describe('Generate JS', function() {
 
       assert.strictEqual(1, m.$functionsCount);
       assert.ok(m.foo);
-      assert.strictEqual(1, m.foo.types.length);
-      assertTypesEqual(expected, m.foo.types[0]);
+      assert.strictEqual(1, m.foo.$types.length);
+      assertTypesEqual(expected, m.foo.$types[0]);
       assert.strictEqual(0, m.$typesCount);
       assert.strictEqual(0, m.$tagsCount);
       done();
@@ -100,84 +100,84 @@ describe('Generate JS', function() {
 
       // Incomplete struct == s1
       assert.ok(m.$tags.s1);
-      assert.strictEqual('s1', m.$tags.s1.tag);
-      assert.strictEqual(-2, m.$tags.s1.size);
-      assert.strictEqual(0, m.$tags.s1.fields.length);
-      assert.strictEqual(false, m.$tags.s1.isUnion);
+      assert.strictEqual('s1', m.$tags.s1.$tag);
+      assert.strictEqual(-2, m.$tags.s1.$size);
+      assert.strictEqual(0, m.$tags.s1.$fields.length);
+      assert.strictEqual(false, m.$tags.s1.$isUnion);
 
       // Empty struct == s2
       assert.ok(m.$tags.s2);
-      assert.strictEqual('s2', m.$tags.s2.tag);
-      assert.strictEqual(0, m.$tags.s2.size);
-      assert.strictEqual(0, m.$tags.s2.fields.length);
-      assert.strictEqual(false, m.$tags.s2.isUnion);
+      assert.strictEqual('s2', m.$tags.s2.$tag);
+      assert.strictEqual(0, m.$tags.s2.$size);
+      assert.strictEqual(0, m.$tags.s2.$fields.length);
+      assert.strictEqual(false, m.$tags.s2.$isUnion);
 
       // Basic struct == s3
       assert.ok(m.$tags.s3);
-      assert.strictEqual('s3', m.$tags.s3.tag);
-      assert.strictEqual(4, m.$tags.s3.size);
-      assert.strictEqual(1, m.$tags.s3.fields.length);
-      assertFieldsEqual(m.$tags.s3.fields[0], 'f', type.int, 0);
-      assert.strictEqual(false, m.$tags.s3.isUnion);
+      assert.strictEqual('s3', m.$tags.s3.$tag);
+      assert.strictEqual(4, m.$tags.s3.$size);
+      assert.strictEqual(1, m.$tags.s3.$fields.length);
+      assertFieldsEqual(m.$tags.s3.$fields[0], 'f', type.int, 0);
+      assert.strictEqual(false, m.$tags.s3.$isUnion);
 
       // Struct with typedef == s4, t1
       assert.ok(m.$tags.s4);
-      assert.strictEqual('s4', m.$tags.s4.tag);
-      assert.strictEqual(4, m.$tags.s4.size);
-      assert.strictEqual(1, m.$tags.s4.fields.length);
-      assertFieldsEqual(m.$tags.s4.fields[0], 'g', type.int, 0);
-      assert.strictEqual(false, m.$tags.s4.isUnion);
+      assert.strictEqual('s4', m.$tags.s4.$tag);
+      assert.strictEqual(4, m.$tags.s4.$size);
+      assert.strictEqual(1, m.$tags.s4.$fields.length);
+      assertFieldsEqual(m.$tags.s4.$fields[0], 'g', type.int, 0);
+      assert.strictEqual(false, m.$tags.s4.$isUnion);
 
       assert.ok(m.$types.t1);
-      assert.strictEqual('t1', m.$types.t1.tag);
-      assertTypesEqual(m.$tags.s4, m.$types.t1.alias);
-      assert.strictEqual('t1', m.$types.t1.spelling);
+      assert.strictEqual('t1', m.$types.t1.$tag);
+      assertTypesEqual(m.$tags.s4, m.$types.t1.$alias);
+      assert.strictEqual('t1', m.$types.t1.$spelling);
       assert.strictEqual();
 
       // Anonymous nested struct, named field == s5
       assert.ok(m.$tags.s5);
-      assert.strictEqual('s5', m.$tags.s5.tag);
-      assert.strictEqual(8, m.$tags.s5.size);
-      assert.strictEqual(1, m.$tags.s5.fields.length);
-      assert.strictEqual('nested', m.$tags.s5.fields[0].name);
-      assert.strictEqual(0, m.$tags.s5.fields[0].offset);
-      assert.strictEqual(false, m.$tags.s5.isUnion);
+      assert.strictEqual('s5', m.$tags.s5.$tag);
+      assert.strictEqual(8, m.$tags.s5.$size);
+      assert.strictEqual(1, m.$tags.s5.$fields.length);
+      assert.strictEqual('nested', m.$tags.s5.$fields[0].$name);
+      assert.strictEqual(0, m.$tags.s5.$fields[0].$offset);
+      assert.strictEqual(false, m.$tags.s5.$isUnion);
 
-      assert.strictEqual(2, m.$tags.s5.fields[0].type.fields.length);
-      assertFieldsEqual(m.$tags.s5.fields[0].type.fields[0], 'f', type.int, 0);
-      assertFieldsEqual(m.$tags.s5.fields[0].type.fields[1], 'g', type.int, 4);
+      assert.strictEqual(2, m.$tags.s5.$fields[0].$type.$fields.length);
+      assertFieldsEqual(m.$tags.s5.$fields[0].$type.$fields[0], 'f', type.int, 0);
+      assertFieldsEqual(m.$tags.s5.$fields[0].$type.$fields[1], 'g', type.int, 4);
 
       // Anonymous nested struct, unnamed field == s6
       assert.ok(m.$tags.s6);
-      assert.strictEqual('s6', m.$tags.s6.tag);
-      assert.strictEqual(8, m.$tags.s6.size);
-      assert.strictEqual(2, m.$tags.s6.fields.length);
-      assertFieldsEqual(m.$tags.s6.fields[0], 'f', type.int, 0);
-      assertFieldsEqual(m.$tags.s6.fields[1], 'g', type.int, 4);
-      assert.strictEqual(false, m.$tags.s6.isUnion);
+      assert.strictEqual('s6', m.$tags.s6.$tag);
+      assert.strictEqual(8, m.$tags.s6.$size);
+      assert.strictEqual(2, m.$tags.s6.$fields.length);
+      assertFieldsEqual(m.$tags.s6.$fields[0], 'f', type.int, 0);
+      assertFieldsEqual(m.$tags.s6.$fields[1], 'g', type.int, 4);
+      assert.strictEqual(false, m.$tags.s6.$isUnion);
 
       // Named nested struct, named field == s7
       assert.ok(m.$tags.s7);
-      assert.strictEqual('s7', m.$tags.s7.tag);
-      assert.strictEqual(8, m.$tags.s7.size);
-      assert.strictEqual(2, m.$tags.s7.fields.length);
-      assertFieldsEqual(m.$tags.s7.fields[0], 'g', m.$tags.ns1, 0);
-      assertFieldsEqual(m.$tags.s7.fields[1], 'h', type.int, 4);
-      assert.strictEqual(false, m.$tags.s7.isUnion);
+      assert.strictEqual('s7', m.$tags.s7.$tag);
+      assert.strictEqual(8, m.$tags.s7.$size);
+      assert.strictEqual(2, m.$tags.s7.$fields.length);
+      assertFieldsEqual(m.$tags.s7.$fields[0], 'g', m.$tags.ns1, 0);
+      assertFieldsEqual(m.$tags.s7.$fields[1], 'h', type.int, 4);
+      assert.strictEqual(false, m.$tags.s7.$isUnion);
 
       assert.ok(m.$tags.ns1);
-      assert.strictEqual('ns1', m.$tags.ns1.tag);
-      assert.strictEqual(4, m.$tags.ns1.size);
-      assert.strictEqual(1, m.$tags.ns1.fields.length);
-      assertFieldsEqual(m.$tags.ns1.fields[0], 'f', type.int, 0);
+      assert.strictEqual('ns1', m.$tags.ns1.$tag);
+      assert.strictEqual(4, m.$tags.ns1.$size);
+      assert.strictEqual(1, m.$tags.ns1.$fields.length);
+      assertFieldsEqual(m.$tags.ns1.$fields[0], 'f', type.int, 0);
 
       // Named nested struct, unnamed field == s8
       assert.ok(m.$tags.s8);
-      assert.strictEqual('s8', m.$tags.s8.tag);
-      assert.strictEqual(4, m.$tags.s8.size);
-      assert.strictEqual(1, m.$tags.s8.fields.length);
-      assertFieldsEqual(m.$tags.s8.fields[0], 'g', type.int, 0);
-      assert.strictEqual(false, m.$tags.s8.isUnion);
+      assert.strictEqual('s8', m.$tags.s8.$tag);
+      assert.strictEqual(4, m.$tags.s8.$size);
+      assert.strictEqual(1, m.$tags.s8.$fields.length);
+      assertFieldsEqual(m.$tags.s8.$fields[0], 'g', type.int, 0);
+      assert.strictEqual(false, m.$tags.s8.$isUnion);
 
       done();
     });
@@ -195,84 +195,84 @@ describe('Generate JS', function() {
 
       // Incomplete union == s1
       assert.ok(m.$tags.s1);
-      assert.strictEqual('s1', m.$tags.s1.tag);
-      assert.strictEqual(-2, m.$tags.s1.size);
-      assert.strictEqual(0, m.$tags.s1.fields.length);
-      assert.strictEqual(true, m.$tags.s1.isUnion);
+      assert.strictEqual('s1', m.$tags.s1.$tag);
+      assert.strictEqual(-2, m.$tags.s1.$size);
+      assert.strictEqual(0, m.$tags.s1.$fields.length);
+      assert.strictEqual(true, m.$tags.s1.$isUnion);
 
       // Empty union == s2
       assert.ok(m.$tags.s2);
-      assert.strictEqual('s2', m.$tags.s2.tag);
-      assert.strictEqual(0, m.$tags.s2.size);
-      assert.strictEqual(0, m.$tags.s2.fields.length);
-      assert.strictEqual(true, m.$tags.s2.isUnion);
+      assert.strictEqual('s2', m.$tags.s2.$tag);
+      assert.strictEqual(0, m.$tags.s2.$size);
+      assert.strictEqual(0, m.$tags.s2.$fields.length);
+      assert.strictEqual(true, m.$tags.s2.$isUnion);
 
       // Basic union == s3
       assert.ok(m.$tags.s3);
-      assert.strictEqual('s3', m.$tags.s3.tag);
-      assert.strictEqual(4, m.$tags.s3.size);
-      assert.strictEqual(1, m.$tags.s3.fields.length);
-      assertFieldsEqual(m.$tags.s3.fields[0], 'f', type.int, 0);
-      assert.strictEqual(true, m.$tags.s3.isUnion);
+      assert.strictEqual('s3', m.$tags.s3.$tag);
+      assert.strictEqual(4, m.$tags.s3.$size);
+      assert.strictEqual(1, m.$tags.s3.$fields.length);
+      assertFieldsEqual(m.$tags.s3.$fields[0], 'f', type.int, 0);
+      assert.strictEqual(true, m.$tags.s3.$isUnion);
 
       // Union with typedef == s4, t1
       assert.ok(m.$tags.s4);
-      assert.strictEqual('s4', m.$tags.s4.tag);
-      assert.strictEqual(4, m.$tags.s4.size);
-      assert.strictEqual(1, m.$tags.s4.fields.length);
-      assertFieldsEqual(m.$tags.s4.fields[0], 'g', type.int, 0);
-      assert.strictEqual(true, m.$tags.s4.isUnion);
+      assert.strictEqual('s4', m.$tags.s4.$tag);
+      assert.strictEqual(4, m.$tags.s4.$size);
+      assert.strictEqual(1, m.$tags.s4.$fields.length);
+      assertFieldsEqual(m.$tags.s4.$fields[0], 'g', type.int, 0);
+      assert.strictEqual(true, m.$tags.s4.$isUnion);
 
       assert.ok(m.$types.t1);
-      assert.strictEqual('t1', m.$types.t1.tag);
-      assertTypesEqual(m.$tags.s4, m.$types.t1.alias);
-      assert.strictEqual('t1', m.$types.t1.spelling);
+      assert.strictEqual('t1', m.$types.t1.$tag);
+      assertTypesEqual(m.$tags.s4, m.$types.t1.$alias);
+      assert.strictEqual('t1', m.$types.t1.$spelling);
       assert.strictEqual();
 
       // Anonymous nested union, named field == s5
       assert.ok(m.$tags.s5);
-      assert.strictEqual('s5', m.$tags.s5.tag);
-      assert.strictEqual(4, m.$tags.s5.size);
-      assert.strictEqual(1, m.$tags.s5.fields.length);
-      assert.strictEqual('nested', m.$tags.s5.fields[0].name);
-      assert.strictEqual(0, m.$tags.s5.fields[0].offset);
-      assert.strictEqual(true, m.$tags.s5.isUnion);
+      assert.strictEqual('s5', m.$tags.s5.$tag);
+      assert.strictEqual(4, m.$tags.s5.$size);
+      assert.strictEqual(1, m.$tags.s5.$fields.length);
+      assert.strictEqual('nested', m.$tags.s5.$fields[0].$name);
+      assert.strictEqual(0, m.$tags.s5.$fields[0].$offset);
+      assert.strictEqual(true, m.$tags.s5.$isUnion);
 
-      assert.strictEqual(2, m.$tags.s5.fields[0].type.fields.length);
-      assertFieldsEqual(m.$tags.s5.fields[0].type.fields[0], 'f', type.int, 0);
-      assertFieldsEqual(m.$tags.s5.fields[0].type.fields[1], 'g', type.int, 0);
+      assert.strictEqual(2, m.$tags.s5.$fields[0].$type.$fields.length);
+      assertFieldsEqual(m.$tags.s5.$fields[0].$type.$fields[0], 'f', type.int, 0);
+      assertFieldsEqual(m.$tags.s5.$fields[0].$type.$fields[1], 'g', type.int, 0);
 
       // Anonymous nested union, unnamed field == s6
       assert.ok(m.$tags.s6);
-      assert.strictEqual('s6', m.$tags.s6.tag);
-      assert.strictEqual(4, m.$tags.s6.size);
-      assert.strictEqual(2, m.$tags.s6.fields.length);
-      assertFieldsEqual(m.$tags.s6.fields[0], 'f', type.int, 0);
-      assertFieldsEqual(m.$tags.s6.fields[1], 'g', type.int, 0);
-      assert.strictEqual(true, m.$tags.s6.isUnion);
+      assert.strictEqual('s6', m.$tags.s6.$tag);
+      assert.strictEqual(4, m.$tags.s6.$size);
+      assert.strictEqual(2, m.$tags.s6.$fields.length);
+      assertFieldsEqual(m.$tags.s6.$fields[0], 'f', type.int, 0);
+      assertFieldsEqual(m.$tags.s6.$fields[1], 'g', type.int, 0);
+      assert.strictEqual(true, m.$tags.s6.$isUnion);
 
       // Named nested union, named field == s7
       assert.ok(m.$tags.s7);
-      assert.strictEqual('s7', m.$tags.s7.tag);
-      assert.strictEqual(4, m.$tags.s7.size);
-      assert.strictEqual(2, m.$tags.s7.fields.length);
-      assertFieldsEqual(m.$tags.s7.fields[0], 'g', m.$tags.ns1, 0);
-      assertFieldsEqual(m.$tags.s7.fields[1], 'h', type.int, 0);
-      assert.strictEqual(true, m.$tags.s7.isUnion);
+      assert.strictEqual('s7', m.$tags.s7.$tag);
+      assert.strictEqual(4, m.$tags.s7.$size);
+      assert.strictEqual(2, m.$tags.s7.$fields.length);
+      assertFieldsEqual(m.$tags.s7.$fields[0], 'g', m.$tags.ns1, 0);
+      assertFieldsEqual(m.$tags.s7.$fields[1], 'h', type.int, 0);
+      assert.strictEqual(true, m.$tags.s7.$isUnion);
 
       assert.ok(m.$tags.ns1);
-      assert.strictEqual('ns1', m.$tags.ns1.tag);
-      assert.strictEqual(4, m.$tags.ns1.size);
-      assert.strictEqual(1, m.$tags.ns1.fields.length);
-      assertFieldsEqual(m.$tags.ns1.fields[0], 'f', type.int, 0);
+      assert.strictEqual('ns1', m.$tags.ns1.$tag);
+      assert.strictEqual(4, m.$tags.ns1.$size);
+      assert.strictEqual(1, m.$tags.ns1.$fields.length);
+      assertFieldsEqual(m.$tags.ns1.$fields[0], 'f', type.int, 0);
 
       // Named nested union, unnamed field == s8
       assert.ok(m.$tags.s8);
-      assert.strictEqual('s8', m.$tags.s8.tag);
-      assert.strictEqual(4, m.$tags.s8.size);
-      assert.strictEqual(1, m.$tags.s8.fields.length);
-      assertFieldsEqual(m.$tags.s8.fields[0], 'g', type.int, 0);
-      assert.strictEqual(true, m.$tags.s8.isUnion);
+      assert.strictEqual('s8', m.$tags.s8.$tag);
+      assert.strictEqual(4, m.$tags.s8.$size);
+      assert.strictEqual(1, m.$tags.s8.$fields.length);
+      assertFieldsEqual(m.$tags.s8.$fields[0], 'g', type.int, 0);
+      assert.strictEqual(true, m.$tags.s8.$isUnion);
 
       done();
     });
@@ -288,46 +288,46 @@ describe('Generate JS', function() {
       assert.strictEqual(0, m.$typesCount);
       assert.strictEqual(0, m.$tagsCount);
 
-      assert.strictEqual(m.f1.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.char]), m.f1.types[0]);
+      assert.strictEqual(m.f1.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.char]), m.f1.$types[0]);
 
-      assert.strictEqual(m.f2.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.schar]), m.f2.types[0]);
+      assert.strictEqual(m.f2.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.schar]), m.f2.$types[0]);
 
-      assert.strictEqual(m.f3.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.uchar]), m.f3.types[0]);
+      assert.strictEqual(m.f3.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.uchar]), m.f3.$types[0]);
 
-      assert.strictEqual(m.f4.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.short]), m.f4.types[0]);
+      assert.strictEqual(m.f4.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.short]), m.f4.$types[0]);
 
-      assert.strictEqual(m.f5.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.ushort]), m.f5.types[0]);
+      assert.strictEqual(m.f5.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.ushort]), m.f5.$types[0]);
 
-      assert.strictEqual(m.f6.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.int]), m.f6.types[0]);
+      assert.strictEqual(m.f6.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.int]), m.f6.$types[0]);
 
-      assert.strictEqual(m.f7.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.uint]), m.f7.types[0]);
+      assert.strictEqual(m.f7.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.uint]), m.f7.$types[0]);
 
-      assert.strictEqual(m.f8.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.long]), m.f8.types[0]);
+      assert.strictEqual(m.f8.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.long]), m.f8.$types[0]);
 
-      assert.strictEqual(m.f9.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.ulong]), m.f9.types[0]);
+      assert.strictEqual(m.f9.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.ulong]), m.f9.$types[0]);
 
-      assert.strictEqual(m.f10.types.length, 1);
+      assert.strictEqual(m.f10.$types.length, 1);
       assertTypesEqual(type.Function(type.void, [type.longlong]),
-                       m.f10.types[0]);
+                       m.f10.$types[0]);
 
-      assert.strictEqual(m.f11.types.length, 1);
+      assert.strictEqual(m.f11.$types.length, 1);
       assertTypesEqual(type.Function(type.void, [type.ulonglong]),
-                       m.f11.types[0]);
+                       m.f11.$types[0]);
 
-      assert.strictEqual(m.f12.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.float]), m.f12.types[0]);
+      assert.strictEqual(m.f12.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.float]), m.f12.$types[0]);
 
-      assert.strictEqual(m.f13.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.double]), m.f13.types[0]);
+      assert.strictEqual(m.f13.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.double]), m.f13.$types[0]);
 
       done();
     })
@@ -347,58 +347,58 @@ describe('Generate JS', function() {
       assert.strictEqual(1, m.$tagsCount);
 
       assert.ok(m.$tags.s1);
-      assert.strictEqual('s1', m.$tags.s1.tag);
-      assert.strictEqual(4, m.$tags.s1.size);
-      assert.strictEqual(1, m.$tags.s1.fields.length);
-      assert.strictEqual(false, m.$tags.s1.isUnion);
-      assertFieldsEqual(m.$tags.s1.fields[0],
+      assert.strictEqual('s1', m.$tags.s1.$tag);
+      assert.strictEqual(4, m.$tags.s1.$size);
+      assert.strictEqual(1, m.$tags.s1.$fields.length);
+      assert.strictEqual(false, m.$tags.s1.$isUnion);
+      assertFieldsEqual(m.$tags.s1.$fields[0],
                         'f', type.Pointer(m.$types.t4), 0);
 
       assert.ok(m.$types.t1);
-      assert.strictEqual('t1', m.$types.t1.tag);
-      assertTypesEqual(type.char, m.$types.t1.alias);
+      assert.strictEqual('t1', m.$types.t1.$tag);
+      assertTypesEqual(type.char, m.$types.t1.$alias);
 
       assert.ok(m.$types.t2);
-      assert.strictEqual('t2', m.$types.t2.tag);
-      assertTypesEqual(voidp, m.$types.t2.alias);
+      assert.strictEqual('t2', m.$types.t2.$tag);
+      assertTypesEqual(voidp, m.$types.t2.$alias);
 
       assert.ok(m.$types.t3);
-      assert.strictEqual('t3', m.$types.t3.tag);
-      assertTypesEqual(type.Pointer(m.$types.t1), m.$types.t3.alias);
+      assert.strictEqual('t3', m.$types.t3.$tag);
+      assertTypesEqual(type.Pointer(m.$types.t1), m.$types.t3.$alias);
 
       assert.ok(m.$types.t4);
-      assert.strictEqual('t4', m.$types.t4.tag);
-      assertTypesEqual(m.$tags.s1, m.$types.t4.alias);
+      assert.strictEqual('t4', m.$types.t4.$tag);
+      assertTypesEqual(m.$tags.s1, m.$types.t4.$alias);
 
       assert.ok(m.$types.t5);
-      assert.strictEqual('t5', m.$types.t5.tag);
-      assertTypesEqual(m.$types.t4, m.$types.t5.alias);
+      assert.strictEqual('t5', m.$types.t5.$tag);
+      assertTypesEqual(m.$types.t4, m.$types.t5.$alias);
 
       assert.ok(m.$types.t6);
-      assert.strictEqual('t6', m.$types.t6.tag);
-      assertTypesEqual(type.char, m.$types.t6.alias);
+      assert.strictEqual('t6', m.$types.t6.$tag);
+      assertTypesEqual(type.char, m.$types.t6.$alias);
 
       assert.ok(m.f1);
-      assert.strictEqual(m.f1.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.char]), m.f1.types[0]);
+      assert.strictEqual(m.f1.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.char]), m.f1.$types[0]);
 
       assert.ok(m.f2);
-      assert.strictEqual(m.f2.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [voidp]), m.f2.types[0]);
+      assert.strictEqual(m.f2.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [voidp]), m.f2.$types[0]);
 
       assert.ok(m.f3);
-      assert.strictEqual(m.f3.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [charp]), m.f3.types[0]);
+      assert.strictEqual(m.f3.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [charp]), m.f3.$types[0]);
 
       assert.ok(m.f4);
-      assert.strictEqual(m.f4.types.length, 1);
+      assert.strictEqual(m.f4.$types.length, 1);
       // Not t5 because functions are defined with the canonical type.
       assertTypesEqual(type.Function(type.void, [type.Pointer(m.$tags.s1)]),
-                       m.f4.types[0]);
+                       m.f4.$types[0]);
 
       assert.ok(m.f5);
-      assert.strictEqual(m.f5.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [type.char]), m.f5.types[0]);
+      assert.strictEqual(m.f5.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [type.char]), m.f5.$types[0]);
 
       done();
     })
@@ -419,22 +419,22 @@ describe('Generate JS', function() {
       assert.strictEqual(9, m.$enumValuesCount);
 
       assert.ok(m.$tags.e1);
-      assert.strictEqual('e1', m.$tags.e1.tag);
+      assert.strictEqual('e1', m.$tags.e1.$tag);
 
       assert.ok(m.$tags.e2);
-      assert.strictEqual('e2', m.$tags.e2.tag);
+      assert.strictEqual('e2', m.$tags.e2.$tag);
 
       assert.ok(m.$types.t1);
-      assert.strictEqual('t1', m.$types.t1.tag);
-      assertTypesEqual(e2, m.$types.t1.alias);
+      assert.strictEqual('t1', m.$types.t1.$tag);
+      assertTypesEqual(e2, m.$types.t1.$alias);
 
       assert.ok(m.f1);
-      assert.strictEqual(m.f1.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [e1]), m.f1.types[0]);
+      assert.strictEqual(m.f1.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [e1]), m.f1.$types[0]);
 
       assert.ok(m.f2);
-      assert.strictEqual(m.f2.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [e2]), m.f2.types[0]);
+      assert.strictEqual(m.f2.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [e2]), m.f2.$types[0]);
 
       // e1
       assert.strictEqual(m.E0, 0);
@@ -467,7 +467,7 @@ describe('Generate JS', function() {
       var s2 = type.Record('s2', 4, type.STRUCT);
       var u1 = type.Record('u1', 0, type.UNION);
       var voidp = type.Pointer(type.void);
-      var constvoidp = type.Pointer(type.void.qualify(type.CONST));
+      var constvoidp = type.Pointer(type.void.$qualify(type.CONST));
       var s1p = type.Pointer(s1);
       var u1p = type.Pointer(u1);
       var PFviE = type.Pointer(type.Function(type.void, [type.int]));
@@ -476,7 +476,7 @@ describe('Generate JS', function() {
       var intArr10 = type.Pointer(type.int);
       var argv = type.Pointer(type.Pointer(type.char));
 
-      s2.addField('f', type.int, 0);
+      s2.$addField('f', type.int, 0);
 
       assert.strictEqual(15, m.$functionsCount);
       assert.strictEqual(1, m.$typesCount);
@@ -484,72 +484,72 @@ describe('Generate JS', function() {
 
       // Pointers
       assert.ok(m.f1);
-      assert.strictEqual(m.f1.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [voidp]), m.f1.types[0]);
+      assert.strictEqual(m.f1.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [voidp]), m.f1.$types[0]);
 
       assert.ok(m.f2);
-      assert.strictEqual(m.f2.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [s1p]), m.f2.types[0]);
+      assert.strictEqual(m.f2.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [s1p]), m.f2.$types[0]);
 
       assert.ok(m.f3);
-      assert.strictEqual(m.f3.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [u1p]), m.f3.types[0]);
+      assert.strictEqual(m.f3.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [u1p]), m.f3.$types[0]);
 
       assert.ok(m.f15);
-      assert.strictEqual(m.f15.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [constvoidp]), m.f15.types[0]);
+      assert.strictEqual(m.f15.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [constvoidp]), m.f15.$types[0]);
 
 
       // Multiple params
       assert.ok(m.f4);
-      assert.strictEqual(m.f4.types.length, 1);
+      assert.strictEqual(m.f4.$types.length, 1);
       assertTypesEqual(type.Function(type.void, [type.int, type.int, voidp]),
-                       m.f4.types[0]);
+                       m.f4.$types[0]);
 
       assert.ok(m.f5);
-      assert.strictEqual(m.f5.types.length, 1);
+      assert.strictEqual(m.f5.$types.length, 1);
       assertTypesEqual(type.Function(type.void, [type.int, s2]),
-                       m.f5.types[0]);
+                       m.f5.$types[0]);
 
       // Return values
       assert.ok(m.f6);
-      assert.strictEqual(m.f6.types.length, 1);
-      assertTypesEqual(type.Function(type.int, [type.int]), m.f6.types[0]);
+      assert.strictEqual(m.f6.$types.length, 1);
+      assertTypesEqual(type.Function(type.int, [type.int]), m.f6.$types[0]);
 
       assert.ok(m.f7);
-      assert.strictEqual(m.f7.types.length, 1);
-      assertTypesEqual(type.Function(voidp, [type.uint]), m.f7.types[0]);
+      assert.strictEqual(m.f7.$types.length, 1);
+      assertTypesEqual(type.Function(voidp, [type.uint]), m.f7.$types[0]);
 
       assert.ok(m.f8);
-      assert.strictEqual(m.f8.types.length, 1);
-      assertTypesEqual(type.Function(s1, []), m.f8.types[0]);
+      assert.strictEqual(m.f8.$types.length, 1);
+      assertTypesEqual(type.Function(s1, []), m.f8.$types[0]);
 
       assert.ok(m.f14);
-      assert.strictEqual(m.f14.types.length, 1);
-      assertTypesEqual(type.Function(type.char, []), m.f14.types[0]);
+      assert.strictEqual(m.f14.$types.length, 1);
+      assertTypesEqual(type.Function(type.char, []), m.f14.$types[0]);
 
       // Function pointers
       assert.ok(m.f9);
-      assert.strictEqual(m.f9.types.length, 1);
-      assertTypesEqual(type.Function(type.int, [PFviE]), m.f9.types[0]);
+      assert.strictEqual(m.f9.$types.length, 1);
+      assertTypesEqual(type.Function(type.int, [PFviE]), m.f9.$types[0]);
 
       assert.ok(m.f10);
-      assert.strictEqual(m.f10.types.length, 1);
-      assertTypesEqual(type.Function(PFviE, [type.int, PFviE]), m.f10.types[0]);
+      assert.strictEqual(m.f10.$types.length, 1);
+      assertTypesEqual(type.Function(PFviE, [type.int, PFviE]), m.f10.$types[0]);
 
       // Arrays
       assert.ok(m.f11);
-      assert.strictEqual(m.f11.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [intArr]), m.f11.types[0]);
+      assert.strictEqual(m.f11.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [intArr]), m.f11.$types[0]);
 
       assert.ok(m.f12);
-      assert.strictEqual(m.f12.types.length, 1);
-      assertTypesEqual(type.Function(type.void, [intArr10]), m.f12.types[0]);
+      assert.strictEqual(m.f12.$types.length, 1);
+      assertTypesEqual(type.Function(type.void, [intArr10]), m.f12.$types[0]);
 
       assert.ok(m.f13);
-      assert.strictEqual(m.f13.types.length, 1);
+      assert.strictEqual(m.f13.$types.length, 1);
       assertTypesEqual(type.Function(type.void, [type.int, argv]),
-                       m.f13.types[0]);
+                       m.f13.$types[0]);
 
       done();
     })
@@ -567,8 +567,8 @@ describe('Generate JS', function() {
 
       // Pointers
       assert.ok(m.foo);
-      assert.strictEqual(m.foo.types.length, 1);
-      assertTypesEqual(type.FunctionNoProto(type.int), m.foo.types[0]);
+      assert.strictEqual(m.foo.$types.length, 1);
+      assertTypesEqual(type.FunctionNoProto(type.int), m.foo.$types[0]);
 
       done();
     });
@@ -603,20 +603,20 @@ describe('Generate JS', function() {
       assert.strictEqual(2, m.$tagsCount);
 
       assert.ok(m.$tags.A);
-      assert.strictEqual('A', m.$tags.A.tag);
-      assert.strictEqual(4, m.$tags.A.size);
-      assert.strictEqual(1, m.$tags.A.fields.length);
-      assert.strictEqual(false, m.$tags.A.isUnion);
+      assert.strictEqual('A', m.$tags.A.$tag);
+      assert.strictEqual(4, m.$tags.A.$size);
+      assert.strictEqual(1, m.$tags.A.$fields.length);
+      assert.strictEqual(false, m.$tags.A.$isUnion);
 
-      assertFieldsEqual(m.$tags.A.fields[0], 'b', type.Pointer(m.$tags.B), 0);
+      assertFieldsEqual(m.$tags.A.$fields[0], 'b', type.Pointer(m.$tags.B), 0);
 
       assert.ok(m.$tags.B);
-      assert.strictEqual('B', m.$tags.B.tag);
-      assert.strictEqual(4, m.$tags.B.size);
-      assert.strictEqual(1, m.$tags.B.fields.length);
-      assert.strictEqual(false, m.$tags.B.isUnion);
+      assert.strictEqual('B', m.$tags.B.$tag);
+      assert.strictEqual(4, m.$tags.B.$size);
+      assert.strictEqual(1, m.$tags.B.$fields.length);
+      assert.strictEqual(false, m.$tags.B.$isUnion);
 
-      assertFieldsEqual(m.$tags.B.fields[0], 'a', type.Pointer(m.$tags.A), 0);
+      assertFieldsEqual(m.$tags.B.$fields[0], 'a', type.Pointer(m.$tags.A), 0);
 
       done();
     });
@@ -633,17 +633,17 @@ describe('Generate JS', function() {
       assert.strictEqual(1, m.$tagsCount);
 
       assert.ok(m.$types.foo);
-      assert.strictEqual('foo', m.$types.foo.tag);
-      assertTypesEqual(type.int, m.$types.foo.alias);
-      assert.strictEqual('foo', m.$types.foo.spelling);
+      assert.strictEqual('foo', m.$types.foo.$tag);
+      assertTypesEqual(type.int, m.$types.foo.$alias);
+      assert.strictEqual('foo', m.$types.foo.$spelling);
 
       assert.ok(m.$tags.bar);
-      assert.strictEqual('bar', m.$tags.bar.tag);
-      assert.strictEqual(8, m.$tags.bar.size);
-      assert.strictEqual(1, m.$tags.bar.fields.length);
-      assert.strictEqual(false, m.$tags.bar.isUnion);
+      assert.strictEqual('bar', m.$tags.bar.$tag);
+      assert.strictEqual(8, m.$tags.bar.$size);
+      assert.strictEqual(1, m.$tags.bar.$fields.length);
+      assert.strictEqual(false, m.$tags.bar.$isUnion);
 
-      assertFieldsEqual(m.$tags.bar.fields[0],
+      assertFieldsEqual(m.$tags.bar.$fields[0],
                         'stuff', type.Array(m.$types.foo, 2), 0);
 
       done();
@@ -662,26 +662,26 @@ describe('Generate JS', function() {
       assert.strictEqual(1, m.$tagsCount);
 
       assert.ok(m.$types.s1);
-      assert.strictEqual('s1', m.$types.s1.tag);
-      assertTypesEqual(m.$tags.__anon_record_0, m.$types.s1.alias);
-      assert.strictEqual('s1', m.$types.s1.spelling);
+      assert.strictEqual('s1', m.$types.s1.$tag);
+      assertTypesEqual(m.$tags.__anon_record_0, m.$types.s1.$alias);
+      assert.strictEqual('s1', m.$types.s1.$spelling);
 
       var anon = m.$tags.__anon_record_0;
 
       assert.ok(anon);
-      assert.strictEqual('__anon_record_0', anon.tag);
-      assert.strictEqual(4, anon.size);
-      assert.strictEqual(1, anon.fields.length);
-      assert.strictEqual(false, anon.isUnion);
+      assert.strictEqual('__anon_record_0', anon.$tag);
+      assert.strictEqual(4, anon.$size);
+      assert.strictEqual(1, anon.$fields.length);
+      assert.strictEqual(false, anon.$isUnion);
 
-      assertFieldsEqual(anon.fields[0], 'f', type.int, 0);
+      assertFieldsEqual(anon.$fields[0], 'f', type.int, 0);
 
-      assert.strictEqual(m.f1.types.length, 1);
-      assertTypesEqual(type.Function(anon.qualify(type.CONST), []),
-                       m.f1.types[0]);
+      assert.strictEqual(m.f1.$types.length, 1);
+      assertTypesEqual(type.Function(anon.$qualify(type.CONST), []),
+                       m.f1.$types[0]);
 
-      assert.strictEqual(m.f2.types.length, 1);
-      assertTypesEqual(type.Function(anon, []), m.f2.types[0]);
+      assert.strictEqual(m.f2.$types.length, 1);
+      assertTypesEqual(type.Function(anon, []), m.f2.$types[0]);
 
       done();
     });
@@ -697,11 +697,11 @@ describe('Generate JS', function() {
       assert.strictEqual(0, m.$typesCount);
       assert.strictEqual(0, m.$tagsCount);
 
-      assert.strictEqual(m.foo.types.length, 3);
-      assertTypesEqual(type.Function(type.void, [type.int]), m.foo.types[0]);
-      assertTypesEqual(type.Function(type.void, [type.float]), m.foo.types[1]);
+      assert.strictEqual(m.foo.$types.length, 3);
+      assertTypesEqual(type.Function(type.void, [type.int]), m.foo.$types[0]);
+      assertTypesEqual(type.Function(type.void, [type.float]), m.foo.$types[1]);
       assertTypesEqual(type.Function(type.void, [type.Pointer(type.void)]),
-                       m.foo.types[2]);
+                       m.foo.$types[2]);
 
       done();
     });
@@ -735,17 +735,17 @@ describe('Generate JS', function() {
       // Make sure non-builtins are added too.
       assert.ok(m.foo);
 
-      assert.strictEqual(m.get.types.length, 14);
-      assert.strictEqual(m.set.types.length, 14);
-      assert.strictEqual(m.lt.types.length, 14);
-      assert.strictEqual(m.le.types.length, 14);
-      assert.strictEqual(m.gt.types.length, 14);
-      assert.strictEqual(m.ge.types.length, 14);
-      assert.strictEqual(m.eq.types.length, 14);
-      assert.strictEqual(m.ne.types.length, 14);
-      assert.strictEqual(m.add.types.length, 7);
-      assert.strictEqual(m.sub.types.length, 7);
-      assert.strictEqual(m.foo.types.length, 1);
+      assert.strictEqual(m.get.$types.length, 14);
+      assert.strictEqual(m.set.$types.length, 14);
+      assert.strictEqual(m.lt.$types.length, 14);
+      assert.strictEqual(m.le.$types.length, 14);
+      assert.strictEqual(m.gt.$types.length, 14);
+      assert.strictEqual(m.ge.$types.length, 14);
+      assert.strictEqual(m.eq.$types.length, 14);
+      assert.strictEqual(m.ne.$types.length, 14);
+      assert.strictEqual(m.add.$types.length, 7);
+      assert.strictEqual(m.sub.$types.length, 7);
+      assert.strictEqual(m.foo.$types.length, 1);
 
       done();
     });

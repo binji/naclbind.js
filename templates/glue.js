@@ -56,7 +56,7 @@ var types = {};
 [[for type in collector.types_topo:]]
 [[  if type.kind == TypeKind.RECORD:]]
 [[    for name, ftype, offset in type.fields:]]
-{{type.js_spelling}}.addField('{{name}}', {{ftype.js_spelling}}, {{offset}});
+{{type.js_spelling}}.$addField('{{name}}', {{ftype.js_spelling}}, {{offset}});
 [[    ]]
 [[]]
 
@@ -96,7 +96,7 @@ function createModule(nmf, mimeType) {
     }
   } else {
     embed = Embed(NaClEmbed(nmf, mimeType));
-    embed.appendToBody();
+    embed.$appendToBody();
   }
 
   m = mod.Module(embed);

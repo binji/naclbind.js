@@ -18,16 +18,16 @@ function NaClEmbedForTesting(fireEventsImmediately) {
   if (!(this instanceof NaClEmbedForTesting)) {
     return new NaClEmbedForTesting(fireEventsImmediately);
   }
-  this.loaded = false;
-  this.listeners = {};
-  this.postMessageCallback = null;
-  this.lastError = undefined;
-  this.exitStatus = undefined;
-  this.fireEventsImmediately = fireEventsImmediately || false;
+  this.$loaded = false;
+  this.$listeners = {};
+  this.$postMessageCallback = null;
+  this.$lastError = undefined;
+  this.$exitStatus = undefined;
+  this.$fireEventsImmediately = fireEventsImmediately || false;
 }
 
-NaClEmbedForTesting.prototype.fireEvent = function(message, e) {
-  var callbacks = this.listeners[message];
+NaClEmbedForTesting.prototype.$fireEvent = function(message, e) {
+  var callbacks = this.$listeners[message];
   var i;
   var fireEvents;
   if (!callbacks) {
@@ -40,7 +40,7 @@ NaClEmbedForTesting.prototype.fireEvent = function(message, e) {
     }
   };
 
-  if (this.fireEventsImmediately) {
+  if (this.$fireEventsImmediately) {
     fireEvents();
   } else {
     // Run on the next tick to more closely emulate a real embed.
@@ -48,64 +48,64 @@ NaClEmbedForTesting.prototype.fireEvent = function(message, e) {
   }
 };
 
-NaClEmbedForTesting.prototype.addEventListener_ = function(message, callback) {
-  if (!this.listeners[message]) {
-    this.listeners[message] = [];
+NaClEmbedForTesting.prototype.$addEventListener_ = function(message, callback) {
+  if (!this.$listeners[message]) {
+    this.$listeners[message] = [];
   }
 
-  this.listeners[message].push(callback);
+  this.$listeners[message].push(callback);
 };
 
-NaClEmbedForTesting.prototype.load = function() {
-  this.loaded = true;
-  this.fireEvent('load', null);
+NaClEmbedForTesting.prototype.$load = function() {
+  this.$loaded = true;
+  this.$fireEvent('load', null);
 };
 
-NaClEmbedForTesting.prototype.message = function(msg) {
+NaClEmbedForTesting.prototype.$message = function(msg) {
   var event = {data: msg};
-  this.fireEvent('message', event);
+  this.$fireEvent('message', event);
 };
 
-NaClEmbedForTesting.prototype.error = function(error) {
-  this.lastError = error;
-  this.fireEvent('error', null);
+NaClEmbedForTesting.prototype.$error = function(error) {
+  this.$lastError = error;
+  this.$fireEvent('error', null);
 };
 
-NaClEmbedForTesting.prototype.exit = function(exitStatus) {
-  this.exitStatus = exitStatus;
-  this.fireEvent('crash', null);
+NaClEmbedForTesting.prototype.$exit = function(exitStatus) {
+  this.$exitStatus = exitStatus;
+  this.$fireEvent('crash', null);
 };
 
-NaClEmbedForTesting.prototype.crash = function() {
-  this.exit(-1);
+NaClEmbedForTesting.prototype.$crash = function() {
+  this.$exit(-1);
 };
 
-NaClEmbedForTesting.prototype.addLoadListener = function(callback) {
-  this.addEventListener_('load', callback);
+NaClEmbedForTesting.prototype.$addLoadListener = function(callback) {
+  this.$addEventListener_('load', callback);
 };
 
-NaClEmbedForTesting.prototype.addMessageListener = function(callback) {
-  this.addEventListener_('message', callback);
+NaClEmbedForTesting.prototype.$addMessageListener = function(callback) {
+  this.$addEventListener_('message', callback);
 };
 
-NaClEmbedForTesting.prototype.addErrorListener = function(callback) {
-  this.addEventListener_('error', callback);
+NaClEmbedForTesting.prototype.$addErrorListener = function(callback) {
+  this.$addEventListener_('error', callback);
 };
 
-NaClEmbedForTesting.prototype.addCrashListener = function(callback) {
-  this.addEventListener_('crash', callback);
+NaClEmbedForTesting.prototype.$addCrashListener = function(callback) {
+  this.$addEventListener_('crash', callback);
 };
 
-NaClEmbedForTesting.prototype.appendToBody = function() {
+NaClEmbedForTesting.prototype.$appendToBody = function() {
 };
 
-NaClEmbedForTesting.prototype.setPostMessageCallback = function(callback) {
-  this.postMessageCallback = callback;
+NaClEmbedForTesting.prototype.$setPostMessageCallback = function(callback) {
+  this.$postMessageCallback = callback;
 }
 
-NaClEmbedForTesting.prototype.postMessage = function(msg) {
-  assert(this.postMessageCallback);
-  this.postMessageCallback(msg);
+NaClEmbedForTesting.prototype.$postMessage = function(msg) {
+  assert(this.$postMessageCallback);
+  this.$postMessageCallback(msg);
 };
 
 module.exports = NaClEmbedForTesting;

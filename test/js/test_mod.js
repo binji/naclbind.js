@@ -117,7 +117,7 @@ describe('Module', function() {
     m.$defineFunction('malloc', [mod.Function(0, mallocType)]);
     m.$defineFunction('get', [mod.Function(1, getIntType)]);
 
-    m.get(m.malloc(4).cast(intp));
+    m.get(m.malloc(4).$cast(intp));
 
     assert.deepEqual(m.$getMessage(), {
       id: 1,
@@ -137,10 +137,10 @@ describe('Module', function() {
     m.$context = c;
     h = m.$handle(1000);
 
-    assert.strictEqual(h.id, 1);
-    assert.strictEqual(h.context, c);
-    assert.strictEqual(c.handles.length, 1);
-    assert.strictEqual(c.handles[0].id, 1);
+    assert.strictEqual(h.$id, 1);
+    assert.strictEqual(h.$context, c);
+    assert.strictEqual(c.$handles.length, 1);
+    assert.strictEqual(c.$handles[0].$id, 1);
   });
 
   describe('$commit', function() {
@@ -153,8 +153,8 @@ describe('Module', function() {
 
       m.$defineFunction('add', [mod.Function(0, addType)]);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         assert.deepEqual(msg, {
           id: 1,
           get: [3],
@@ -162,7 +162,7 @@ describe('Module', function() {
           commands: [ {id: 0, args: [1, 2], ret: 3} ]
         });
 
-        ne.message({id: 1, values: [7]});
+        ne.$message({id: 1, values: [7]});
       });
 
       h = m.add(3, 4);
@@ -184,10 +184,10 @@ describe('Module', function() {
 
       m.$defineFunction('add', [mod.Function(0, addType)]);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         assert.deepEqual(msg.get, [3, 5]);
-        ne.message({id: 1, values: [7, 12]});
+        ne.$message({id: 1, values: [7, 12]});
       });
 
       h1 = m.add(3, 4);
@@ -206,9 +206,9 @@ describe('Module', function() {
       var c = m.$createContext();
       var oldC;
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
-        ne.message({id: 1});
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
+        ne.$message({id: 1});
       });
 
       oldC = m.$context;
@@ -233,15 +233,15 @@ describe('Module', function() {
 
       m.$defineFunction('getLongLong', [mod.Function(0, getLongLongType)]);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         assert.deepEqual(msg, {
           id: 1,
           get: [1],
           commands: [ {id: 0, args: [], ret: 1} ]
         });
 
-        ne.message({id: 1, values: [['long', 0, 256]]});
+        ne.$message({id: 1, values: [['long', 0, 256]]});
       });
 
       h = m.getLongLong();
@@ -261,8 +261,8 @@ describe('Module', function() {
 
       m.$defineFunction('getInt', [mod.Function(0, getIntType)]);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         assert.deepEqual(msg, {
           id: 1,
           set: {1: 1},
@@ -273,7 +273,7 @@ describe('Module', function() {
           ]
         });
 
-        ne.message({id: 1, values: [undefined], error: 0});
+        ne.$message({id: 1, values: [undefined], error: 0});
       });
 
       m.$errorIf(1);
@@ -294,8 +294,8 @@ describe('Module', function() {
 
       m.$defineFunction('getInt', [mod.Function(0, getIntType)]);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         assert.deepEqual(msg, {
           id: 1,
           get: [1],
@@ -304,7 +304,7 @@ describe('Module', function() {
           ]
         });
 
-        ne.message({id: 1, values: [42]});
+        ne.$message({id: 1, values: [42]});
       });
 
       h = m.getInt();
@@ -354,10 +354,10 @@ describe('Module', function() {
       var c = m.$context;
 
       m.$handle(1);
-      assert.strictEqual(c.handles.length, 1);
+      assert.strictEqual(c.$handles.length, 1);
 
       m.$destroyHandles();
-      assert.strictEqual(c.handles.length, 0);
+      assert.strictEqual(c.$handles.length, 0);
     });
 
     it('should not destroy handles created after', function() {
@@ -367,7 +367,7 @@ describe('Module', function() {
       m.$destroyHandles();
       m.$handle(2);
       assert.deepEqual(m.$getMessage().destroy, [1]);
-      assert.strictEqual(m.$context.handles.length, 1);
+      assert.strictEqual(m.$context.$handles.length, 1);
     });
 
     it('should accumulate handles to destroy', function() {
@@ -387,10 +387,10 @@ describe('Module', function() {
       var e = Embed(ne);
       var m = mod.Module(e);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         assert.deepEqual(msg.destroy, [1]);
-        ne.message({id: 1});
+        ne.$message({id: 1});
       });
 
       m.$handle(1);
@@ -405,10 +405,10 @@ describe('Module', function() {
       var m = mod.Module(e);
       var h;
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         assert.deepEqual(msg.destroy, [1]);
-        ne.message({id: 1, values: [1]});
+        ne.$message({id: 1, values: [1]});
       });
 
       h = m.$handle(1);
@@ -557,7 +557,7 @@ describe('Module', function() {
     });
 
     it('should work for strings', function() {
-      var charp = type.Pointer(type.char.qualify(type.CONST));
+      var charp = type.Pointer(type.char.$qualify(type.CONST));
       assertTypesEqual(charp, mod.objectToType("hi"));
     });
 
@@ -597,8 +597,8 @@ describe('Module', function() {
         var h1 = m.$handle(4);
         var h2 = m.$handle(4, type.float);
 
-        assertTypesEqual(h1.type, type.schar);
-        assertTypesEqual(h2.type, type.float);
+        assertTypesEqual(h1.$type, type.schar);
+        assertTypesEqual(h2.$type, type.float);
 
         assert.deepEqual(m.$getMessage(), {
           id: 1,
@@ -632,8 +632,8 @@ describe('Module', function() {
         var h1 = m.$handle(0);
         var h2 = m.$handle(1000);
 
-        assertTypesEqual(h1.type, type.schar);
-        assertTypesEqual(h2.type, type.short);
+        assertTypesEqual(h1.$type, type.schar);
+        assertTypesEqual(h2.$type, type.short);
 
         assert.deepEqual(m.$getMessage(), {
           id: 1,
@@ -650,8 +650,8 @@ describe('Module', function() {
         var h1 = m.$handle(Infinity);
         var h2 = m.$handle(1e10);
 
-        assertTypesEqual(h1.type, type.float);
-        assertTypesEqual(h2.type, type.float);
+        assertTypesEqual(h1.$type, type.float);
+        assertTypesEqual(h2.$type, type.float);
 
         assert.deepEqual(m.$getMessage(), {
           id: 1,
@@ -666,7 +666,7 @@ describe('Module', function() {
         var m = mod.Module();
         var h = m.$handle("Hello");
 
-        assertTypesEqual(h.type, type.Pointer(type.char.qualify(type.CONST)));
+        assertTypesEqual(h.$type, type.Pointer(type.char.$qualify(type.CONST)));
 
         assert.deepEqual(m.$getMessage(), {
           id: 1,
@@ -680,7 +680,7 @@ describe('Module', function() {
         var m = mod.Module();
         var h = m.$handle(null);
 
-        assertTypesEqual(h.type, type.Pointer(type.void));
+        assertTypesEqual(h.$type, type.Pointer(type.void));
 
         assert.deepEqual(m.$getMessage(), {
           id: 1,
@@ -695,7 +695,7 @@ describe('Module', function() {
         var two_to_the_fortieth = Long.fromBits(0, 256);
         var h = m.$handle(two_to_the_fortieth);
 
-        assertTypesEqual(h.type, type.longlong);
+        assertTypesEqual(h.$type, type.longlong);
 
         assert.deepEqual(m.$getMessage(), {
           id: 1,
@@ -713,10 +713,10 @@ describe('Module', function() {
         var h2;
 
         h1 = m.$handle(1);
-        h2 = h1.cast(type.long);
+        h2 = h1.$cast(type.long);
 
-        assert.strictEqual(h1.id, h2.id);
-        assert.deepEqual(h2.type, type.long);
+        assert.strictEqual(h1.$id, h2.$id);
+        assert.deepEqual(h2.$type, type.long);
       });
 
       it('should throw if the cast is invalid', function() {
@@ -725,7 +725,7 @@ describe('Module', function() {
 
         h = m.$handle(1);
         assert.throws(function() {
-          h.cast(type.Function(type.void, []));
+          h.$cast(type.Function(type.void, []));
         }, /Invalid cast/);
       });
     });
@@ -736,7 +736,7 @@ describe('Module', function() {
         var h;
 
         h = m.$handle(1);
-        h.setFinalizer(function(handle) {
+        h.$setFinalizer(function(handle) {
           assert.strictEqual(handle, h);
           done();
         });
@@ -756,25 +756,25 @@ describe('Module', function() {
         finalizer = function(handle) {
           switch (count++) {
             case 0:
-              assert.strictEqual(handle.id, 2);
+              assert.strictEqual(handle.$id, 2);
               break;
             case 1:
-              assert.strictEqual(handle.id, 1);
+              assert.strictEqual(handle.$id, 1);
               break;
             case 2:
-              assert.strictEqual(handle.id, 4);
+              assert.strictEqual(handle.$id, 4);
               break;
             case 3:
-              assert.strictEqual(handle.id, 3);
+              assert.strictEqual(handle.$id, 3);
               done();
               break;
           }
         };
 
         h1 = m.$handle(1);
-        h1.setFinalizer(finalizer);
+        h1.$setFinalizer(finalizer);
         h2 = m.$handle(2);
-        h2.setFinalizer(finalizer);
+        h2.$setFinalizer(finalizer);
         m.$destroyHandles();
 
         // Should always be in reverse handle order, even if finalizers are
@@ -782,8 +782,8 @@ describe('Module', function() {
 
         h3 = m.$handle(3);
         h4 = m.$handle(4);
-        h4.setFinalizer(finalizer);
-        h3.setFinalizer(finalizer);
+        h4.$setFinalizer(finalizer);
+        h3.$setFinalizer(finalizer);
         m.$destroyHandles();
       });
 
@@ -794,8 +794,8 @@ describe('Module', function() {
         var h2;
 
         h1 = m.$handle(1);
-        h1.setFinalizer(function() { count++; });
-        h2 = h1.cast(type.int);
+        h1.$setFinalizer(function() { count++; });
+        h2 = h1.$cast(type.int);
         m.$destroyHandles();
         assert.strictEqual(count, 1);
         assert.deepEqual(m.$getMessage().destroy, [1]);
@@ -809,20 +809,20 @@ describe('Module', function() {
         var h3;
 
         h1 = m.$handle(1);
-        h1.setFinalizer(dummy);
+        h1.$setFinalizer(dummy);
 
         assert.throws(function() {
-          h1.setFinalizer(dummy);
+          h1.$setFinalizer(dummy);
         }, /already has finalizer/);
 
-        h2 = h1.cast(type.int);
+        h2 = h1.$cast(type.int);
         assert.throws(function() {
-          h2.setFinalizer(dummy);
+          h2.$setFinalizer(dummy);
         }, /already has finalizer/);
 
-        h3 = h2.cast(type.float);
+        h3 = h2.$cast(type.float);
         assert.throws(function() {
-          h3.setFinalizer(dummy);
+          h3.$setFinalizer(dummy);
         }, /already has finalizer/);
       });
 
@@ -837,7 +837,7 @@ describe('Module', function() {
         m.$defineFunction('free', [mod.Function(1, freeType)]);
 
         h = m.malloc(4);
-        h.setFinalizer(function(x) { m.free(x); });
+        h.$setFinalizer(function(x) { m.free(x); });
         m.$destroyHandles();
 
         assert.deepEqual(m.$getMessage(), {
@@ -889,13 +889,13 @@ describe('Module', function() {
 
       m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         if (msg.id === 1) {
           // First call the commit callback.
-          ne.message({id: 1, values: []});
+          ne.$message({id: 1, values: []});
           // Then call callback.
-          ne.message({id: 2, cbId: 1, values: [42]});
+          ne.$message({id: 2, cbId: 1, values: [42]});
         } else if (msg.id === 2) {
           // Return value from callback.
           assert.deepEqual(msg, {
@@ -929,14 +929,14 @@ describe('Module', function() {
 
       m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         switch (msg.id) {
           case 1:
             // First call the commit callback.
-            ne.message({id: 1, values: []});
+            ne.$message({id: 1, values: []});
             // Then call callback.
-            ne.message({id: 2, cbId: 1, values: [10]});
+            ne.$message({id: 2, cbId: 1, values: [10]});
             break;
 
           case 2:
@@ -944,7 +944,7 @@ describe('Module', function() {
               case 1:
                 assert.deepEqual(msg.values, [20]);
                 // Call callback again.
-                ne.message({id: 2, cbId: 2, values: [42]});
+                ne.$message({id: 2, cbId: 2, values: [42]});
                 break;
 
               case 2:
@@ -971,13 +971,13 @@ describe('Module', function() {
 
       m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
 
-      ne.load();
-      ne.setPostMessageCallback(function(msg) {
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
         if (msg.id === 1) {
           // First call the commit callback.
-          ne.message({id: 1, values: []});
+          ne.$message({id: 1, values: []});
           // Then call callback.
-          ne.message({id: 2, cbId: 1, values: [42]});
+          ne.$message({id: 2, cbId: 1, values: [42]});
         }
       });
 

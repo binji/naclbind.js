@@ -40,12 +40,12 @@
         m.nacl_io_init();
         m.mount("", "/memfs", "memfs", 0, null);
         var f = m.fopen("/memfs/foo.txt", "w+");
-        f.setFinalizer(m.fclose.bind(m));
+        f.$setFinalizer(m.fclose.bind(m));
         var wrote = m.fwrite(msg, 1, msg.length, f);
         m.$commit([wrote], function(wrote) {
           assert.strictEqual(wrote, msg.length);
           var p = m.malloc(20);
-          p.setFinalizer(m.free.bind(m));
+          p.$setFinalizer(m.free.bind(m));
           m.fseek(f, 0, 0);
           var read = m.fread(p, 1, 20, f);
           m.$commitDestroy([read], function(read) {
