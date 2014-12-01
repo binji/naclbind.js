@@ -226,23 +226,25 @@ def RunClangForArgs(args):
     # Try again, defaulting to parsing as C
     return RunClangForArgs(['-x', 'c'] + args)
 
-  # TODO(binji): It's cheesy to rely on line 4 being the command line to parse.
-  # Find a better way.
-  # If there are < 4 lines, the driver failed. Just forward the RunError
-  # through.
+  # Look for a line starting with a single space:
   stderr_lines = stderr.splitlines()
-  if len(stderr_lines) < 4:
-    raise e
+  for line in stderr_lines:
+    if line[0] == ' ':
+      if '-cc1' not in line:
+        continue
 
-  # TODO(binji): handle quoted args with spaces
-  new_args = stderr_lines[4].split()
-  if new_args[0] == 'clang:':
-    # Clang failure; it couldn't generate the commandline. Output everything
-    # except for the verbose stuff.
-    e.stderr = '\n'.join(stderr_lines[4:])
-    raise e
+      # TODO(binji): handle quoted args with spaces
+      new_args = line.split()
+      if new_args[0] == 'clang:':
+        # Clang failure; it couldn't generate the commandline. Output everything
+        # except for the verbose stuff.
+        e.stderr = '\n'.join(line)
+        raise e
 
-  return new_args
+      return new_args
+
+  # Couldn't find it, must be an error. Just forward the RunError through.
+  raise e
 
 
 def ParseClangArgs(args):
