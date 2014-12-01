@@ -273,10 +273,29 @@ NB_Bool nb_parse_sethandles(struct NB_Request* request, struct PP_Var var) {
         break;
 
       case PP_VARTYPE_ARRAY: {
-        /* For now, all arrays are longs. */
-        int64_t i64_value;
-        if (!nb_var_int64(value, &i64_value)) {
-          NB_ERROR("Unable to parse set handle value as \"long\".");
+        const char* tag;
+        uint32_t tag_length;
+        uint32_t array_length;
+
+        if (!nb_var_tagged_array(value, &tag, &tag_length, &array_length)) {
+          goto cleanup;
+        }
+
+        if (strncmp(tag, "long", tag_length) == 0) {
+          int64_t i64_value;
+          if (!nb_var_int64(value, &i64_value)) {
+            NB_ERROR("Unable to parse set handle value as \"long\".");
+            goto cleanup;
+          }
+        } else if (strncmp(tag, "function", tag_length) == 0) {
+          int32_t function_id;
+          if (!nb_var_function_id(value, &function_id)) {
+            NB_ERROR("Unable to parse set handle value as \"function\".");
+            goto cleanup;
+          }
+        } else {
+          NB_VERROR("Unexpected set handle tagged array type: %.*s.",
+                    tag_length, tag);
           goto cleanup;
         }
 

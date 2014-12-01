@@ -67,6 +67,7 @@ NB_Bool nb_var_uint64(struct PP_Var, uint64_t*);
 NB_Bool nb_var_float(struct PP_Var, float*);
 NB_Bool nb_var_double(struct PP_Var, double*);
 NB_Bool nb_var_string(struct PP_Var, const char**, uint32_t* out_length);
+NB_Bool nb_var_function_id(struct PP_Var, int32_t* out_id);
 NB_Bool nb_var_tagged_array(struct PP_Var,
                             const char** out_tag,
                             uint32_t* out_tag_length,

@@ -114,4 +114,3 @@ static void* nb_handle_message_thread(void* user_data) {
   }
   return NULL;
 }
-

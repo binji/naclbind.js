@@ -298,6 +298,23 @@ NB_Bool nb_var_string(struct PP_Var var,
   return *out_str != NULL;
 }
 
+NB_Bool nb_var_function_id(struct PP_Var var, int32_t* out_id) {
+  struct PP_Var id_var;
+
+  if (!nb_var_tagged_array_check(var, "function", 2)) {
+    return NB_FALSE;
+  }
+
+  id_var = nb_var_array_get(var, 1);
+  if (!nb_var_check_type_with_error(id_var, PP_VARTYPE_INT32)) {
+    nb_var_release(id_var);
+    return NB_FALSE;
+  }
+
+  *out_id = id_var.value.as_int;
+  return NB_TRUE;
+}
+
 NB_Bool nb_var_tagged_array(struct PP_Var var,
                             const char** out_tag,
                             uint32_t* out_tag_length,

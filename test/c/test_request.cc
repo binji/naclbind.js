@@ -233,6 +233,34 @@ TEST_F(RequestTest, SetHandles_Long) {
   nb_var_release(value);
 }
 
+TEST_F(RequestTest, SetHandles_Function) {
+  const char* json = "{\"id\": 1, \"set\": {\"1\": [\"function\", 1]}}";
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
+
+  EXPECT_EQ(1, nb_request_id(request));
+  EXPECT_EQ(1, nb_request_sethandles_count(request));
+
+  NB_Handle handle;
+  struct PP_Var value;
+  struct PP_Var tag;
+  const char* tag_str;
+  uint32_t tag_len;
+
+  nb_request_sethandle(request, 0, &handle, &value);
+  EXPECT_EQ(1, handle);
+  EXPECT_EQ(PP_VARTYPE_ARRAY, value.type);
+  EXPECT_EQ(2, nb_var_array_length(value));
+  tag = nb_var_array_get(value, 0);
+  EXPECT_EQ(NB_TRUE, nb_var_string(tag, &tag_str, &tag_len));
+  EXPECT_EQ(8, tag_len);
+  EXPECT_EQ(0, strcmp(tag_str, "function"));
+  EXPECT_EQ(PP_VARTYPE_INT32, nb_var_array_get(value, 1).type);
+  EXPECT_EQ(1, nb_var_array_get(value, 1).value.as_int);
+  nb_var_release(tag);
+  nb_var_release(value);
+}
+
 TEST_F(RequestTest, GetHandles) {
   const char* json = "{\"id\": 1, \"get\": [4, 5, 100]}";
   JsonToRequest(json);
