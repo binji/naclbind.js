@@ -568,7 +568,12 @@ def main(args):
     parser.error('--template argument required')
 
   if len(options.template) != len(options.output):
-    parser.error('Need to have same number of --template and --output')
+    # It's OK if there is only one template, and no output. In that case, write
+    # to stdout.
+    if len(options.template) == 1 and len(options.output) == 0:
+      options.output = [None]
+    else:
+      parser.error('Need to have same number of --template and --output')
 
   collector = Collector()
   if options.builtins:
