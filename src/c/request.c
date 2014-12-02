@@ -288,8 +288,8 @@ NB_Bool nb_parse_sethandles(struct NB_Request* request, struct PP_Var var) {
             goto cleanup;
           }
         } else if (strncmp(tag, "function", tag_length) == 0) {
-          int32_t function_id;
-          if (!nb_var_function_id(value, &function_id)) {
+          int32_t id;
+          if (!nb_var_func_id(value, &id)) {
             NB_ERROR("Unable to parse set handle value as \"function\".");
             goto cleanup;
           }

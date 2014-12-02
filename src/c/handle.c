@@ -306,6 +306,12 @@ NB_Bool nb_handle_register_funcp(NB_Handle handle, void (*value)(void)) {
   return nb_register_handle(handle, NB_TYPE_FUNC_P, hval);
 }
 
+NB_Bool nb_handle_register_func_id(NB_Handle handle, int32_t value) {
+  NB_HandleValue hval;
+  hval.int32 = value;
+  return nb_register_handle(handle, NB_TYPE_FUNC_ID, hval);
+}
+
 NB_Bool nb_handle_register_var(NB_Handle handle, struct PP_Var value) {
   NB_HandleValue hval;
   hval.var = value;
@@ -915,6 +921,24 @@ NB_Bool nb_handle_get_funcp(NB_Handle handle, void (**out_value)(void)) {
   }
 
   *out_value = hentry->value.funcp;
+  return NB_TRUE;
+}
+
+NB_Bool nb_handle_get_func_id(NB_Handle handle, int32_t* out_value) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
+    return NB_FALSE;
+  }
+
+  if (hentry->type != NB_TYPE_FUNC_ID) {
+    NB_VERROR("handle %d is of type %s. Expected %s.",
+              handle,
+              nb_type_to_string(hentry->type),
+              nb_type_to_string(NB_TYPE_FUNC_ID));
+    return NB_FALSE;
+  }
+
+  *out_value = hentry->value.int32;
   return NB_TRUE;
 }
 

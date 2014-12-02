@@ -129,17 +129,48 @@ NB_Bool nb_request_set_handles(struct NB_Request* request) {
       }
 
       case PP_VARTYPE_ARRAY: {
-        int64_t num;
-        if (!nb_var_int64(value, &num)) {
-          NB_VERROR("nb_var_int64(%d, %s) failed, i=%d.", handle,
-                    nb_var_type_to_string(value.type), i);
+        const char* tag;
+        uint32_t tag_length;
+        uint32_t array_length;
+
+        if (!nb_var_tagged_array(value, &tag, &tag_length, &array_length)) {
           goto cleanup;
         }
 
-        if (!nb_handle_register_int64(handle, num)) {
-          NB_VERROR("nb_handle_register_int64(%d, %lld) failed, i=%d.", handle,
-                    num, i);
-          goto cleanup;
+        if (strncmp(tag, "long", tag_length) == 0) {
+          int64_t num;
+          if (!nb_var_int64(value, &num)) {
+            NB_VERROR("nb_var_int64(%d, %s) failed, i=%d.",
+                      handle,
+                      nb_var_type_to_string(value.type),
+                      i);
+            goto cleanup;
+          }
+
+          if (!nb_handle_register_int64(handle, num)) {
+            NB_VERROR("nb_handle_register_int64(%d, %lld) failed, i=%d.",
+                      handle,
+                      num,
+                      i);
+            goto cleanup;
+          }
+        } else if (strncmp(tag, "function", tag_length) == 0) {
+          int32_t id;
+          if (!nb_var_func_id(value, &id)) {
+            NB_VERROR("nb_var_func_id(%d, %s) failed, i=%d.",
+                      handle,
+                      nb_var_type_to_string(value.type),
+                      i);
+            goto cleanup;
+          }
+
+          if (!nb_handle_register_func_id(handle, id)) {
+            NB_VERROR("nb_handle_register_int64(%d, %d) failed, i=%d.",
+                      handle,
+                      id,
+                      i);
+            goto cleanup;
+          }
         }
         break;
       }

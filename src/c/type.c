@@ -33,6 +33,7 @@ static const char* s_nb_type_string[] = {
     "double",
     "void*",
     "void(*)(void)",
+    "<function id>",
     "struct PP_Var",
 };
 

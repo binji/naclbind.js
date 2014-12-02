@@ -156,4 +156,8 @@ describe('C Generator Tests', function() {
     genAndRun('function_pointers.h', 'function_pointers.c',
               'test_function_pointers.cc', done);
   });
+
+  it('should succeed for test_callback', function(done) {
+    genAndRun('callback.h', 'callback.c', 'test_callback.cc', done);
+  });
 });

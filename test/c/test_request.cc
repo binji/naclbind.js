@@ -62,6 +62,7 @@ TEST_F(RequestTest, Valid) {
     "{\"id\": 1, \"set\": {\"1\": \"hi\"}}",
     "{\"id\": 1, \"set\": {\"1\": null}}",
     "{\"id\": 1, \"set\": {\"1\": [\"long\", 0, 256]}}",
+    "{\"id\": 1, \"set\": {\"1\": [\"function\", 20]}}",
     "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [2, 3]}]}",
     "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [2, 3], \"ret\": 4}]}",
     "{\"id\": 1, \"get\": [10], \"destroy\": []}",
@@ -97,10 +98,12 @@ TEST_F(RequestTest, Invalid) {
     "{\"id\": 1, \"set\": {\"1\": {}}}",
     // "set" values array must start with string tag
     "{\"id\": 1, \"set\": {\"1\": [1]}}",
-    // "set" values array string tag must be "long"
+    // "set" values array string tag must be valid tag
     "{\"id\": 1, \"set\": {\"1\": [\"foo\", 1, 2]}}",
-    // "set" values array must have len 3
+    // "set" values array with tag "long" must have len 3
     "{\"id\": 1, \"set\": {\"1\": [\"long\", 1]}}",
+    // "set" values array with tag "function" must have len 2
+    "{\"id\": 1, \"set\": {\"1\": [\"function\"]}}",
     // "destroy" must be array
     "{\"id\": 1, \"destroy\": {}}",
     // "destroy" must be array of ints

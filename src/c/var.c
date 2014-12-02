@@ -298,7 +298,7 @@ NB_Bool nb_var_string(struct PP_Var var,
   return *out_str != NULL;
 }
 
-NB_Bool nb_var_function_id(struct PP_Var var, int32_t* out_id) {
+NB_Bool nb_var_func_id(struct PP_Var var, int32_t* out_id) {
   struct PP_Var id_var;
 
   if (!nb_var_tagged_array_check(var, "function", 2)) {
