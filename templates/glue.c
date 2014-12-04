@@ -22,8 +22,8 @@
 {{IncludeFile('c/handle.h')}}
 {{IncludeFile('c/interfaces.h')}}
 {{IncludeFile('c/macros.h')}}
-{{IncludeFile('c/message.h')}}
 {{IncludeFile('c/queue.h')}}
+{{IncludeFile('c/request.h')}}
 {{IncludeFile('c/response.h')}}
 {{IncludeFile('c/run.h')}}
 {{IncludeFile('c/type.h')}}
@@ -34,7 +34,7 @@
 
 {{IncludeFile('c/handle.c')}}
 {{IncludeFile('c/interfaces.c')}}
-{{IncludeFile('c/message.c')}}
+{{IncludeFile('c/request.c')}}
 {{IncludeFile('c/response.c')}}
 {{IncludeFile('c/run.c')}}
 {{IncludeFile('c/type.c')}}
@@ -78,10 +78,10 @@ NB_COMPILE_ASSERT(offsetof({{type.c_spelling}}, {{name}}) == {{offset}});
 
 [[for fn in collector.functions:]]
 // {{fn.displayname}}
-static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int command_idx) {
+static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int command_idx) {
 [[  if fn.type.kind == TypeKind.FUNCTIONPROTO:]]
 [[    arguments = list(fn.type.arg_types)]]
-  int arg_count = nb_message_command_arg_count(message, command_idx);
+  int arg_count = nb_request_command_arg_count(request, command_idx);
 [[    if fn.type.is_variadic:]]
   if (arg_count < {{len(arguments)}}) {
     NB_VERROR("Expected at least %d args, got %d.", {{len(arguments)}}, arg_count);
@@ -93,7 +93,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
   }
 [[    for i, arg in enumerate(arguments):]]
 [[      orig_arg, arg = arg, arg.canonical]]
-  NB_Handle handle{{i}} = nb_message_command_arg(message, command_idx, {{i}});
+  NB_Handle handle{{i}} = nb_request_command_arg(request, command_idx, {{i}});
 [[      if arg.kind == TypeKind.POINTER:]]
 [[        pointee = arg.pointee]]
 [[        if pointee.kind in (TypeKind.CHAR_S, TypeKind.CHAR_U):]]
@@ -217,7 +217,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
   NB_VarArgDbl* dargs_end = &dargs[NB_MAX_DBL_VARARGS];
   int i;
   for (i = 0; i < arg_count - {{len(arguments)}}; ++i) {
-    NB_Handle handle = nb_message_command_arg(message, command_idx, i + {{len(arguments)}});
+    NB_Handle handle = nb_request_command_arg(request, command_idx, i + {{len(arguments)}});
     if (!nb_handle_get_default(handle, &iargsp, iargs_end,
                                        &dargsp, dargs_end)) {
       NB_ERROR("Failed to add variadic argument.");
@@ -227,7 +227,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
   size_t iarg_count = iargsp - iargs;
   size_t darg_count = dargsp - dargs;
 [[  elif fn.type.kind == TypeKind.FUNCTIONNOPROTO:]]
-  int arg_count = nb_message_command_arg_count(message, command_idx);
+  int arg_count = nb_request_command_arg_count(request, command_idx);
   if (arg_count != 0) {
     // UNSUPPORTED: no proto with non-zero argument list.
     NB_VERROR("Function with no prototype passed non-zero args: %d", arg_count);
@@ -238,11 +238,11 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
 [[    raise Error('Unexpected function type: %s' % fn.type.kind)]]
 [[  result_type = fn.type.result_type.canonical]]
 [[  if result_type.kind != TypeKind.VOID:]]
-  if (!nb_message_command_has_ret(message, command_idx)) {
+  if (!nb_request_command_has_ret(request, command_idx)) {
     NB_ERROR("Return type is non-void, but no return handle given.");
     return NB_FALSE;
   }
-  NB_Handle ret = nb_message_command_ret(message, command_idx);
+  NB_Handle ret = nb_request_command_ret(request, command_idx);
 [[    if fn.type.kind == TypeKind.FUNCTIONPROTO and fn.type.is_variadic:]]
   {{result_type.GetCSpelling('result')}};
 #ifdef __x86_64__
@@ -330,23 +330,23 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Message* message, int co
 [[]]
 
 // getFunc()
-static NB_Bool nb_command_run_get_func(struct NB_Message* message, int command_idx) {
-  int arg_count = nb_message_command_arg_count(message, command_idx);
+static NB_Bool nb_command_run_get_func(struct NB_Request* request, int command_idx) {
+  int arg_count = nb_request_command_arg_count(request, command_idx);
   if (arg_count != 1) {
     NB_VERROR("Expected %d arg, got %d.", 1, arg_count);
     return NB_FALSE;
   }
-  NB_Handle handle = nb_message_command_arg(message, command_idx, 0);
+  NB_Handle handle = nb_request_command_arg(request, command_idx, 0);
   int32_t arg;
   if (!nb_handle_get_int32(handle, &arg)) {
     NB_VERROR("Unable to get handle %d as int32_t.", handle);
     return NB_FALSE;
   }
-  if (!nb_message_command_has_ret(message, command_idx)) {
+  if (!nb_request_command_has_ret(request, command_idx)) {
     NB_ERROR("Return type is non-void, but no return handle given.");
     return NB_FALSE;
   }
-  NB_Handle ret = nb_message_command_ret(message, command_idx);
+  NB_Handle ret = nb_request_command_ret(request, command_idx);
 
   void (*result)(void);
   switch (arg) {
@@ -365,13 +365,13 @@ static NB_Bool nb_command_run_get_func(struct NB_Message* message, int command_i
 }
 
 // $errorIf()
-static NB_Bool nb_command_run_error_if(struct NB_Message* message, int command_idx) {
-  int arg_count = nb_message_command_arg_count(message, command_idx);
+static NB_Bool nb_command_run_error_if(struct NB_Request* request, int command_idx) {
+  int arg_count = nb_request_command_arg_count(request, command_idx);
   if (arg_count != 1) {
     NB_VERROR("Expected %d arg, got %d.", 1, arg_count);
     return NB_FALSE;
   }
-  NB_Handle handle = nb_message_command_arg(message, command_idx, 0);
+  NB_Handle handle = nb_request_command_arg(request, command_idx, 0);
   int32_t arg;
   if (!nb_handle_get_int32(handle, &arg)) {
     NB_VERROR("Unable to get handle %d as int32_t.", handle);
@@ -384,7 +384,7 @@ enum {
   NUM_FUNCTIONS = {{len(collector.functions)}}
 };
 
-typedef NB_Bool (*nb_command_func_t)(struct NB_Message*, int);
+typedef NB_Bool (*nb_command_func_t)(struct NB_Request*, int);
 static nb_command_func_t s_functions[] = {
   nb_command_run_get_func,  /* -2 */
   nb_command_run_error_if,  /* -1 */
@@ -393,12 +393,12 @@ static nb_command_func_t s_functions[] = {
 [[]]
 };
 
-NB_Bool nb_message_command_run(struct NB_Message* message, int command_idx) {
-  int function_idx = nb_message_command_function(message, command_idx);
+NB_Bool nb_request_command_run(struct NB_Request* request, int command_idx) {
+  int function_idx = nb_request_command_function(request, command_idx);
   if (function_idx < -2 || function_idx >= NUM_FUNCTIONS) {
     NB_VERROR("Function id %d is out of range [-2, %d).", function_idx, NUM_FUNCTIONS);
     return NB_FALSE;
   }
 
-  return s_functions[function_idx + 2](message, command_idx);
+  return s_functions[function_idx + 2](request, command_idx);
 }

@@ -17,7 +17,7 @@
 #include <ppapi/c/pp_var.h>
 #include "fake_interfaces.h"
 #include "json.h"
-#include "message.h"
+#include "request.h"
 #include "var.h"
 
 class JsonTest : public ::testing::Test {

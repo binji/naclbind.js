@@ -37,15 +37,15 @@ describe('C Unit Tests', function() {
     var infiles = [
           path.join(srcdir, 'handle.c'),
           path.join(srcdir, 'interfaces.c'),
-          path.join(srcdir, 'message.c'),
-          path.join(srcdir, 'var.c'),
+          path.join(srcdir, 'request.c'),
           path.join(srcdir, 'type.c'),
+          path.join(srcdir, 'var.c'),
           path.join(__dirname, 'fake_interfaces.c'),
           path.join(__dirname, 'json.cc'),
           path.join(__dirname, 'main.cc'),
           path.join(__dirname, 'test_handle.cc'),
-          path.join(__dirname, 'test_message.cc'),
           path.join(__dirname, 'test_json.cc'),
+          path.join(__dirname, 'test_request.cc'),
         ];
     var opts = {
           toolchain: 'newlib',

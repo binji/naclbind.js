@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-NB_Bool nb_request_run(struct PP_Var request, struct PP_Var* response);
+NB_Bool nb_request_run(struct PP_Var request_var, struct PP_Var* response_var);
 
 #ifdef __cplusplus
 }

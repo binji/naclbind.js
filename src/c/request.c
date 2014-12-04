@@ -14,7 +14,7 @@
  */
 
 #ifndef NB_ONE_FILE
-#include "message.h"
+#include "request.h"
 #endif
 
 #include <assert.h>
@@ -29,7 +29,7 @@
 #include "var.h"
 #endif
 
-struct NB_Message;
+struct NB_Request;
 struct NB_Command;
 
 static void* nb_calloc_list(uint32_t len, size_t element_size);
@@ -39,15 +39,15 @@ static NB_Bool nb_expect_key(struct PP_Var var,
 static NB_Bool nb_optional_key(struct PP_Var var,
                                const char* key,
                                struct PP_Var* out_value);
-static NB_Bool nb_parse_message(struct NB_Message* message, struct PP_Var var);
-static NB_Bool nb_parse_id(struct NB_Message* message, struct PP_Var var);
-static NB_Bool nb_parse_gethandles(struct NB_Message* message,
+static NB_Bool nb_parse_request(struct NB_Request* request, struct PP_Var var);
+static NB_Bool nb_parse_id(struct NB_Request* request, struct PP_Var var);
+static NB_Bool nb_parse_gethandles(struct NB_Request* request,
                                    struct PP_Var var);
-static NB_Bool nb_parse_sethandles(struct NB_Message* message,
+static NB_Bool nb_parse_sethandles(struct NB_Request* request,
                                    struct PP_Var var);
-static NB_Bool nb_parse_destroyhandles(struct NB_Message* message,
+static NB_Bool nb_parse_destroyhandles(struct NB_Request* request,
                                        struct PP_Var var);
-static NB_Bool nb_parse_commands(struct NB_Message* message, struct PP_Var var);
+static NB_Bool nb_parse_commands(struct NB_Request* request, struct PP_Var var);
 static NB_Bool nb_parse_command(struct NB_Command* command, struct PP_Var var);
 
 struct NB_Command {
@@ -62,7 +62,7 @@ struct NB_HandleVarPair {
   struct PP_Var var;
 };
 
-struct NB_Message {
+struct NB_Request {
   int id;
   NB_Handle* gethandles;
   uint32_t gethandles_count;
@@ -108,32 +108,32 @@ static NB_Bool nb_var_string_to_long(struct PP_Var var, long* out_value) {
   return NB_TRUE;
 }
 
-struct NB_Message* nb_message_create(struct PP_Var var) {
-  struct NB_Message* message = calloc(1, sizeof(struct NB_Message));
-  if (!nb_parse_message(message, var)) {
-    nb_message_destroy(message);
+struct NB_Request* nb_request_create(struct PP_Var var) {
+  struct NB_Request* request = calloc(1, sizeof(struct NB_Request));
+  if (!nb_parse_request(request, var)) {
+    nb_request_destroy(request);
     return NULL;
   }
 
-  return message;
+  return request;
 }
 
-void nb_message_destroy(struct NB_Message* message) {
+void nb_request_destroy(struct NB_Request* request) {
   uint32_t i;
-  assert(message != NULL);
+  assert(request != NULL);
 
-  for (i = 0; i < message->commands_count; ++i) {
-    free(message->commands[i].args);
+  for (i = 0; i < request->commands_count; ++i) {
+    free(request->commands[i].args);
   }
-  free(message->commands);
-  free(message->destroyhandles);
+  free(request->commands);
+  free(request->destroyhandles);
 
-  for (i = 0; i < message->sethandles_count; ++i) {
-    nb_var_release(message->sethandles[i].var);
+  for (i = 0; i < request->sethandles_count; ++i) {
+    nb_var_release(request->sethandles[i].var);
   }
-  free(message->sethandles);
-  free(message->gethandles);
-  free(message);
+  free(request->sethandles);
+  free(request->gethandles);
+  free(request);
 }
 
 void* nb_calloc_list(uint32_t len, size_t element_size) {
@@ -145,7 +145,7 @@ NB_Bool nb_expect_key(struct PP_Var var,
                       struct PP_Var* out_value) {
   NB_Bool result = nb_optional_key(var, key, out_value);
   if (!result) {
-    NB_VERROR("Expected message to have key: %s", key);
+    NB_VERROR("Expected request to have key: %s", key);
   }
 
   return result;
@@ -162,15 +162,15 @@ NB_Bool nb_optional_key(struct PP_Var var,
   return NB_TRUE;
 }
 
-NB_Bool nb_parse_message(struct NB_Message* message, struct PP_Var var) {
+NB_Bool nb_parse_request(struct NB_Request* request, struct PP_Var var) {
   return nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY) &&
-         nb_parse_id(message, var) && nb_parse_gethandles(message, var) &&
-         nb_parse_sethandles(message, var) &&
-         nb_parse_destroyhandles(message, var) &&
-         nb_parse_commands(message, var);
+         nb_parse_id(request, var) && nb_parse_gethandles(request, var) &&
+         nb_parse_sethandles(request, var) &&
+         nb_parse_destroyhandles(request, var) &&
+         nb_parse_commands(request, var);
 }
 
-NB_Bool nb_parse_id(struct NB_Message* message, struct PP_Var var) {
+NB_Bool nb_parse_id(struct NB_Request* request, struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var id = PP_MakeUndefined();
 
@@ -183,18 +183,18 @@ NB_Bool nb_parse_id(struct NB_Message* message, struct PP_Var var) {
   }
 
   if (id.value.as_int <= 0) {
-    NB_VERROR("Expected message id to be > 0. Got %d", id.value.as_int);
+    NB_VERROR("Expected request id to be > 0. Got %d", id.value.as_int);
     goto cleanup;
   }
 
-  message->id = id.value.as_int;
+  request->id = id.value.as_int;
   result = NB_TRUE;
 cleanup:
   nb_var_release(id);
   return result;
 }
 
-NB_Bool nb_parse_gethandles(struct NB_Message* message, struct PP_Var var) {
+NB_Bool nb_parse_gethandles(struct NB_Request* request, struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var gethandles_var = PP_MakeUndefined();
   NB_Handle* gethandles = NULL;
@@ -222,18 +222,18 @@ NB_Bool nb_parse_gethandles(struct NB_Message* message, struct PP_Var var) {
     nb_var_release(handle);
   }
 
-  message->gethandles = gethandles;
-  message->gethandles_count = len;
+  request->gethandles = gethandles;
+  request->gethandles_count = len;
 
   result = NB_TRUE;
-  gethandles = NULL; /* Pass ownership to the message. */
+  gethandles = NULL; /* Pass ownership to the request. */
 cleanup:
   free(gethandles);
   nb_var_release(gethandles_var);
   return result;
 }
 
-NB_Bool nb_parse_sethandles(struct NB_Message* message, struct PP_Var var) {
+NB_Bool nb_parse_sethandles(struct NB_Request* request, struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var sethandles_var = PP_MakeUndefined();
   struct PP_Var keys = PP_MakeUndefined();
@@ -296,10 +296,10 @@ NB_Bool nb_parse_sethandles(struct NB_Message* message, struct PP_Var var) {
     value = PP_MakeUndefined(); /* Don't release below in cleanup */
   }
 
-  message->sethandles = sethandles;
-  message->sethandles_count = len;
+  request->sethandles = sethandles;
+  request->sethandles_count = len;
   result = NB_TRUE;
-  sethandles = NULL; /* Pass ownership to the message. */
+  sethandles = NULL; /* Pass ownership to the request. */
 cleanup:
   nb_var_release(value);
   free(sethandles);
@@ -308,7 +308,7 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_parse_destroyhandles(struct NB_Message* message, struct PP_Var var) {
+NB_Bool nb_parse_destroyhandles(struct NB_Request* request, struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var destroyhandles_var = PP_MakeUndefined();
   NB_Handle* destroyhandles = NULL;
@@ -336,17 +336,17 @@ NB_Bool nb_parse_destroyhandles(struct NB_Message* message, struct PP_Var var) {
     nb_var_release(handle);
   }
 
-  message->destroyhandles = destroyhandles;
-  message->destroyhandles_count = len;
+  request->destroyhandles = destroyhandles;
+  request->destroyhandles_count = len;
   result = NB_TRUE;
-  destroyhandles = NULL; /* Pass ownership to the message. */
+  destroyhandles = NULL; /* Pass ownership to the request. */
 cleanup:
   free(destroyhandles);
   nb_var_release(destroyhandles_var);
   return result;
 }
 
-NB_Bool nb_parse_commands(struct NB_Message* message, struct PP_Var var) {
+NB_Bool nb_parse_commands(struct NB_Request* request, struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var commands_var = PP_MakeUndefined();
   struct NB_Command* commands = NULL;
@@ -373,10 +373,10 @@ NB_Bool nb_parse_commands(struct NB_Message* message, struct PP_Var var) {
     nb_var_release(command_var);
   }
 
-  message->commands = commands;
-  message->commands_count = len;
+  request->commands = commands;
+  request->commands_count = len;
   result = NB_TRUE;
-  commands = NULL; /* Pass ownership to the message. */
+  commands = NULL; /* Pass ownership to the request. */
 cleanup:
   free(commands);
   nb_var_release(commands_var);
@@ -437,7 +437,7 @@ NB_Bool nb_parse_command(struct NB_Command* command, struct PP_Var var) {
     command->ret = ret_var.value.as_int;
   }
   result = NB_TRUE;
-  args = NULL; /* Pass ownership to the message. */
+  args = NULL; /* Pass ownership to the request. */
 cleanup:
   free(args);
   nb_var_release(ret_var);
@@ -446,86 +446,86 @@ cleanup:
   return result;
 }
 
-int nb_message_id(struct NB_Message* message) {
-  assert(message != NULL);
-  return message->id;
+int nb_request_id(struct NB_Request* request) {
+  assert(request != NULL);
+  return request->id;
 }
 
-int nb_message_sethandles_count(struct NB_Message* message) {
-  assert(message != NULL);
-  return message->sethandles_count;
+int nb_request_sethandles_count(struct NB_Request* request) {
+  assert(request != NULL);
+  return request->sethandles_count;
 }
 
-void nb_message_sethandle(struct NB_Message* message,
+void nb_request_sethandle(struct NB_Request* request,
                           int index,
                           NB_Handle* out_handle,
                           struct PP_Var* out_value) {
-  assert(message != NULL);
-  assert(index >= 0 && index < message->sethandles_count);
+  assert(request != NULL);
+  assert(index >= 0 && index < request->sethandles_count);
   assert(out_handle != NULL);
   assert(out_value != NULL);
-  *out_handle = message->sethandles[index].id;
-  *out_value = message->sethandles[index].var;
+  *out_handle = request->sethandles[index].id;
+  *out_value = request->sethandles[index].var;
   nb_var_addref(*out_value);
 }
 
-int nb_message_gethandles_count(struct NB_Message* message) {
-  assert(message != NULL);
-  return message->gethandles_count;
+int nb_request_gethandles_count(struct NB_Request* request) {
+  assert(request != NULL);
+  return request->gethandles_count;
 }
 
-NB_Handle nb_message_gethandle(struct NB_Message* message, int index) {
-  assert(message != NULL);
-  assert(index >= 0 && index < message->gethandles_count);
-  return message->gethandles[index];
+NB_Handle nb_request_gethandle(struct NB_Request* request, int index) {
+  assert(request != NULL);
+  assert(index >= 0 && index < request->gethandles_count);
+  return request->gethandles[index];
 }
 
-int nb_message_destroyhandles_count(struct NB_Message* message) {
-  assert(message != NULL);
-  return message->destroyhandles_count;
+int nb_request_destroyhandles_count(struct NB_Request* request) {
+  assert(request != NULL);
+  return request->destroyhandles_count;
 }
 
-NB_Handle nb_message_destroyhandle(struct NB_Message* message, int index) {
-  assert(message != NULL);
-  assert(index >= 0 && index < message->destroyhandles_count);
-  return message->destroyhandles[index];
+NB_Handle nb_request_destroyhandle(struct NB_Request* request, int index) {
+  assert(request != NULL);
+  assert(index >= 0 && index < request->destroyhandles_count);
+  return request->destroyhandles[index];
 }
 
-int nb_message_commands_count(struct NB_Message* message) {
-  assert(message != NULL);
-  return message->commands_count;
+int nb_request_commands_count(struct NB_Request* request) {
+  assert(request != NULL);
+  return request->commands_count;
 }
 
-int nb_message_command_function(struct NB_Message* message, int command_idx) {
-  assert(message != NULL);
-  assert(command_idx >= 0 && command_idx < message->commands_count);
-  return message->commands[command_idx].id;
+int nb_request_command_function(struct NB_Request* request, int command_idx) {
+  assert(request != NULL);
+  assert(command_idx >= 0 && command_idx < request->commands_count);
+  return request->commands[command_idx].id;
 }
 
-int nb_message_command_arg_count(struct NB_Message* message, int command_idx) {
-  assert(message != NULL);
-  assert(command_idx >= 0 && command_idx < message->commands_count);
-  return message->commands[command_idx].args_count;
+int nb_request_command_arg_count(struct NB_Request* request, int command_idx) {
+  assert(request != NULL);
+  assert(command_idx >= 0 && command_idx < request->commands_count);
+  return request->commands[command_idx].args_count;
 }
 
-NB_Handle nb_message_command_arg(struct NB_Message* message,
+NB_Handle nb_request_command_arg(struct NB_Request* request,
                                  int command_idx,
                                  int arg_idx) {
-  assert(message != NULL);
-  assert(command_idx >= 0 && command_idx < message->commands_count);
-  assert(arg_idx >= 0 && arg_idx < message->commands[command_idx].args_count);
-  return message->commands[command_idx].args[arg_idx];
+  assert(request != NULL);
+  assert(command_idx >= 0 && command_idx < request->commands_count);
+  assert(arg_idx >= 0 && arg_idx < request->commands[command_idx].args_count);
+  return request->commands[command_idx].args[arg_idx];
 }
 
-NB_Bool nb_message_command_has_ret(struct NB_Message* message,
+NB_Bool nb_request_command_has_ret(struct NB_Request* request,
                                    int command_idx) {
-  assert(message != NULL);
-  assert(command_idx >= 0 && command_idx < message->commands_count);
-  return message->commands[command_idx].ret != 0 ? NB_TRUE : NB_FALSE;
+  assert(request != NULL);
+  assert(command_idx >= 0 && command_idx < request->commands_count);
+  return request->commands[command_idx].ret != 0 ? NB_TRUE : NB_FALSE;
 }
 
-NB_Handle nb_message_command_ret(struct NB_Message* message, int command_idx) {
-  assert(message != NULL);
-  assert(command_idx >= 0 && command_idx < message->commands_count);
-  return message->commands[command_idx].ret;
+NB_Handle nb_request_command_ret(struct NB_Request* request, int command_idx) {
+  assert(request != NULL);
+  assert(command_idx >= 0 && command_idx < request->commands_count);
+  return request->commands[command_idx].ret;
 }

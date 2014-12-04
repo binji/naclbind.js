@@ -17,42 +17,42 @@
 #include "fake_interfaces.h"
 #include "error.h"
 #include "json.h"
-#include "message.h"
+#include "request.h"
 #include "var.h"
 
-class MessageTest : public ::testing::Test {
+class RequestTest : public ::testing::Test {
  public:
-  MessageTest() : message(NULL) {}
+  RequestTest() : request(NULL) {}
 
-  void JsonToMessage(const char* json) {
-    if (message) {
-      nb_message_destroy(message);
+  void JsonToRequest(const char* json) {
+    if (request) {
+      nb_request_destroy(request);
     }
 
     struct PP_Var var = json_to_var(json);
     ASSERT_EQ(PP_VARTYPE_DICTIONARY, var.type)
         << "  Failed to parse json:\n  " << json;
 
-    message = nb_message_create(var);
+    request = nb_request_create(var);
     nb_var_release(var);
   }
 
   virtual void TearDown() {
-    if (message) {
-      nb_message_destroy(message);
+    if (request) {
+      nb_request_destroy(request);
     }
 
     EXPECT_EQ(NB_TRUE, fake_var_check_no_references());
   }
 
  protected:
-  NB_Message* message;
+  NB_Request* request;
 };
 
-NB_Message* NULL_MESSAGE = NULL;
+NB_Request* NULL_REQUEST = NULL;
 
-TEST_F(MessageTest, Valid) {
-  const char* valid_messages[] = {
+TEST_F(RequestTest, Valid) {
+  const char* valid_requests[] = {
     "{\"id\": 1}",
     "{\"id\": 1, \"get\": []}",
     "{\"id\": 1, \"get\": [1]}",
@@ -70,15 +70,15 @@ TEST_F(MessageTest, Valid) {
     NULL
   };
 
-  for (int i = 0; valid_messages[i]; ++i) {
-    const char* json = valid_messages[i];
-    JsonToMessage(json);
-    EXPECT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  for (int i = 0; valid_requests[i]; ++i) {
+    const char* json = valid_requests[i];
+    JsonToRequest(json);
+    EXPECT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
   }
 }
 
-TEST_F(MessageTest, Invalid) {
-  const char* invalid_messages[] = {
+TEST_F(RequestTest, Invalid) {
+  const char* invalid_requests[] = {
     // Missing "id"
     "{}",
     // "id" can't be < 0
@@ -124,57 +124,57 @@ TEST_F(MessageTest, Invalid) {
     NULL
   };
 
-  for (int i = 0; invalid_messages[i]; ++i) {
-    const char* json = invalid_messages[i];
-    JsonToMessage(json);
-    EXPECT_EQ(NULL_MESSAGE, message) << "Expected invalid: " << json;
+  for (int i = 0; invalid_requests[i]; ++i) {
+    const char* json = invalid_requests[i];
+    JsonToRequest(json);
+    EXPECT_EQ(NULL_REQUEST, request) << "Expected invalid: " << json;
   }
 }
 
-TEST_F(MessageTest, Id) {
+TEST_F(RequestTest, Id) {
   const char* json = "{\"id\": 1}";
-  JsonToMessage(json);
-  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
 
-  EXPECT_EQ(1, nb_message_id(message));
+  EXPECT_EQ(1, nb_request_id(request));
 }
 
-TEST_F(MessageTest, SetHandles) {
+TEST_F(RequestTest, SetHandles) {
   const char* json = "{\"id\": 1, \"set\": {\"1\": 4, \"2\": 5}}";
-  JsonToMessage(json);
-  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
 
-  EXPECT_EQ(1, nb_message_id(message));
-  EXPECT_EQ(2, nb_message_sethandles_count(message));
+  EXPECT_EQ(1, nb_request_id(request));
+  EXPECT_EQ(2, nb_request_sethandles_count(request));
 
   NB_Handle handle;
   struct PP_Var value;
 
-  nb_message_sethandle(message, 0, &handle, &value);
+  nb_request_sethandle(request, 0, &handle, &value);
   EXPECT_EQ(1, handle);
   EXPECT_EQ(PP_VARTYPE_INT32, value.type);
   EXPECT_EQ(4, value.value.as_int);
   nb_var_release(value);
 
-  nb_message_sethandle(message, 1, &handle, &value);
+  nb_request_sethandle(request, 1, &handle, &value);
   EXPECT_EQ(2, handle);
   EXPECT_EQ(PP_VARTYPE_INT32, value.type);
   EXPECT_EQ(5, value.value.as_int);
   nb_var_release(value);
 }
 
-TEST_F(MessageTest, SetHandles_String) {
+TEST_F(RequestTest, SetHandles_String) {
   const char* json = "{\"id\": 1, \"set\": {\"1\": \"Hi\"}}";
-  JsonToMessage(json);
-  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
 
-  EXPECT_EQ(1, nb_message_id(message));
-  EXPECT_EQ(1, nb_message_sethandles_count(message));
+  EXPECT_EQ(1, nb_request_id(request));
+  EXPECT_EQ(1, nb_request_sethandles_count(request));
 
   NB_Handle handle;
   struct PP_Var value;
 
-  nb_message_sethandle(message, 0, &handle, &value);
+  nb_request_sethandle(request, 0, &handle, &value);
   EXPECT_EQ(1, handle);
   EXPECT_EQ(PP_VARTYPE_STRING, value.type);
 
@@ -186,30 +186,30 @@ TEST_F(MessageTest, SetHandles_String) {
   nb_var_release(value);
 }
 
-TEST_F(MessageTest, SetHandles_Null) {
+TEST_F(RequestTest, SetHandles_Null) {
   const char* json = "{\"id\": 1, \"set\": {\"1\": null}}";
-  JsonToMessage(json);
-  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
 
-  EXPECT_EQ(1, nb_message_id(message));
-  EXPECT_EQ(1, nb_message_sethandles_count(message));
+  EXPECT_EQ(1, nb_request_id(request));
+  EXPECT_EQ(1, nb_request_sethandles_count(request));
 
   NB_Handle handle;
   struct PP_Var value;
 
-  nb_message_sethandle(message, 0, &handle, &value);
+  nb_request_sethandle(request, 0, &handle, &value);
   EXPECT_EQ(1, handle);
   EXPECT_EQ(PP_VARTYPE_NULL, value.type);
   nb_var_release(value);
 }
 
-TEST_F(MessageTest, SetHandles_Long) {
+TEST_F(RequestTest, SetHandles_Long) {
   const char* json = "{\"id\": 1, \"set\": {\"1\": [\"long\", 0, 1]}}";
-  JsonToMessage(json);
-  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
 
-  EXPECT_EQ(1, nb_message_id(message));
-  EXPECT_EQ(1, nb_message_sethandles_count(message));
+  EXPECT_EQ(1, nb_request_id(request));
+  EXPECT_EQ(1, nb_request_sethandles_count(request));
 
   NB_Handle handle;
   struct PP_Var value;
@@ -217,7 +217,7 @@ TEST_F(MessageTest, SetHandles_Long) {
   const char* tag_str;
   uint32_t tag_len;
 
-  nb_message_sethandle(message, 0, &handle, &value);
+  nb_request_sethandle(request, 0, &handle, &value);
   EXPECT_EQ(1, handle);
   EXPECT_EQ(PP_VARTYPE_ARRAY, value.type);
   EXPECT_EQ(3, nb_var_array_length(value));
@@ -233,45 +233,45 @@ TEST_F(MessageTest, SetHandles_Long) {
   nb_var_release(value);
 }
 
-TEST_F(MessageTest, GetHandles) {
+TEST_F(RequestTest, GetHandles) {
   const char* json = "{\"id\": 1, \"get\": [4, 5, 100]}";
-  JsonToMessage(json);
-  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
 
-  EXPECT_EQ(1, nb_message_id(message));
-  EXPECT_EQ(3, nb_message_gethandles_count(message));
+  EXPECT_EQ(1, nb_request_id(request));
+  EXPECT_EQ(3, nb_request_gethandles_count(request));
 
-  EXPECT_EQ(4, nb_message_gethandle(message, 0));
-  EXPECT_EQ(5, nb_message_gethandle(message, 1));
-  EXPECT_EQ(100, nb_message_gethandle(message, 2));
+  EXPECT_EQ(4, nb_request_gethandle(request, 0));
+  EXPECT_EQ(5, nb_request_gethandle(request, 1));
+  EXPECT_EQ(100, nb_request_gethandle(request, 2));
 }
 
-TEST_F(MessageTest, DestroyHandles) {
+TEST_F(RequestTest, DestroyHandles) {
   const char* json = "{\"id\": 1, \"destroy\": [4, 5, 100]}";
-  JsonToMessage(json);
-  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
 
-  EXPECT_EQ(1, nb_message_id(message));
-  EXPECT_EQ(3, nb_message_destroyhandles_count(message));
+  EXPECT_EQ(1, nb_request_id(request));
+  EXPECT_EQ(3, nb_request_destroyhandles_count(request));
 
-  EXPECT_EQ(4, nb_message_destroyhandle(message, 0));
-  EXPECT_EQ(5, nb_message_destroyhandle(message, 1));
-  EXPECT_EQ(100, nb_message_destroyhandle(message, 2));
+  EXPECT_EQ(4, nb_request_destroyhandle(request, 0));
+  EXPECT_EQ(5, nb_request_destroyhandle(request, 1));
+  EXPECT_EQ(100, nb_request_destroyhandle(request, 2));
 }
 
-TEST_F(MessageTest, Commands) {
+TEST_F(RequestTest, Commands) {
   const char* json =
       "{\"id\": 1, \"commands\": [{\"id\": 1, \"args\": [42, 3], \"ret\": 5}]}";
-  JsonToMessage(json);
-  ASSERT_NE(NULL_MESSAGE, message) << "Expected valid: " << json;
+  JsonToRequest(json);
+  ASSERT_NE(NULL_REQUEST, request) << "Expected valid: " << json;
 
-  EXPECT_EQ(1, nb_message_id(message));
-  EXPECT_EQ(1, nb_message_commands_count(message));
+  EXPECT_EQ(1, nb_request_id(request));
+  EXPECT_EQ(1, nb_request_commands_count(request));
 
-  EXPECT_EQ(1, nb_message_command_function(message, 0));
-  EXPECT_EQ(2, nb_message_command_arg_count(message, 0));
-  EXPECT_EQ(42, nb_message_command_arg(message, 0, 0));
-  EXPECT_EQ(3, nb_message_command_arg(message, 0, 1));
-  EXPECT_EQ(NB_TRUE, nb_message_command_has_ret(message, 0));
-  EXPECT_EQ(5, nb_message_command_ret(message, 0));
+  EXPECT_EQ(1, nb_request_command_function(request, 0));
+  EXPECT_EQ(2, nb_request_command_arg_count(request, 0));
+  EXPECT_EQ(42, nb_request_command_arg(request, 0, 0));
+  EXPECT_EQ(3, nb_request_command_arg(request, 0, 1));
+  EXPECT_EQ(NB_TRUE, nb_request_command_has_ret(request, 0));
+  EXPECT_EQ(5, nb_request_command_ret(request, 0));
 }

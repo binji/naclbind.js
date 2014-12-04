@@ -21,60 +21,60 @@
 
 #ifndef NB_ONE_FILE
 #include "handle.h"
-#include "message.h"
+#include "request.h"
 #include "response.h"
 #endif
 
 /* This function is defined by the generated code. */
-NB_Bool nb_message_command_run(struct NB_Message* message, int command_idx);
+NB_Bool nb_request_command_run(struct NB_Request* request, int command_idx);
 
-static NB_Bool nb_request_set_handles(struct NB_Message* message);
-static NB_Bool nb_request_run_commands(struct NB_Message* message,
+static NB_Bool nb_request_set_handles(struct NB_Request* request);
+static NB_Bool nb_request_run_commands(struct NB_Request* request,
                                        int* out_failed_command_idx);
-static NB_Bool nb_request_get_handles(struct NB_Message* message,
+static NB_Bool nb_request_get_handles(struct NB_Request* request,
                                       struct NB_Response* response);
-static void nb_request_destroy_handles(struct NB_Message* message);
+static void nb_request_destroy_handles(struct NB_Request* request);
 
-NB_Bool nb_request_run(struct PP_Var request,
+NB_Bool nb_request_run(struct PP_Var request_var,
                        struct PP_Var* out_response_var) {
   NB_Bool result = NB_FALSE;
-  struct NB_Message* message = NULL;
+  struct NB_Request* request = NULL;
   struct NB_Response* response = NULL;
   int failed_command_idx = -1;
 
-  message = nb_message_create(request);
-  if (message == NULL) {
-    NB_ERROR("nb_message_create() failed.");
+  request = nb_request_create(request_var);
+  if (request == NULL) {
+    NB_ERROR("nb_request_create() failed.");
     goto cleanup;
   }
 
-  response = nb_response_create(nb_message_id(message));
+  response = nb_response_create(nb_request_id(request));
   if (response == NULL) {
     goto cleanup;
   }
 
-  if (!nb_request_set_handles(message)) {
+  if (!nb_request_set_handles(request)) {
     NB_ERROR("nb_request_set_handles() failed.");
     goto cleanup;
   }
 
   result = NB_TRUE;
 
-  if (!nb_request_run_commands(message, &failed_command_idx)) {
+  if (!nb_request_run_commands(request, &failed_command_idx)) {
     NB_ERROR("nb_request_run_commands() failed.");
     result = NB_FALSE;
   }
 
-  if (!nb_request_get_handles(message, response)) {
+  if (!nb_request_get_handles(request, response)) {
     NB_ERROR("nb_request_get_handles() failed.");
     result = NB_FALSE;
   }
 
-  nb_request_destroy_handles(message);
+  nb_request_destroy_handles(request);
 
 cleanup:
-  if (message != NULL) {
-    nb_message_destroy(message);
+  if (request != NULL) {
+    nb_request_destroy(request);
   }
 
   if (response) {
@@ -92,43 +92,37 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_request_set_handles(struct NB_Message* message) {
+NB_Bool nb_request_set_handles(struct NB_Request* request) {
   NB_Bool result = NB_FALSE;
-  int sethandles_count = nb_message_sethandles_count(message);
+  int sethandles_count = nb_request_sethandles_count(request);
   int i;
   struct PP_Var value = PP_MakeUndefined();
 
   for (i = 0; i < sethandles_count; ++i) {
     NB_Handle handle;
-    nb_message_sethandle(message, i, &handle, &value);
+    nb_request_sethandle(request, i, &handle, &value);
 
     switch (value.type) {
       case PP_VARTYPE_INT32:
         if (!nb_handle_register_int32(handle, value.value.as_int)) {
-          NB_VERROR("nb_handle_register_int32(%d, %d) failed, i=%d.",
-                    handle,
-                    value.value.as_int,
-                    i);
+          NB_VERROR("nb_handle_register_int32(%d, %d) failed, i=%d.", handle,
+                    value.value.as_int, i);
           goto cleanup;
         }
         break;
 
       case PP_VARTYPE_DOUBLE:
         if (!nb_handle_register_double(handle, value.value.as_double)) {
-          NB_VERROR("nb_handle_register_double(%d, %g) failed, i=%d.",
-                    handle,
-                    value.value.as_double,
-                    i);
+          NB_VERROR("nb_handle_register_double(%d, %g) failed, i=%d.", handle,
+                    value.value.as_double, i);
           goto cleanup;
         }
         break;
 
       case PP_VARTYPE_STRING: {
         if (!nb_handle_register_var(handle, value)) {
-          NB_VERROR("nb_handle_register_var(%d, %s) failed, i=%d.",
-                    handle,
-                    nb_var_type_to_string(value.type),
-                    i);
+          NB_VERROR("nb_handle_register_var(%d, %s) failed, i=%d.", handle,
+                    nb_var_type_to_string(value.type), i);
           goto cleanup;
         }
         break;
@@ -137,18 +131,14 @@ NB_Bool nb_request_set_handles(struct NB_Message* message) {
       case PP_VARTYPE_ARRAY: {
         int64_t num;
         if (!nb_var_int64(value, &num)) {
-          NB_VERROR("nb_var_int64(%d, %s) failed, i=%d.",
-                    handle,
-                    nb_var_type_to_string(value.type),
-                    i);
+          NB_VERROR("nb_var_int64(%d, %s) failed, i=%d.", handle,
+                    nb_var_type_to_string(value.type), i);
           goto cleanup;
         }
 
         if (!nb_handle_register_int64(handle, num)) {
-          NB_VERROR("nb_handle_register_int64(%d, %lld) failed, i=%d.",
-                    handle,
-                    num,
-                    i);
+          NB_VERROR("nb_handle_register_int64(%d, %lld) failed, i=%d.", handle,
+                    num, i);
           goto cleanup;
         }
         break;
@@ -156,14 +146,14 @@ NB_Bool nb_request_set_handles(struct NB_Message* message) {
 
       case PP_VARTYPE_NULL:
         if (!nb_handle_register_voidp(handle, NULL)) {
-          NB_VERROR(
-              "nb_handle_register_voidp(%d, NULL) failed, i=%d.", handle, i);
+          NB_VERROR("nb_handle_register_voidp(%d, NULL) failed, i=%d.", handle,
+                    i);
           goto cleanup;
         }
         break;
 
       default:
-        /* This shouldn't happen; we've already validated the message before
+        /* This shouldn't happen; we've already validated the request before
          * getting here. */
         assert(!"Unsupported value type.");
         goto cleanup;
@@ -182,15 +172,15 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_request_run_commands(struct NB_Message* message,
+NB_Bool nb_request_run_commands(struct NB_Request* request,
                                 int* out_failed_command_idx) {
-  int commands_count = nb_message_commands_count(message);
+  int commands_count = nb_request_commands_count(request);
   int i;
 
   for (i = 0; i < commands_count; ++i) {
-    if (!nb_message_command_run(message, i)) {
+    if (!nb_request_command_run(request, i)) {
       *out_failed_command_idx = i;
-      NB_VERROR("nb_message_command_run(%d) failed.", i);
+      NB_VERROR("nb_request_command_run(%d) failed.", i);
       return NB_FALSE;
     }
   }
@@ -198,14 +188,14 @@ NB_Bool nb_request_run_commands(struct NB_Message* message,
   return NB_TRUE;
 }
 
-NB_Bool nb_request_get_handles(struct NB_Message* message,
+NB_Bool nb_request_get_handles(struct NB_Request* request,
                                struct NB_Response* response) {
   NB_Bool result = NB_TRUE;
-  int gethandles_count = nb_message_gethandles_count(message);
+  int gethandles_count = nb_request_gethandles_count(request);
   int i;
 
   for (i = 0; i < gethandles_count; ++i) {
-    NB_Handle handle = nb_message_gethandle(message, i);
+    NB_Handle handle = nb_request_gethandle(request, i);
     struct PP_Var value = PP_MakeUndefined();
 
     if (!nb_handle_convert_to_var(handle, &value)) {
@@ -223,13 +213,13 @@ NB_Bool nb_request_get_handles(struct NB_Message* message,
   return result;
 }
 
-void nb_request_destroy_handles(struct NB_Message* message) {
-  int destroyhandles_count = nb_message_destroyhandles_count(message);
+void nb_request_destroy_handles(struct NB_Request* request) {
+  int destroyhandles_count = nb_request_destroyhandles_count(request);
   NB_Handle* handles = alloca(destroyhandles_count * sizeof(NB_Handle));
   int i;
 
   for (i = 0; i < destroyhandles_count; ++i) {
-    handles[i] = nb_message_destroyhandle(message, i);
+    handles[i] = nb_request_destroyhandle(request, i);
   }
 
   nb_handle_destroy_many(handles, destroyhandles_count);

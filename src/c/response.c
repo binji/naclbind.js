@@ -18,7 +18,7 @@
 #endif
 
 #ifndef NB_ONE_FILE
-#include "message.h"
+#include "request.h"
 #endif
 
 struct NB_Response {
