@@ -8,6 +8,7 @@
 /* naclbind-gen:
     -B cfree
     -B dtoa
+    -B fstatat
     -B .*lockfile
     -B .*mktemp.*
     -B _mstats_r
