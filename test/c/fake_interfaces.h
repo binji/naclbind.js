@@ -15,14 +15,20 @@
 #ifndef FAKE_INTERFACES_H_
 #define FAKE_INTERFACES_H_
 
+#include <ppapi/c/pp_var.h>
 #include "bool.h"
+#include <ppapi/c/pp_var.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef void (*PostMessageCallback)(struct PP_Var message, void* user_data);
+
 void fake_interface_init(void);
 void fake_interface_destroy(void);
+void fake_interface_set_post_message_callback(PostMessageCallback,
+                                              void* user_data);
 NB_Bool fake_interface_check_no_references(void);
 const void* fake_get_browser_interface(const char* interface_name);
 

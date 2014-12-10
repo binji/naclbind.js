@@ -26,8 +26,8 @@
 #define NB_VLOG(msg, ...)
 #endif
 
-#define NB_TRACE LOG("enter")
-#define NB_VTRACE(fmt, ...) VLOG("enter" fmt, __VA_ARGS__)
+#define NB_TRACE NB_LOG("enter")
+#define NB_VTRACE(fmt, ...) NB_VLOG("enter" fmt, __VA_ARGS__)
 
 #define NB_ERROR(msg) \
   fprintf(stderr, "%s:%d:(%s): " msg "\n", __FILE__, __LINE__, __FUNCTION__)

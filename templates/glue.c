@@ -34,6 +34,7 @@
 
 {{IncludeFile('c/handle.c')}}
 {{IncludeFile('c/interfaces.c')}}
+{{IncludeFile('c/queue.c')}}
 {{IncludeFile('c/request.c')}}
 {{IncludeFile('c/response.c')}}
 {{IncludeFile('c/run.c')}}
@@ -41,7 +42,6 @@
 {{IncludeFile('c/var.c')}}
 
 #ifndef NB_NO_APP
-{{IncludeFile('c/queue.c')}}
 {{IncludeFile('c/app.c')}}
 #endif
 [[]]

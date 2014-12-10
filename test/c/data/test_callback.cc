@@ -14,50 +14,103 @@
 
 #include <gtest/gtest.h>
 #include <ppapi/c/pp_var.h>
+#include <pthread.h>
 #include "bool.h"
+#include "error.h"
 #include "fake_interfaces.h"
 #include "handle.h"
+#include "interfaces.h"
 #include "json.h"
+#include "queue.h"
 #include "run.h"
 #include "var.h"
 
-class GeneratorCallbackTest : public ::testing::Test {
+class ThreadedTest : public ::testing::Test {
  public:
+  static const int kQueueSize = 256;
+
   virtual void SetUp() {
-    request_ = PP_MakeUndefined();
-    response_ = PP_MakeUndefined();
+    js_to_c_queue_ = nb_queue_create(kQueueSize);
+    c_to_js_queue_ = nb_queue_create(kQueueSize);
+    pthread_create(&thread_, NULL, &ThreadFuncThunk, this);
+    fake_interface_set_post_message_callback(&OnPostMessageThunk, this);
   }
 
   virtual void TearDown() {
-    nb_var_release(request_);
-    nb_var_release(response_);
+    nb_queue_destroy(js_to_c_queue_);
+    nb_queue_destroy(c_to_js_queue_);
     EXPECT_EQ(NB_TRUE, fake_interface_check_no_references());
   }
 
-  void RunTest(const char* request_json, const char* expected_response_json) {
-    request_ = json_to_var(request_json);
-    ASSERT_EQ(PP_VARTYPE_DICTIONARY, request_.type);
+  static void* ThreadFuncThunk(void* thiz) {
+    return static_cast<ThreadedTest*>(thiz)->ThreadFunc();
+  }
 
-    ASSERT_EQ(NB_TRUE, nb_request_run(request_, &response_));
+  static void OnPostMessageThunk(struct PP_Var message, void* thiz) {
+    static_cast<ThreadedTest*>(thiz)->OnPostMessage(message);
+  }
 
-    char* response_json = var_to_json_flat(response_);
-    EXPECT_STREQ(expected_response_json, response_json);
-    free(response_json);
+  void EnqueueCMessage(const char* json) {
+    struct PP_Var message = json_to_var(json);
+    ASSERT_EQ(PP_VARTYPE_DICTIONARY, message.type);
+    ASSERT_EQ(1, nb_queue_enqueue(js_to_c_queue_, message));
+    nb_var_release(message);
+  }
+
+  void EnqueueQuitMessage() {
+    ASSERT_EQ(1, nb_queue_enqueue(js_to_c_queue_, PP_MakeUndefined()));
+  }
+
+  struct PP_Var DequeueJsMessage() {
+    return nb_queue_dequeue(c_to_js_queue_);
+  }
+
+  void* ThreadFunc() {
+    while (1) {
+      struct PP_Var request = nb_queue_dequeue(js_to_c_queue_);
+      struct PP_Var response = PP_MakeUndefined();
+
+      /* undefined is the sentinel to exit the thread loop */
+      if (request.type == PP_VARTYPE_UNDEFINED) {
+        nb_var_release(request);
+        break;
+      }
+
+      nb_request_run(request, &response);
+      g_nb_ppb_messaging->PostMessage(g_nb_pp_instance, response);
+      nb_var_release(response);
+      nb_var_release(request);
+    }
+
+    return NULL;
+  }
+
+  void OnPostMessage(struct PP_Var message) {
+    ASSERT_EQ(1, nb_queue_enqueue(c_to_js_queue_, message));
   }
 
  protected:
-  struct PP_Var request_;
-  struct PP_Var response_;
+  pthread_t thread_;
+  NB_Queue* js_to_c_queue_;
+  NB_Queue* c_to_js_queue_;
 };
 
-TEST_F(GeneratorCallbackTest, Basic) {
-  const char *request_json =
-    "{\"id\": 1,"
-    " \"set\": {\"1\": [\"function\", 1]}}";
-  const char* response_json = "{\"id\":1,\"values\":[]}\n";
+TEST_F(ThreadedTest, Basic) {
+  const char* request_json =
+      "{\"id\": 1,"
+      " \"set\": {\"1\": [\"function\", 1]}}";
+  const char* expected_response_json = "{\"id\":1,\"values\":[]}\n";
+  EnqueueCMessage(request_json);
+  struct PP_Var response_var = DequeueJsMessage();
+
+  char* response_json = var_to_json_flat(response_var);
+  EXPECT_STREQ(expected_response_json, response_json);
+  free(response_json);
+
   int32_t func_id;
-  RunTest(request_json, response_json);
   EXPECT_EQ(NB_TRUE, nb_handle_get_func_id(1, &func_id));
   EXPECT_EQ(1, func_id);
   nb_handle_destroy(1);
+
+  EnqueueQuitMessage();
 }

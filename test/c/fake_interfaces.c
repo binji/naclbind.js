@@ -94,6 +94,8 @@ struct VarData {
 /* Static variables */
 static struct VarData s_data[kDataCap];
 static int s_data_first_free = 0;
+static PostMessageCallback s_post_message_callback;
+static void* s_post_message_callback_user_data;
 
 static pthread_mutex_t s_fake_interface_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -145,6 +147,8 @@ static void dict_delete(struct PP_Var, struct PP_Var key);
 static PP_Bool dict_has_key(struct PP_Var, struct PP_Var key);
 static struct PP_Var dict_get_keys(struct PP_Var);
 
+static void messaging_post_message(PP_Instance instance, struct PP_Var message);
+
 static struct PPB_Var_1_1 s_ppb_var = {
     &var_add_ref,
     &var_release,
@@ -176,6 +180,10 @@ static struct PPB_VarDictionary_1_0 s_ppb_var_dict = {
     &dict_get_keys,
 };
 
+static struct PPB_Messaging_1_0 s_ppb_messaging = {
+  &messaging_post_message,
+};
+
 void fake_interface_init(void) {
   var_data_destroy_all();
   var_data_init_all();
@@ -183,6 +191,12 @@ void fake_interface_init(void) {
 
 void fake_interface_destroy(void) {
   var_data_destroy_all();
+}
+
+void fake_interface_set_post_message_callback(PostMessageCallback callback,
+                                              void* user_data) {
+  s_post_message_callback = callback;
+  s_post_message_callback_user_data = user_data;
 }
 
 NB_Bool fake_interface_check_no_references(void) {
@@ -219,7 +233,7 @@ const void* fake_get_browser_interface(const char* interface_name) {
   } else if (strcmp(interface_name, PPB_VAR_DICTIONARY_INTERFACE_1_0) == 0) {
     return &s_ppb_var_dict;
   } else if (strcmp(interface_name, PPB_MESSAGING_INTERFACE_1_0) == 0) {
-    return NULL;
+    return &s_ppb_messaging;
   } else {
     assert(!"Unknown interface name");
   }
@@ -1026,4 +1040,13 @@ struct PP_Var dict_get_keys(struct PP_Var var) {
 
   FAKE_INTERFACE_UNLOCK;
   return keys;
+}
+
+void messaging_post_message(PP_Instance instance, struct PP_Var message) {
+  if (!s_post_message_callback) {
+    NB_ERROR("PostMessage called without a fake post message callback.");
+    return;
+  }
+
+  (*s_post_message_callback)(message, s_post_message_callback_user_data);
 }
