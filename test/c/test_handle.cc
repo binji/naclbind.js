@@ -100,7 +100,7 @@ class HandleTest : public ::testing::Test {
   virtual void SetUp() { EXPECT_EQ(0, nb_handle_count()); }
 
   virtual void TearDown() {
-    EXPECT_EQ(NB_TRUE, fake_var_check_no_references());
+    EXPECT_EQ(NB_TRUE, fake_interface_check_no_references());
     EXPECT_EQ(0, nb_handle_count());
   }
 };

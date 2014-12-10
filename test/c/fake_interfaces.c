@@ -140,16 +140,16 @@ static struct PPB_VarDictionary_1_0 s_ppb_var_dict = {
     &dict_get_keys,
 };
 
-void fake_var_init(void) {
+void fake_interface_init(void) {
   var_data_destroy_all();
   var_data_init_all();
 }
 
-void fake_var_destroy(void) {
+void fake_interface_destroy(void) {
   var_data_destroy_all();
 }
 
-NB_Bool fake_var_check_no_references(void) {
+NB_Bool fake_interface_check_no_references(void) {
   NB_Bool result = NB_TRUE;
   int i;
   for (i = 0; i < kDataCap; ++i) {

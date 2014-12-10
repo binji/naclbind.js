@@ -42,7 +42,7 @@ class RequestTest : public ::testing::Test {
       nb_request_destroy(request);
     }
 
-    EXPECT_EQ(NB_TRUE, fake_var_check_no_references());
+    EXPECT_EQ(NB_TRUE, fake_interface_check_no_references());
   }
 
  protected:

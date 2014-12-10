@@ -27,7 +27,7 @@ void GeneratorTest::SetUp() {
 
 void GeneratorTest::TearDown() {
   CleanUp();
-  EXPECT_EQ(NB_TRUE, fake_var_check_no_references());
+  EXPECT_EQ(NB_TRUE, fake_interface_check_no_references());
 }
 
 void GeneratorTest::RunTest(const char* request_json,

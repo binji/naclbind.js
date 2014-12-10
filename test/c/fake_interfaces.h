@@ -21,9 +21,9 @@
 extern "C" {
 #endif
 
-void fake_var_init(void);
-void fake_var_destroy(void);
-NB_Bool fake_var_check_no_references(void);
+void fake_interface_init(void);
+void fake_interface_destroy(void);
+NB_Bool fake_interface_check_no_references(void);
 const void* fake_get_browser_interface(const char* interface_name);
 
 #ifdef __cplusplus

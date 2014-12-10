@@ -21,7 +21,7 @@
 int nacl_main(int argc, char* argv[]) {
   PP_Instance instance = 1;
   setenv("TERM", "xterm-256color", 0);
-  fake_var_init();
+  fake_interface_init();
   nb_interfaces_init(instance, fake_get_browser_interface);
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
