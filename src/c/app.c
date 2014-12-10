@@ -29,8 +29,11 @@
 #include <ppapi/c/ppp_messaging.h>
 #include <pthread.h>
 
+enum { NB_QUEUE_MAX_SIZE = 256 };
+
 static PPB_GetInterface s_nb_get_browser_interface = NULL;
-static pthread_t s_handle_message_thread;
+static pthread_t s_nb_thread_id;
+static struct NB_Queue* s_nb_message_queue;
 
 static PP_Bool nb_instance_did_create(PP_Instance,
                                       uint32_t,
@@ -76,9 +79,8 @@ PP_Bool nb_instance_did_create(PP_Instance instance,
                                const char* argn[],
                                const char* argv[]) {
   nb_interfaces_init(instance, s_nb_get_browser_interface);
-  nb_queue_init();
-  pthread_create(
-      &s_handle_message_thread, NULL, &nb_handle_message_thread, NULL);
+  s_nb_message_queue = nb_queue_create(NB_QUEUE_MAX_SIZE);
+  pthread_create(&s_nb_thread_id, NULL, &nb_handle_message_thread, NULL);
   return PP_TRUE;
 }
 
@@ -96,7 +98,7 @@ PP_Bool nb_instance_handle_document_load(PP_Instance instance,
 
 void nb_instance_handle_message(PP_Instance instance, struct PP_Var var) {
   nb_var_addref(var);
-  if (!nb_queue_enqueue(var)) {
+  if (!nb_queue_enqueue(s_nb_message_queue, var)) {
     NB_ERROR("Warning: dropped message because the queue was full.");
     nb_var_release(var);
   }
@@ -104,7 +106,7 @@ void nb_instance_handle_message(PP_Instance instance, struct PP_Var var) {
 
 static void* nb_handle_message_thread(void* user_data) {
   while (1) {
-    struct PP_Var request = nb_queue_dequeue();
+    struct PP_Var request = nb_queue_dequeue(s_nb_message_queue);
     struct PP_Var response = PP_MakeUndefined();
 
     nb_request_run(request, &response);
