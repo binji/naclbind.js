@@ -31,7 +31,6 @@
 #include "var.h"
 
 #define FAKE_INTERFACE_TRACE 0
-
 enum { kArrayInitCount = 4 };
 enum { kDictInitCount = 4 };
 enum { kDataCap = 1024 };
@@ -181,7 +180,7 @@ static struct PPB_VarDictionary_1_0 s_ppb_var_dict = {
 };
 
 static struct PPB_Messaging_1_0 s_ppb_messaging = {
-  &messaging_post_message,
+    &messaging_post_message,
 };
 
 void fake_interface_init(void) {
@@ -195,8 +194,10 @@ void fake_interface_destroy(void) {
 
 void fake_interface_set_post_message_callback(PostMessageCallback callback,
                                               void* user_data) {
+  FAKE_INTERFACE_LOCK;
   s_post_message_callback = callback;
   s_post_message_callback_user_data = user_data;
+  FAKE_INTERFACE_UNLOCK;
 }
 
 NB_Bool fake_interface_check_no_references(void) {
@@ -1043,10 +1044,13 @@ struct PP_Var dict_get_keys(struct PP_Var var) {
 }
 
 void messaging_post_message(PP_Instance instance, struct PP_Var message) {
+  FAKE_INTERFACE_LOCK;
   if (!s_post_message_callback) {
     NB_ERROR("PostMessage called without a fake post message callback.");
+    FAKE_INTERFACE_UNLOCK;
     return;
   }
 
   (*s_post_message_callback)(message, s_post_message_callback_user_data);
+  FAKE_INTERFACE_UNLOCK;
 }
