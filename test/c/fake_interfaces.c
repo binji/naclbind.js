@@ -1051,6 +1051,13 @@ void messaging_post_message(PP_Instance instance, struct PP_Var message) {
     return;
   }
 
-  (*s_post_message_callback)(message, s_post_message_callback_user_data);
+#if FAKE_INTERFACE_TRACE > 0
+  VAR_DEBUG_STRING(message, 256);
+  NB_VERROR("messagingpost_message(%s)", message_str);
+#endif
+
   FAKE_INTERFACE_UNLOCK;
+
+  /* Don't hold the interface lock when calling the callback. */
+  (*s_post_message_callback)(message, s_post_message_callback_user_data);
 }

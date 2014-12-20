@@ -106,6 +106,7 @@ TEST_F(ThreadedTest, Basic) {
   char* response_json = var_to_json_flat(response_var);
   EXPECT_STREQ(expected_response_json, response_json);
   free(response_json);
+  nb_var_release(response_var);
 
   int32_t func_id;
   EXPECT_EQ(NB_TRUE, nb_handle_get_func_id(1, &func_id));
