@@ -97,10 +97,8 @@ PP_Bool nb_instance_handle_document_load(PP_Instance instance,
 }
 
 void nb_instance_handle_message(PP_Instance instance, struct PP_Var var) {
-  nb_var_addref(var);
   if (!nb_queue_enqueue(s_nb_message_queue, var)) {
     NB_ERROR("Warning: dropped message because the queue was full.");
-    nb_var_release(var);
   }
 }
 

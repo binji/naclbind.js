@@ -15,6 +15,7 @@
 
 #ifndef NB_ONE_FILE
 #include "queue.h"
+#include "var.h"
 #endif
 
 #include <pthread.h>
@@ -55,12 +56,16 @@ static int nb_queue_isfull(struct NB_Queue* queue) {
 }
 
 int nb_queue_enqueue(struct NB_Queue* queue, struct PP_Var message) {
+  /* Take ownership of message */
+  nb_var_addref(message);
+
   pthread_mutex_lock(&queue->mutex);
 
   /* We shouldn't block the main thread waiting for the queue to not be full,
    * so just drop the message. */
   if (nb_queue_isfull(queue)) {
     pthread_mutex_unlock(&queue->mutex);
+    nb_var_release(message);
     return 0;
   }
 
@@ -90,5 +95,6 @@ struct PP_Var nb_queue_dequeue(struct NB_Queue* queue) {
 
   pthread_mutex_unlock(&queue->mutex);
 
+  /* pass refcount ownership from this queue to the caller */
   return message;
 }
