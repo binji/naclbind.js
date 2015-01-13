@@ -50,7 +50,8 @@ def InitializeDirectories(bundle_name):
   global NACL_SDK_ROOT
   global NACL_CONFIG
   global PNACL_CLANG
-  NACL_SDK_ROOT = os.path.join(NACL_SDK_DIR, bundle_name)
+  NACL_SDK_ROOT = os.getenv('NACL_SDK_ROOT',
+                            os.path.join(NACL_SDK_DIR, bundle_name))
   NACL_CONFIG = os.path.join(NACL_SDK_ROOT, 'tools', 'nacl_config.py')
   PNACL_CLANG = RunNaClConfig('-t', 'pnacl', '--tool', 'clang')
 
