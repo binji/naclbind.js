@@ -74,7 +74,6 @@ def FuncDef(fname, type, extra_args=None):
     args.extend(extra_args)
   return '%s %s(%s)' % (type.result_type.c_spelling, fname, ', '.join(args))
 ]]]
-#if 0
 [[for type in collector.types_topo:]]
 [[  if type.kind != TypeKind.RECORD or type.is_anonymous:]]
 [[    continue]]
@@ -91,27 +90,130 @@ NB_COMPILE_ASSERT(offsetof({{type.c_spelling}}, {{name}}) == {{offset}});
 [[    continue]]
 [[  ]]
 /* {{type.c_spelling}} */
-static {{FuncDef('nb_callback_%s' % type.mangled, type.pointee, extra_args=['void* user_data'])}} {
-  /* CREATE RESPONSE */
-  /* SET VALUES */
-  /* POST RESPONSE */
-  /* WAIT FOR RESPONSE MESSAGE */
-  /* EXTRACT VALUE FROM RESPONSE */
-  /* RETURN VALUE */
+typedef {{FuncDef('(*NB_Callback_%s)' % type.mangled, type.pointee)}};
+
+struct NB_CallbackData_{{type.mangled}} {
+  NB_FuncId func_id;
+  struct NB_Queue* message_queue;
+};
+
+static int32_t s_nb_callback_id_{{type.mangled}} = 1;
+
+static {{FuncDef('nb_callback_%s' % type.mangled, type.pointee, extra_args=['struct NB_CallbackData_%s* callback_data' % type.mangled])}} {
+  struct NB_Response* response = NULL;
+  struct NB_Response* callback_response = NULL;
+  struct PP_Var response_var;
+  int32_t cb_id;
+[[  if type.pointee.result_type.kind != TypeKind.VOID:]]
+  {{type.pointee.result_type.GetCSpelling('result')}};
+[[  ]]
+
+  response = nb_response_create(callback_data->func_id);
+  if (response == NULL) {
+    NB_VERROR("nb_response_create(%d) failed.", callback_data->func_id);
+    goto cleanup;
+  }
+
+  cb_id = s_nb_callback_id_{{type.mangled}}++;
+  if (!nb_response_set_cb_id(response, cb_id)) {
+    NB_VERROR("nb_response_set_cb_id(%d) failed.", cb_id);
+    goto cleanup;
+  }
+
+[[  for i, arg in enumerate(type.pointee.arg_types):]]
+[[    orig_arg, arg = arg, arg.canonical]]
+[[    if arg.kind in (TypeKind.INT, TypeKind.SHORT, TypeKind.SCHAR, TypeKind.CHAR_S):]]
+  if (!nb_response_set_value(response, {{i}}, PP_MakeInt32(arg{{i}}))) {
+    NB_VERROR("nb_response_set_value(%d) failed.", arg{{i}});
+    goto cleanup;
+  }
+[[    else:]]
+  /* UNSUPPORTED: {{arg.kind}} */
+[[    ]]
+[[  ]]
+  response_var = nb_response_get_var(response);
+  nb_response_destroy(response);
+  response = NULL;
+  g_nb_ppb_messaging->PostMessage(g_nb_pp_instance, response_var);
+
+  callback_response = nb_run_message_loop_for_response(
+      callback_data->message_queue, callback_data->func_id, cb_id);
+
+  if (nb_response_values_count(callback_response) != 1) {
+    NB_VERROR("Expected one value in values array, got %d.",
+              nb_response_values_count(callback_response));
+    goto cleanup;
+  }
+
+[[  if type.pointee.result_type.kind in (TypeKind.INT, TypeKind.SHORT, TypeKind.SCHAR, TypeKind.CHAR_S):]]
+  result = nb_response_value(callback_response, 0).value.as_int;
+[[  elif type.pointee.result_type.kind == TypeKind.VOID:]]
+
+[[  else:]]
+  /* UNSUPPORTED: {{type.pointee.result_type.kind}} */
+[[  ]]
+
+cleanup:
+  nb_var_release(response_var);
+
+  if (response) {
+    nb_response_destroy(response);
+  }
+
+  if (callback_response) {
+    nb_response_destroy(callback_response);
+  }
+
+[[  if type.pointee.result_type.kind != TypeKind.VOID:]]
+  return result;
+[[  ]]
 }
 
-static void* s_nb_callback_{{type.mangled}}_user_data[NB_FUNC_PTR_COUNT];
+static struct NB_CallbackData_{{type.mangled}} s_nb_callback_data_{{type.mangled}}[NB_FUNC_PTR_COUNT];
 [[  for i in xrange(FUNCTION_POINTER_COUNT):]]
 static {{FuncDef('nb_callback_%s_%d' % (type.mangled, i), type.pointee)}} {
-  return {{FuncCall('nb_callback_%s' % type.mangled, len(type.pointee.arg_types), extra_args=['s_nb_callback_%s_user_data[%d]' % (type.mangled, i)])}};
+  return {{FuncCall('nb_callback_%s' % type.mangled, len(type.pointee.arg_types), extra_args=['&s_nb_callback_data_%s[%d]' % (type.mangled, i)])}};
 }
 [[  ]]
 
+static NB_Callback_{{type.mangled}} s_nb_callback_funcs_{{type.mangled}}[] = {
+[[  for i in xrange(FUNCTION_POINTER_COUNT):]]
+  &nb_callback_{{type.mangled}}_{{i}},
+[[  ]]
+};
+
+NB_Callback_{{type.mangled}} nb_callback_allocate_{{type.mangled}}(NB_FuncId func_id, struct NB_Queue* message_queue) {
+  uint32_t i;
+  for (i = 0; i < NB_FUNC_PTR_COUNT; ++i) {
+    if (s_nb_callback_data_{{type.mangled}}[i].func_id) {
+      continue;
+    }
+
+    s_nb_callback_data_{{type.mangled}}[i].func_id = func_id;
+    s_nb_callback_data_{{type.mangled}}[i].message_queue = message_queue;
+
+    return s_nb_callback_funcs_{{type.mangled}}[i];
+  }
+
+  return NULL;
+}
+
+void nb_callback_free_{{type.mangled}}(NB_FuncId func_id) {
+  uint32_t i;
+  for (i = 0; i < NB_FUNC_PTR_COUNT; ++i) {
+    if (s_nb_callback_data_{{type.mangled}}[i].func_id != func_id) {
+      continue;
+    }
+
+    s_nb_callback_data_{{type.mangled}}[i].func_id = 0;
+    return;
+  }
+}
+
 [[]]
-#endif
 [[for fn in collector.functions:]]
 /* {{fn.displayname}} */
-static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int command_idx) {
+static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Queue* message_queue, struct NB_Request* request, int command_idx) {
 [[  if fn.type.kind == TypeKind.FUNCTIONPROTO:]]
 [[    arguments = list(fn.type.arg_types)]]
   int arg_count = nb_request_command_arg_count(request, command_idx);
@@ -144,8 +246,18 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int co
 [[        elif pointee.kind == TypeKind.FUNCTIONPROTO:]]
   void (*arg{{i}}x)(void);
   if (!nb_handle_get_funcp(handle{{i}}, &arg{{i}}x)) {
-    NB_VERROR("Unable to get handle %d as void(*)(void).", handle{{i}});
-    return NB_FALSE;
+    /* Try to get the function pointer as a function id (i.e. JavaScript
+     * function */
+    int32_t func_id;
+    if (!nb_handle_get_func_id(handle{{i}}, &func_id)) {
+      NB_VERROR("Unable to get handle %d as void(*)(void).", handle{{i}});
+      return NB_FALSE;
+    }
+
+    /* This is a JavaScript function, so it must be allocated using the
+     * predefined functions with the same signature above */
+    arg{{i}}x = (void(*)(void))nb_callback_allocate_{{arg.mangled}}(func_id, message_queue);
+    nb_handle_set_func_id_free(handle{{i}}, &nb_callback_free_{{arg.mangled}});
   }
   {{arg.GetCSpelling('arg%s' % i)}} = ({{arg.c_spelling}}) arg{{i}}x;
 [[        else:]]
@@ -363,7 +475,7 @@ static NB_Bool nb_command_run_{{fn.spelling}}(struct NB_Request* request, int co
 [[]]
 
 /* getFunc() */
-static NB_Bool nb_command_run_get_func(struct NB_Request* request, int command_idx) {
+static NB_Bool nb_command_run_get_func(struct NB_Queue* message_queue, struct NB_Request* request, int command_idx) {
   int arg_count = nb_request_command_arg_count(request, command_idx);
   if (arg_count != 1) {
     NB_VERROR("Expected %d arg, got %d.", 1, arg_count);
@@ -398,7 +510,7 @@ static NB_Bool nb_command_run_get_func(struct NB_Request* request, int command_i
 }
 
 /* $errorIf() */
-static NB_Bool nb_command_run_error_if(struct NB_Request* request, int command_idx) {
+static NB_Bool nb_command_run_error_if(struct NB_Queue* message_queue, struct NB_Request* request, int command_idx) {
   int arg_count = nb_request_command_arg_count(request, command_idx);
   if (arg_count != 1) {
     NB_VERROR("Expected %d arg, got %d.", 1, arg_count);
@@ -417,7 +529,7 @@ enum {
   NUM_FUNCTIONS = {{len(collector.functions)}}
 };
 
-typedef NB_Bool (*nb_command_func_t)(struct NB_Request*, int);
+typedef NB_Bool (*nb_command_func_t)(struct NB_Queue*, struct NB_Request*, int);
 static nb_command_func_t s_functions[] = {
   nb_command_run_get_func,  /* -2 */
   nb_command_run_error_if,  /* -1 */
@@ -426,12 +538,15 @@ static nb_command_func_t s_functions[] = {
 [[]]
 };
 
-NB_Bool nb_request_command_run(struct NB_Request* request, int command_idx) {
+NB_Bool nb_request_command_run(struct NB_Queue* message_queue,
+                               struct NB_Request* request,
+                               int command_idx) {
   int function_idx = nb_request_command_function(request, command_idx);
   if (function_idx < -2 || function_idx >= NUM_FUNCTIONS) {
     NB_VERROR("Function id %d is out of range [-2, %d).", function_idx, NUM_FUNCTIONS);
     return NB_FALSE;
   }
 
-  return s_functions[function_idx + 2](request, command_idx);
+  NB_Bool result = s_functions[function_idx + 2](message_queue, request, command_idx);
+  return result;
 }

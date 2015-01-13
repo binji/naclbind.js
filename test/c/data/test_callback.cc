@@ -76,7 +76,7 @@ class ThreadedTest : public ::testing::Test {
         break;
       }
 
-      nb_request_run(request, &response);
+      nb_request_run(js_to_c_queue_, request, &response);
       g_nb_ppb_messaging->PostMessage(g_nb_pp_instance, response);
       nb_var_release(response);
       nb_var_release(request);
@@ -98,20 +98,47 @@ class ThreadedTest : public ::testing::Test {
 TEST_F(ThreadedTest, Basic) {
   const char* request_json =
       "{\"id\": 1,"
-      " \"set\": {\"1\": [\"function\", 1]}}";
-  const char* expected_response_json = "{\"id\":1,\"values\":[]}\n";
+      " \"set\": {\"1\": [\"function\", 2]}}";
   EnqueueCMessage(request_json);
   struct PP_Var response_var = DequeueJsMessage();
 
   char* response_json = var_to_json_flat(response_var);
-  EXPECT_STREQ(expected_response_json, response_json);
+  ASSERT_STREQ("{\"id\":1,\"values\":[]}\n", response_json);
   free(response_json);
   nb_var_release(response_var);
 
-  int32_t func_id;
-  EXPECT_EQ(NB_TRUE, nb_handle_get_func_id(1, &func_id));
-  EXPECT_EQ(1, func_id);
+  NB_FuncId func_id;
+  ASSERT_EQ(NB_TRUE, nb_handle_get_func_id(1, &func_id));
+  ASSERT_EQ(2, func_id);
   nb_handle_destroy(1);
+
+  EnqueueQuitMessage();
+}
+
+TEST_F(ThreadedTest, Callback) {
+  const char* request_json =
+      "{\"id\": 1,"
+      " \"set\": {\"1\": [\"function\", 2]},"
+      /* call_with_10_and_add_1(f) */
+      " \"commands\": [{\"id\": 0, \"args\": [1], \"ret\": 2}],"
+      " \"get\": [2],"
+      " \"destroy\": [1, 2]}";
+  EnqueueCMessage(request_json);
+
+  struct PP_Var cb_response_var = DequeueJsMessage();
+  char* cb_module_json = var_to_json_flat(cb_response_var);
+  ASSERT_STREQ("{\"cbId\":1,\"id\":2,\"values\":[10]}\n", cb_module_json);
+  free(cb_module_json);
+  nb_var_release(cb_response_var);
+
+  // let's assume the JS function doubles the integer given.
+  EnqueueCMessage("{\"id\":2,\"cbId\":1,\"values\":[20]}");
+
+  struct PP_Var response_var = DequeueJsMessage();
+  char* response_json = var_to_json_flat(response_var);
+  ASSERT_STREQ("{\"id\":1,\"values\":[21]}\n", response_json);
+  free(response_json);
+  nb_var_release(response_var);
 
   EnqueueQuitMessage();
 }

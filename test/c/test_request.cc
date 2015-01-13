@@ -33,7 +33,7 @@ class RequestTest : public ::testing::Test {
     ASSERT_EQ(PP_VARTYPE_DICTIONARY, var.type)
         << "  Failed to parse json:\n  " << json;
 
-    request = nb_request_create(var);
+    request = nb_request_parse(var);
     nb_var_release(var);
   }
 

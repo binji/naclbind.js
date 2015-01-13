@@ -14,6 +14,7 @@
  */
 
 #ifndef NB_ONE_FILE
+#include "interfaces.h"
 #include "queue.h"
 #include "response.h"
 #include "run.h"
@@ -103,14 +104,6 @@ void nb_instance_handle_message(PP_Instance instance, struct PP_Var var) {
 }
 
 static void* nb_handle_message_thread(void* user_data) {
-  while (1) {
-    struct PP_Var request = nb_queue_dequeue(s_nb_message_queue);
-    struct PP_Var response = PP_MakeUndefined();
-
-    nb_request_run(request, &response);
-    g_nb_ppb_messaging->PostMessage(g_nb_pp_instance, response);
-    nb_var_release(response);
-    nb_var_release(request);
-  }
+  nb_run_message_loop(s_nb_message_queue);
   return NULL;
 }

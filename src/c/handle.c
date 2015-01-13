@@ -69,6 +69,9 @@ typedef struct NB_HandleMapEntry {
     /* Only used when the entry is "free". This points to the previous entry in
      * the free list. */
     struct NB_HandleMapEntry* prev;
+    /* Used when the type is NB_TYPE_FUNC_ID. This will be called when the
+     * handle is destroyed to free the corresponding function pointer. */
+    NB_FuncIdFree free_func;
   };
 } NB_HandleMapEntry;
 
@@ -306,7 +309,7 @@ NB_Bool nb_handle_register_funcp(NB_Handle handle, void (*value)(void)) {
   return nb_register_handle(handle, NB_TYPE_FUNC_P, hval);
 }
 
-NB_Bool nb_handle_register_func_id(NB_Handle handle, int32_t value) {
+NB_Bool nb_handle_register_func_id(NB_Handle handle, NB_FuncId value) {
   NB_HandleValue hval;
   hval.int32 = value;
   return nb_register_handle(handle, NB_TYPE_FUNC_ID, hval);
@@ -924,7 +927,7 @@ NB_Bool nb_handle_get_funcp(NB_Handle handle, void (**out_value)(void)) {
   return NB_TRUE;
 }
 
-NB_Bool nb_handle_get_func_id(NB_Handle handle, int32_t* out_value) {
+NB_Bool nb_handle_get_func_id(NB_Handle handle, NB_FuncId* out_value) {
   NB_HandleMapEntry* hentry;
   if (!nb_get_handle_entry(handle, &hentry)) {
     return NB_FALSE;
@@ -1124,9 +1127,16 @@ void nb_handle_destroy(NB_Handle handle) {
   /* Destroy resources associated with this handle */
   if (entry->type == NB_TYPE_VAR) {
     nb_var_release(entry->value.var);
+    free(entry->string_value);
+    entry->string_value = NULL;
+  } else if (entry->type == NB_TYPE_FUNC_ID) {
+    if (*entry->free_func) {
+      (*entry->free_func)(entry->value.int32);
+    } else {
+      NB_VERROR("Warning: potentially leaking function pointer via handle %d.",
+                handle);
+    }
   }
-  free(entry->string_value);
-  entry->string_value = NULL;
 
   /* Remove from chain */
   NB_HandleMapEntry* search = nb_handle_main_entry(handle);
@@ -1232,5 +1242,23 @@ NB_Bool nb_handle_convert_to_var(NB_Handle handle, struct PP_Var* var) {
       return NB_FALSE;
   }
 
+  return NB_TRUE;
+}
+
+NB_Bool nb_handle_set_func_id_free(NB_Handle handle, NB_FuncIdFree free_func) {
+  NB_HandleMapEntry* hentry;
+  if (!nb_get_handle_entry(handle, &hentry)) {
+    return NB_FALSE;
+  }
+
+  if (hentry->type != NB_TYPE_FUNC_ID) {
+    NB_VERROR("handle %d is of type %s. Expected %s.",
+              handle,
+              nb_type_to_string(hentry->type),
+              nb_type_to_string(NB_TYPE_FUNC_ID));
+    return NB_FALSE;
+  }
+
+  hentry->free_func = free_func;
   return NB_TRUE;
 }

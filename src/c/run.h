@@ -26,7 +26,16 @@
 extern "C" {
 #endif
 
-NB_Bool nb_request_run(struct PP_Var request_var, struct PP_Var* response_var);
+struct NB_Queue;
+struct NB_Response;
+
+void nb_run_message_loop(struct NB_Queue* queue);
+struct NB_Response* nb_run_message_loop_for_response(struct NB_Queue* queue,
+                                                     int id,
+                                                     int cb_id);
+NB_Bool nb_request_run(struct NB_Queue* queue,
+                       struct PP_Var request_var,
+                       struct PP_Var* response_var);
 
 #ifdef __cplusplus
 }

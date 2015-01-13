@@ -38,7 +38,9 @@ void GeneratorTest::RunTest(const char* request_json,
   request_ = json_to_var(request_json);
   ASSERT_EQ(PP_VARTYPE_DICTIONARY, request_.type);
 
-  ASSERT_EQ(NB_TRUE, nb_request_run(request_, &response_));
+  // Run without a message queue. This means that no callbacks can be called.
+  struct NB_Queue* message_queue = NULL;
+  ASSERT_EQ(NB_TRUE, nb_request_run(message_queue, request_, &response_));
 
   char* response_json = var_to_json_flat(response_);
   EXPECT_STREQ(expected_response_json, response_json);

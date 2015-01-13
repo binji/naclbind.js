@@ -30,9 +30,16 @@ struct NB_Response;
 
 struct NB_Response* nb_response_create(int id);
 void nb_response_destroy(struct NB_Response*);
+NB_Bool nb_response_set_cb_id(struct NB_Response*, int cb_id);
 NB_Bool nb_response_set_value(struct NB_Response*, int i, struct PP_Var value);
 struct PP_Var nb_response_get_var(struct NB_Response*);
 NB_Bool nb_response_set_error(struct NB_Response*, int failed_command_idx);
+
+struct NB_Response* nb_response_parse(struct PP_Var);
+int nb_response_id(struct NB_Response*);
+int nb_response_cb_id(struct NB_Response*);
+int nb_response_values_count(struct NB_Response*);
+struct PP_Var nb_response_value(struct NB_Response*, int i);
 
 #ifdef __cplusplus
 }

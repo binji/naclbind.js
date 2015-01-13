@@ -17,12 +17,27 @@
 #include "response.h"
 #endif
 
-#ifndef NB_ONE_FILE
-#include "request.h"
-#endif
+static NB_Bool nb_expect_key(struct PP_Var var,
+                             const char* key,
+                             struct PP_Var* out_value);
+static NB_Bool nb_optional_key(struct PP_Var var,
+                               const char* key,
+                               struct PP_Var* out_value);
+static NB_Bool nb_response_parse_id(struct NB_Response* response,
+                                    struct PP_Var var);
+static NB_Bool nb_response_parse_cb_id(struct NB_Response* response,
+                                       struct PP_Var var);
+static NB_Bool nb_response_parse_values(struct NB_Response* response,
+                                        struct PP_Var var);
 
 struct NB_Response {
   struct PP_Var var;
+
+  /* The following are only used when parsing a response, not creating one. */
+  int id;
+  int cb_id;
+  struct PP_Var* values;
+  uint32_t values_count;
 };
 
 struct NB_Response* nb_response_create(int id) {
@@ -51,7 +66,23 @@ cleanup:
   return NULL;
 }
 
+NB_Bool nb_response_set_cb_id(struct NB_Response* response, int cb_id) {
+  if (!nb_var_dict_set(response->var, "cbId", PP_MakeInt32(cb_id))) {
+    NB_VERROR("nb_response_set_cb_id failed to set \"cbId\" to %d.", cb_id);
+    return NB_FALSE;
+  }
+
+  return NB_TRUE;
+}
+
 void nb_response_destroy(struct NB_Response* response) {
+  uint32_t i;
+  assert(response != NULL);
+
+  for (i = 0; i < response->values_count; ++i) {
+    nb_var_release(response->values[i]);
+  }
+
   nb_var_release(response->var);
   free(response);
 }
@@ -89,4 +120,118 @@ NB_Bool nb_response_set_error(struct NB_Response* response,
   }
 
   return NB_TRUE;
+}
+
+struct NB_Response* nb_response_parse(struct PP_Var var) {
+  struct NB_Response* response = calloc(1, sizeof(struct NB_Response));
+  if (!(nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY) &&
+        nb_response_parse_id(response, var) &&
+        nb_response_parse_cb_id(response, var) &&
+        nb_response_parse_values(response, var))) {
+    nb_response_destroy(response);
+    return NULL;
+  }
+
+  return response;
+}
+
+static NB_Bool nb_response_parse_id(struct NB_Response* response,
+                                    struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
+  struct PP_Var id = PP_MakeUndefined();
+
+  if (!nb_expect_key(var, "id", &id)) {
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(id, PP_VARTYPE_INT32)) {
+    goto cleanup;
+  }
+
+  if (id.value.as_int <= 0) {
+    NB_VERROR("Expected response id to be > 0. Got %d", id.value.as_int);
+    goto cleanup;
+  }
+
+  response->id = id.value.as_int;
+  result = NB_TRUE;
+cleanup:
+  nb_var_release(id);
+  return result;
+}
+
+static NB_Bool nb_response_parse_cb_id(struct NB_Response* response,
+                                       struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
+  struct PP_Var cb_id = PP_MakeUndefined();
+
+  if (!nb_optional_key(var, "cbId", &cb_id)) {
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(cb_id, PP_VARTYPE_INT32)) {
+    goto cleanup;
+  }
+
+  if (cb_id.value.as_int <= 0) {
+    NB_VERROR("Expected response cbId to be > 0. Got %d", cb_id.value.as_int);
+    goto cleanup;
+  }
+
+  response->cb_id = cb_id.value.as_int;
+  result = NB_TRUE;
+cleanup:
+  nb_var_release(cb_id);
+  return result;
+}
+
+static NB_Bool nb_response_parse_values(struct NB_Response* response,
+                                        struct PP_Var var) {
+  NB_Bool result = NB_FALSE;
+  struct PP_Var values_var = PP_MakeUndefined();
+  struct PP_Var* values = NULL;
+  uint32_t i, len;
+
+  if (!nb_expect_key(var, "values", &values_var)) {
+    goto cleanup;
+  }
+
+  if (!nb_var_check_type_with_error(values_var, PP_VARTYPE_ARRAY)) {
+    goto cleanup;
+  }
+
+  len = nb_var_array_length(values_var);
+  values = nb_calloc_list(len, sizeof(struct PP_Var));
+  for (i = 0; i < len; ++i) {
+    values[i] = nb_var_array_get(values_var, i);
+  }
+
+  response->values = values;
+  response->values_count = len;
+
+  result = NB_TRUE;
+  values = NULL; /* Pass ownership to the response */
+cleanup:
+  free(values);
+  nb_var_release(values_var);
+  return result;
+}
+
+int nb_response_id(struct NB_Response* response) {
+  return response->id;
+}
+
+int nb_response_cb_id(struct NB_Response* response) {
+  return response->cb_id;
+}
+
+int nb_response_values_count(struct NB_Response* response) {
+  assert(response != NULL);
+  return response->values_count;
+}
+
+struct PP_Var nb_response_value(struct NB_Response* response, int index) {
+  assert(response != NULL);
+  assert(index >= 0 && index < response->values_count);
+  return response->values[index];
 }

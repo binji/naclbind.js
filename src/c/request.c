@@ -39,16 +39,18 @@ static NB_Bool nb_expect_key(struct PP_Var var,
 static NB_Bool nb_optional_key(struct PP_Var var,
                                const char* key,
                                struct PP_Var* out_value);
-static NB_Bool nb_parse_request(struct NB_Request* request, struct PP_Var var);
-static NB_Bool nb_parse_id(struct NB_Request* request, struct PP_Var var);
-static NB_Bool nb_parse_gethandles(struct NB_Request* request,
+static NB_Bool nb_request_parse_id(struct NB_Request* request,
                                    struct PP_Var var);
-static NB_Bool nb_parse_sethandles(struct NB_Request* request,
-                                   struct PP_Var var);
-static NB_Bool nb_parse_destroyhandles(struct NB_Request* request,
-                                       struct PP_Var var);
-static NB_Bool nb_parse_commands(struct NB_Request* request, struct PP_Var var);
-static NB_Bool nb_parse_command(struct NB_Command* command, struct PP_Var var);
+static NB_Bool nb_request_parse_gethandles(struct NB_Request* request,
+                                           struct PP_Var var);
+static NB_Bool nb_request_parse_sethandles(struct NB_Request* request,
+                                           struct PP_Var var);
+static NB_Bool nb_request_parse_destroyhandles(struct NB_Request* request,
+                                               struct PP_Var var);
+static NB_Bool nb_request_parse_commands(struct NB_Request* request,
+                                         struct PP_Var var);
+static NB_Bool nb_request_parse_command(struct NB_Command* command,
+                                        struct PP_Var var);
 
 struct NB_Command {
   int id;
@@ -108,9 +110,14 @@ static NB_Bool nb_var_string_to_long(struct PP_Var var, long* out_value) {
   return NB_TRUE;
 }
 
-struct NB_Request* nb_request_create(struct PP_Var var) {
+struct NB_Request* nb_request_parse(struct PP_Var var) {
   struct NB_Request* request = calloc(1, sizeof(struct NB_Request));
-  if (!nb_parse_request(request, var)) {
+  if (!(nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY) &&
+        nb_request_parse_id(request, var) &&
+        nb_request_parse_gethandles(request, var) &&
+        nb_request_parse_sethandles(request, var) &&
+        nb_request_parse_destroyhandles(request, var) &&
+        nb_request_parse_commands(request, var))) {
     nb_request_destroy(request);
     return NULL;
   }
@@ -162,15 +169,7 @@ NB_Bool nb_optional_key(struct PP_Var var,
   return NB_TRUE;
 }
 
-NB_Bool nb_parse_request(struct NB_Request* request, struct PP_Var var) {
-  return nb_var_check_type_with_error(var, PP_VARTYPE_DICTIONARY) &&
-         nb_parse_id(request, var) && nb_parse_gethandles(request, var) &&
-         nb_parse_sethandles(request, var) &&
-         nb_parse_destroyhandles(request, var) &&
-         nb_parse_commands(request, var);
-}
-
-NB_Bool nb_parse_id(struct NB_Request* request, struct PP_Var var) {
+NB_Bool nb_request_parse_id(struct NB_Request* request, struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var id = PP_MakeUndefined();
 
@@ -194,7 +193,8 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_parse_gethandles(struct NB_Request* request, struct PP_Var var) {
+NB_Bool nb_request_parse_gethandles(struct NB_Request* request,
+                                    struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var gethandles_var = PP_MakeUndefined();
   NB_Handle* gethandles = NULL;
@@ -233,7 +233,8 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_parse_sethandles(struct NB_Request* request, struct PP_Var var) {
+NB_Bool nb_request_parse_sethandles(struct NB_Request* request,
+                                    struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var sethandles_var = PP_MakeUndefined();
   struct PP_Var keys = PP_MakeUndefined();
@@ -288,7 +289,7 @@ NB_Bool nb_parse_sethandles(struct NB_Request* request, struct PP_Var var) {
             goto cleanup;
           }
         } else if (strncmp(tag, "function", tag_length) == 0) {
-          int32_t id;
+          NB_FuncId id;
           if (!nb_var_func_id(value, &id)) {
             NB_ERROR("Unable to parse set handle value as \"function\".");
             goto cleanup;
@@ -327,7 +328,8 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_parse_destroyhandles(struct NB_Request* request, struct PP_Var var) {
+NB_Bool nb_request_parse_destroyhandles(struct NB_Request* request,
+                                        struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var destroyhandles_var = PP_MakeUndefined();
   NB_Handle* destroyhandles = NULL;
@@ -365,7 +367,8 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_parse_commands(struct NB_Request* request, struct PP_Var var) {
+NB_Bool nb_request_parse_commands(struct NB_Request* request,
+                                  struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var commands_var = PP_MakeUndefined();
   struct NB_Command* commands = NULL;
@@ -384,7 +387,7 @@ NB_Bool nb_parse_commands(struct NB_Request* request, struct PP_Var var) {
   commands = nb_calloc_list(len, sizeof(struct NB_Command));
   for (i = 0; i < len; ++i) {
     struct PP_Var command_var = nb_var_array_get(commands_var, i);
-    if (!nb_parse_command(&commands[i], command_var)) {
+    if (!nb_request_parse_command(&commands[i], command_var)) {
       nb_var_release(command_var);
       goto cleanup;
     }
@@ -402,7 +405,8 @@ cleanup:
   return result;
 }
 
-NB_Bool nb_parse_command(struct NB_Command* command, struct PP_Var var) {
+NB_Bool nb_request_parse_command(struct NB_Command* command,
+                                 struct PP_Var var) {
   NB_Bool result = NB_FALSE;
   struct PP_Var id_var = PP_MakeUndefined();
   struct PP_Var args_var = PP_MakeUndefined();

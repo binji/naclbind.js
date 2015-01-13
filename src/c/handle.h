@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 typedef int32_t NB_Handle;
+typedef int32_t NB_FuncId;
 
 /* Size to use for default promotion (i.e. when passing to variadic functions */
 #ifdef __x86_64__
@@ -52,7 +53,7 @@ NB_Bool nb_handle_register_float(NB_Handle, float);
 NB_Bool nb_handle_register_double(NB_Handle, double);
 NB_Bool nb_handle_register_voidp(NB_Handle, void*);
 NB_Bool nb_handle_register_funcp(NB_Handle, void(*)(void));
-NB_Bool nb_handle_register_func_id(NB_Handle, int32_t);
+NB_Bool nb_handle_register_func_id(NB_Handle, NB_FuncId);
 NB_Bool nb_handle_register_var(NB_Handle, struct PP_Var);
 NB_Bool nb_handle_get_int8(NB_Handle, int8_t*);
 NB_Bool nb_handle_get_uint8(NB_Handle, uint8_t*);
@@ -66,7 +67,7 @@ NB_Bool nb_handle_get_float(NB_Handle, float*);
 NB_Bool nb_handle_get_double(NB_Handle, double*);
 NB_Bool nb_handle_get_voidp(NB_Handle, void**);
 NB_Bool nb_handle_get_funcp(NB_Handle, void(**)(void));
-NB_Bool nb_handle_get_func_id(NB_Handle, int32_t*);
+NB_Bool nb_handle_get_func_id(NB_Handle, NB_FuncId*);
 NB_Bool nb_handle_get_charp(NB_Handle, char**);
 NB_Bool nb_handle_get_var(NB_Handle, struct PP_Var*);
 NB_Bool nb_handle_get_default(NB_Handle,
@@ -77,6 +78,9 @@ NB_Bool nb_handle_get_default(NB_Handle,
 void nb_handle_destroy(NB_Handle);
 void nb_handle_destroy_many(NB_Handle*, uint32_t handles_count);
 NB_Bool nb_handle_convert_to_var(NB_Handle, struct PP_Var*);
+
+typedef void (*NB_FuncIdFree)(NB_FuncId);
+NB_Bool nb_handle_set_func_id_free(NB_Handle, NB_FuncIdFree);
 
 #ifdef __cplusplus
 }

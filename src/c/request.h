@@ -29,10 +29,10 @@ extern "C" {
 
 struct NB_Request;
 
-struct NB_Request* nb_request_create(struct PP_Var);
+struct NB_Request* nb_request_parse(struct PP_Var);
 void nb_request_destroy(struct NB_Request*);
 
-int nb_request_id(struct NB_Request* NB_Request);
+int nb_request_id(struct NB_Request*);
 
 int nb_request_sethandles_count(struct NB_Request*);
 void nb_request_sethandle(struct NB_Request*,

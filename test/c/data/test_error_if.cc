@@ -18,6 +18,7 @@
 #include "var.h"
 
 TEST_F(GeneratorTest, ErrorIf) {
+  struct NB_Queue* message_queue = NULL;
   const char* request_json =
     "{\"id\": 1,"
     " \"commands\": ["
@@ -28,7 +29,7 @@ TEST_F(GeneratorTest, ErrorIf) {
 
   request_ = json_to_var(request_json);
   ASSERT_EQ(PP_VARTYPE_DICTIONARY, request_.type);
-  ASSERT_EQ(NB_FALSE, nb_request_run(request_, &response_));
+  ASSERT_EQ(NB_FALSE, nb_request_run(message_queue, request_, &response_));
 
   struct PP_Var keys = nb_var_dict_get_keys(response_);
   EXPECT_EQ(3U, nb_var_array_length(keys));
