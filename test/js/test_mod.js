@@ -1110,5 +1110,30 @@ describe('Module', function() {
       });
       m.$commit([], function() {});
     });
+
+    it('should allow returning from callback', function(done) {
+      var pfunc = type.Pointer(type.Function(type.int, []));
+      var useFuncType = type.Function(type.void, [pfunc]);
+      var ne = NaClEmbed();
+      var m = mod.Module(Embed(ne));
+
+      m.$defineFunction('useFunc', [mod.Function(0, useFuncType)]);
+
+      ne.$load();
+      ne.$setPostMessageCallback(function(msg) {
+        if (msg.id === 1) {
+          // First call the callback.
+          ne.$message({id: 2, cbId: 1, values: []});
+          // Then call the commit callback.
+          ne.$message({id: 1, values: []});
+        } else if (msg.id === 2){
+          assert.deepEqual(msg.values, [10]);
+          done();
+        }
+      });
+
+      m.useFunc(function() { return 10; });
+      m.$commit([], function() {});
+    });
   });
 });

@@ -2334,6 +2334,7 @@ var mod = (function(Long, type, utils) {
   Module.prototype.$registerCallback_ = function(id, func) {
     var self = this;
     this.$embed_.$registerCallback(id, function(msg) {
+      var result;
       var doneCalled = false;
       var done = function(result) {
         if (doneCalled) {
@@ -2352,7 +2353,11 @@ var mod = (function(Long, type, utils) {
       var args = msg.values.slice();
 
       args.push(done);
-      func.apply(null, args);
+      result = func.apply(null, args);
+      // If the callback returns a non-undefined value, use that as the result.
+      if (typeof result !== 'undefined') {
+        done(result);
+      }
     });
   };
   Module.prototype.$pushCommand_ = function(id, argHandles, retHandle) {
