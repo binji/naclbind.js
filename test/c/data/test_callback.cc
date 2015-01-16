@@ -142,3 +142,47 @@ TEST_F(ThreadedTest, Callback) {
 
   EnqueueQuitMessage();
 }
+
+TEST_F(ThreadedTest, Int64) {
+  const char* request_json =
+      "{\"id\": 1,"
+      " \"set\": {\"1\": [\"function\", 2]},"
+      /* sum_calls_of_10_and_20(f) */
+      " \"commands\": [{\"id\": 1, \"args\": [1], \"ret\": 2}],"
+      " \"get\": [2],"
+      " \"destroy\": [1, 2]}";
+  EnqueueCMessage(request_json);
+
+  struct PP_Var cb_response_var;
+  char* cb_module_json;
+
+  // Should be called with f(10) first.
+  cb_response_var = DequeueJsMessage();
+  cb_module_json = var_to_json_flat(cb_response_var);
+  ASSERT_STREQ("{\"cbId\":1,\"id\":2,\"values\":[[\"long\",10,0]]}\n",
+               cb_module_json);
+  free(cb_module_json);
+  nb_var_release(cb_response_var);
+
+  // let's assume the JS function returns 1 << x.
+  EnqueueCMessage("{\"id\":2,\"cbId\":1,\"values\":[[\"long\",1024,0]]}");
+
+  // Should be called with f(20) next.
+  cb_response_var = DequeueJsMessage();
+  cb_module_json = var_to_json_flat(cb_response_var);
+  ASSERT_STREQ("{\"cbId\":2,\"id\":2,\"values\":[[\"long\",20,0]]}\n",
+               cb_module_json);
+  free(cb_module_json);
+  nb_var_release(cb_response_var);
+
+  EnqueueCMessage("{\"id\":2,\"cbId\":2,\"values\":[[\"long\",1048576,0]]}");
+
+  // sum_calls_of_10_and_20 will return the sum of the two intermediary results.
+  struct PP_Var response_var = DequeueJsMessage();
+  char* response_json = var_to_json_flat(response_var);
+  ASSERT_STREQ("{\"id\":1,\"values\":[[\"long\",1049600,0]]}\n", response_json);
+  free(response_json);
+  nb_var_release(response_var);
+
+  EnqueueQuitMessage();
+}

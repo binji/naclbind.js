@@ -127,6 +127,13 @@ static {{FuncDef('nb_callback_%s' % type.mangled, type.pointee, extra_args=['str
     NB_VERROR("nb_response_set_value(%d) failed.", arg{{i}});
     goto cleanup;
   }
+[[    elif arg.kind == TypeKind.LONGLONG:]]
+  struct PP_Var arg{{i}}_var = nb_var_int64_create(arg{{i}});
+  if (!nb_response_set_value(response, {{i}}, arg{{i}}_var)) {
+    NB_VERROR("nb_response_set_value(%lld) failed.", arg{{i}});
+    goto cleanup;
+  }
+  nb_var_release(arg{{i}}_var);
 [[    else:]]
   /* UNSUPPORTED: {{arg.kind}} */
 [[    ]]
@@ -147,6 +154,11 @@ static {{FuncDef('nb_callback_%s' % type.mangled, type.pointee, extra_args=['str
 
 [[  if type.pointee.result_type.kind in (TypeKind.INT, TypeKind.SHORT, TypeKind.SCHAR, TypeKind.CHAR_S):]]
   result = nb_response_value(callback_response, 0).value.as_int;
+[[  elif type.pointee.result_type.kind == TypeKind.LONGLONG:]]
+  if (!nb_var_int64(nb_response_value(callback_response, 0), &result)) {
+    NB_ERROR("Expected long long value for result.");
+    goto cleanup;
+  }
 [[  elif type.pointee.result_type.kind == TypeKind.VOID:]]
 
 [[  else:]]
